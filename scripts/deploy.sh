@@ -9,6 +9,7 @@ SRC="$(cd "${1:?usage: deploy.sh <checkout-dir> [target-dir]}" && pwd)"
 DEST="${2:-$HOME/docker/tmc-website}"
 SHA="$(git -C "$SRC" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 STAMP="$(date +%Y%m%d-%H%M%S)"
+umask 077   # backups and release files readable by this user only
 
 cd "$DEST"
 [ -f .env ] || { echo "No .env in $DEST — create it with: scripts/make-env.sh server" >&2; exit 1; }
@@ -23,6 +24,7 @@ if docker ps --format '{{.Names}}' | grep -qx tmc-db; then
     | gzip > "backups/pre-deploy-$STAMP-$SHA.sql.gz"
   unset MYSQL_PWD
   ls -1t backups/pre-deploy-*.sql.gz | tail -n +11 | xargs -r rm -f
+  chmod 600 backups/*.sql.gz
   echo "   backups/pre-deploy-$STAMP-$SHA.sql.gz ($(du -h "backups/pre-deploy-$STAMP-$SHA.sql.gz" | cut -f1))"
 else
   echo "   database not running yet — skipped"

@@ -16,7 +16,12 @@ function tmc_setup() {
 	add_theme_support( 'html5', array( 'search-form', 'gallery', 'caption', 'style', 'script', 'navigation-widgets' ) );
 	remove_theme_support( 'core-block-patterns' ); // only TMC patterns, so editors stay within the design system
 
-	add_editor_style( 'assets/css/main.css' ); // editors see exactly what visitors see
+	// Editors see exactly what visitors see (main + feature styles).
+	$tmc_editor_css = array( 'assets/css/main.css' );
+	foreach ( glob( get_template_directory() . '/assets/css/features/*.css' ) as $tmc_css ) {
+		$tmc_editor_css[] = 'assets/css/features/' . basename( $tmc_css );
+	}
+	add_editor_style( $tmc_editor_css );
 
 	register_nav_menus(
 		array(

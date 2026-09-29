@@ -20,6 +20,16 @@ function tmc_enqueue_assets() {
 		tmc_asset_version( 'assets/js/main.js' ),
 		array( 'strategy' => 'defer', 'in_footer' => true )
 	);
+	// Feature bundles (one file per feature keeps parallel work conflict-free).
+	foreach ( glob( get_template_directory() . '/assets/css/features/*.css' ) as $tmc_css ) {
+		$tmc_rel = 'assets/css/features/' . basename( $tmc_css );
+		wp_enqueue_style( 'tmc-' . basename( $tmc_css, '.css' ), get_template_directory_uri() . '/' . $tmc_rel, array( 'tmc-main' ), tmc_asset_version( $tmc_rel ) );
+	}
+	foreach ( glob( get_template_directory() . '/assets/js/features/*.js' ) as $tmc_js ) {
+		$tmc_rel = 'assets/js/features/' . basename( $tmc_js );
+		wp_enqueue_script( 'tmc-' . basename( $tmc_js, '.js' ), get_template_directory_uri() . '/' . $tmc_rel, array( 'tmc-main' ), tmc_asset_version( $tmc_rel ), array( 'strategy' => 'defer', 'in_footer' => true ) );
+	}
+
 	wp_localize_script(
 		'tmc-main',
 		'tmcI18n',

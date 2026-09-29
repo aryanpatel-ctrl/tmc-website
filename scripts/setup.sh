@@ -2,7 +2,7 @@
 # Bring a TMC environment to its expected state. Idempotent: runs on every deploy, in CI and locally.
 #
 #   1. containers   2. network + 5 unit sites   3. pinned plugins + language packs
-#   4. TMC theme on every site   5. languages, home pages, pages/menus/content per site
+#   4. TMC theme on every site   5. per site: languages, home page, migrations, pages/menus/content
 set -euo pipefail
 cd "$(dirname "$0")/.."
 set -a; . ./.env; set +a
@@ -47,6 +47,7 @@ for site in "${SITES[@]}"; do
   echo "--- ${site}${TMC_BASE_DOMAIN}"
   wp_file "$site" scripts/setup-languages.php | grep -v "already configured" || true
   wp_file "$site" scripts/seed-home-pages.php
+  wp_on "$site" eval-file /tmc-scripts/migrate.php          # run-once data migrations
   wp_file "$site" scripts/seed-site-structure.php | grep -vE "^  page /" || true
 done
 

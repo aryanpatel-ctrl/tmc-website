@@ -29,6 +29,7 @@ x-wp-env: &wp-env
     define('WP_REDIS_HOST', 'redis');
     define('WP_REDIS_PORT', 6379);
     define('WP_CACHE_KEY_SALT', 'tmc_');
+    define('DISABLE_WP_CRON', true); // scheduled jobs run from the "cron" container
     /* Behind reverse proxy (nginx-proxy-manager / Cloudflare) */
     if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($$_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) { $$_SERVER['HTTPS'] = 'on'; }
     /* Multisite: one CMS, six websites on subdomains.
@@ -101,10 +102,39 @@ services:
       <<: *wp-env
       HOME: /tmp
       WP_CLI_CACHE_DIR: /tmp/wp-cli-cache
-    volumes: *wp-volumes
+    volumes:
+      - wp_html:/var/www/html
+      - ./src/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - ./src/themes/tmc:/var/www/html/wp-content/themes/tmc:ro
+      - ./scripts:/tmc-scripts:ro   # migrations and provisioning scripts (CLI only, never served)
     networks: [tmc_internal, tmc_edge]
     entrypoint: ["wp"]
     command: ["--info"]
+
+  # Real cron: runs due scheduled jobs (automatic expiry, publishing) on every site each minute.
+  cron:
+    image: wordpress:cli-php8.3
+    container_name: tmc-cron
+    user: "33:33"
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+      wordpress: { condition: service_started }
+    environment:
+      <<: *wp-env
+      HOME: /tmp
+      TMC_BASE_DOMAIN: ${TMC_BASE_DOMAIN}
+    volumes: *wp-volumes
+    networks: [tmc_internal]   # no internet: it only needs the database
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        while true; do
+          for url in $$(wp site list --field=url --url=$${TMC_BASE_DOMAIN} 2>/dev/null); do
+            wp cron event run --due-now --url="$$url" --quiet 2>/dev/null
+          done
+          sleep 60
+        done
 
 volumes:
   db_data:

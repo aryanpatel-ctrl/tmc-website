@@ -98,7 +98,6 @@ $ia = array(
 		array( 'annual-reports', 'Annual Reports', 'varshik-report', 'वार्षिक रिपोर्ट', "Annual reports of $s, available for download.", "$sh की वार्षिक रिपोर्ट, डाउनलोड हेतु उपलब्ध।" ),
 	) ),
 	array( 'patient-care', 'Patient Care', 'rogi-dekhbhal', 'रोगी देखभाल', 'Everything patients and caregivers need: departments, the patient guide, OPD timings, appointments and charges.', 'रोगियों एवं देखभाल करने वालों के लिए आवश्यक सभी जानकारी: विभाग, रोगी मार्गदर्शिका, ओपीडी समय, अपॉइंटमेंट एवं शुल्क।', 'Departments, patient guide, OPD timings, appointments and charges.', 'विभाग, रोगी मार्गदर्शिका, ओपीडी समय, अपॉइंटमेंट एवं शुल्क।', array(
-		array( 'departments', 'Departments', 'vibhag', 'विभाग', 'Clinical and support departments, with their services and contact information.', 'नैदानिक एवं सहायक विभाग, उनकी सेवाओं एवं संपर्क जानकारी सहित।' ),
 		array( 'patient-guide', 'Patient Guide', 'rogi-margdarshika', 'रोगी मार्गदर्शिका', 'A step-by-step guide for new patients and their families: registration, consultation, tests and treatment.', 'नए रोगियों एवं उनके परिजनों के लिए चरण-दर-चरण मार्गदर्शिका: पंजीकरण, परामर्श, जाँच एवं उपचार।' ),
 		array( 'opd-schedule', 'OPD Schedule', 'opd-samay-sarini', 'ओपीडी समय-सारणी', 'Outpatient department (OPD) days and timings, by department.', 'विभागवार बाह्य रोगी विभाग (ओपीडी) के दिन एवं समय।' ),
 		array( 'appointments', 'Appointments', 'appointment', 'अपॉइंटमेंट', "How to book an appointment. Online booking is provided through TMC's patient services system.", 'अपॉइंटमेंट कैसे बुक करें। ऑनलाइन बुकिंग टीएमसी की रोगी सेवा प्रणाली के माध्यम से उपलब्ध है।' ),
@@ -113,8 +112,6 @@ $ia = array(
 		array( 'admissions', 'Admissions', 'pravesh', 'प्रवेश', 'Admission notices, schedules and the application process.', 'प्रवेश सूचनाएं, समय-सारणी एवं आवेदन प्रक्रिया।' ),
 		array( 'results', 'Results', 'parinam', 'परिणाम', 'Examination and selection results.', 'परीक्षा एवं चयन परिणाम।' ),
 	) ),
-	array( 'careers', 'Careers', 'career', 'करियर', 'Current job openings, recruitment notices and results.', 'वर्तमान रिक्तियाँ, भर्ती सूचनाएं एवं परिणाम।', '', '', array() ),
-	array( 'tenders', 'Tenders', 'nividayen', 'निविदाएं', 'Tenders, Expressions of Interest (EOI) and corrigenda, with their closing dates.', 'निविदाएं, अभिरुचि की अभिव्यक्ति (ईओआई) एवं शुद्धिपत्र, उनकी अंतिम तिथियों सहित।', '', '', array() ),
 	array( 'media', 'Media', 'media-kendra', 'मीडिया', "News, notices and photographs from $s.", "$sh से समाचार, सूचनाएं एवं तस्वीरें।", 'News, notices and photographs.', 'समाचार, सूचनाएं एवं तस्वीरें।', array(
 		array( 'photo-gallery', 'Photo Gallery', 'chitra-dirgha', 'फोटो गैलरी', 'Photographs of events and activities.', 'कार्यक्रमों एवं गतिविधियों की तस्वीरें।' ),
 	) ),
@@ -328,6 +325,15 @@ $make_menu = function ( $menu_name, array $items ) {
 };
 $page_item = fn( $id, $description = '' ) => array( 'menu-item-object-id' => $id, 'menu-item-object' => 'page', 'menu-item-type' => 'post_type', 'menu-item-status' => 'publish', 'menu-item-description' => $description );
 $cat_item  = fn( $id ) => array( 'menu-item-object-id' => $id, 'menu-item-object' => 'category', 'menu-item-type' => 'taxonomy', 'menu-item-status' => 'publish' );
+// Listings of the content types (tenders, events, ...). Polylang adds /hi/ on Hindi pages.
+$archive_titles = array(
+	'tmc_department' => array( 'Departments', 'विभाग' ),
+	'tmc_doctor'     => array( 'Find a Doctor', 'डॉक्टर खोजें' ),
+	'tmc_job'        => array( 'Careers', 'करियर' ),
+	'tmc_tender'     => array( 'Tenders', 'निविदाएं' ),
+	'tmc_event'      => array( 'Events', 'कार्यक्रम' ),
+);
+$archive_item = fn( $type, $i ) => array( 'menu-item-type' => 'post_type_archive', 'menu-item-object' => $type, 'menu-item-title' => $archive_titles[ $type ][ $i ], 'menu-item-status' => 'publish' );
 
 $locations = array();
 foreach ( array( 'en' => 0, 'hi' => 1 ) as $lang => $i ) {
@@ -341,12 +347,28 @@ foreach ( array( 'en' => 0, 'hi' => 1 ) as $lang => $i ) {
 		foreach ( $children as $child ) {
 			$item['children'][] = $page_item( $pages[ $child[0] ][ $i ] );
 		}
+		if ( 'patient-care' === $en_slug ) {
+			array_unshift( $item['children'], $archive_item( 'tmc_department', $i ), $archive_item( 'tmc_doctor', $i ) );
+		}
 		if ( 'media' === $en_slug ) {
-			array_unshift( $item['children'], $cat_item( $cats['news'][ $i ] ), $cat_item( $cats['notices'][ $i ] ) );
+			array_unshift( $item['children'], $cat_item( $cats['news'][ $i ] ), $cat_item( $cats['notices'][ $i ] ), $archive_item( 'tmc_event', $i ) );
 		}
 		$primary[] = $item;
+		if ( 'education' === $en_slug ) {
+			$primary[] = array( 'args' => $archive_item( 'tmc_job', $i ) );
+			$primary[] = array( 'args' => $archive_item( 'tmc_tender', $i ) );
+		}
 	}
-	$quick    = array_map( fn( $slug ) => array( 'args' => $page_item( $pages[ $slug ][ $i ] ) ), array( 'patient-guide', 'appointments', 'opd-schedule', 'departments', 'careers', 'tenders', 'donate' ) );
+	$quick    = array(
+		array( 'args' => $page_item( $pages['patient-guide'][ $i ] ) ),
+		array( 'args' => $page_item( $pages['appointments'][ $i ] ) ),
+		array( 'args' => $page_item( $pages['opd-schedule'][ $i ] ) ),
+		array( 'args' => $archive_item( 'tmc_department', $i ) ),
+		array( 'args' => $archive_item( 'tmc_doctor', $i ) ),
+		array( 'args' => $archive_item( 'tmc_job', $i ) ),
+		array( 'args' => $archive_item( 'tmc_tender', $i ) ),
+		array( 'args' => $page_item( $pages['donate'][ $i ] ) ),
+	);
 	$policy   = array_map( fn( $slug ) => array( 'args' => $page_item( $pages[ $slug ][ $i ] ) ), array( 'copyright-policy', 'hyperlinking-policy', 'privacy-policy', 'terms-conditions', 'accessibility-statement', 'disclaimer', 'help', 'feedback', 'sitemap' ) );
 	$suffix   = 'hi' === $lang ? ' (हिन्दी)' : ' (English)';
 	$locations['primary'][ $lang ]         = $make_menu( 'Main menu' . $suffix, $primary );
@@ -376,7 +398,13 @@ $mo->export_to_db( $hindi );
 
 $home_en = (int) get_option( 'page_on_front' );
 $home_hi = (int) pll_get_post( $home_en, 'hi' );
-$url     = fn( $slug, $lang ) => get_permalink( $pages[ $slug ][ 'hi' === $lang ? 1 : 0 ] );
+$url     = function ( $slug, $lang ) use ( $pages ) {
+	$archives = array( 'departments' => 'departments', 'careers' => 'careers', 'tenders' => 'tenders', 'doctors' => 'doctors', 'events' => 'events' );
+	if ( isset( $archives[ $slug ] ) ) {
+		return home_url( ( 'hi' === $lang ? '/hi/' : '/' ) . $archives[ $slug ] . '/' );
+	}
+	return get_permalink( $pages[ $slug ][ 'hi' === $lang ? 1 : 0 ] );
+};
 
 $build_home = function ( $lang ) use ( $is_main, $name, $name_hi, $url ) {
 	$hi       = 'hi' === $lang;
@@ -431,6 +459,8 @@ $build_home = function ( $lang ) use ( $is_main, $name, $name_hi, $url ) {
 			array( $hi ? 'और पढ़ें' : 'Read more', $url( 'about-us', $lang ) )
 		);
 	}
+
+	$sections[] = tmc_section_opportunities( $hi ? 'निविदाएं एवं ईओआई' : 'Tenders & EOIs', $hi ? 'करियर' : 'Careers', $hi ? 'आगामी कार्यक्रम' : 'Upcoming events' );
 
 	$sections[] = tmc_section_network(
 		$hi ? 'हमारा नेटवर्क' : 'Our network',

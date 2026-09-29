@@ -42,10 +42,29 @@ check "$TMC_BASE_DOMAIN" "/screen-reader-access/"    200 'NVDA'
 check "$TMC_BASE_DOMAIN" "/patient-care/"            200 'section-nav'
 check "$TMC_BASE_DOMAIN" "/category/news/"           200 'card-grid'
 check "$TMC_BASE_DOMAIN" "/?s=accessibility"         200 'result-list'
+check "$TMC_BASE_DOMAIN" "/tenders/"                 200 'data-table' 'Sample tender'
+check "$TMC_BASE_DOMAIN" "/tenders/?view=archive"    200 'data-table' 'badge-closed'
+check "$TMC_BASE_DOMAIN" "/hi/tenders/"              200 'lang="hi-IN"' 'निविदाएं'
+check "$TMC_BASE_DOMAIN" "/careers/"                 200 'data-table'
+check "$TMC_BASE_DOMAIN" "/events/"                  200 'event-cards'
+check "$TMC_BASE_DOMAIN" "/events/?view=calendar"    200 'cal-grid'
+check "$TMC_BASE_DOMAIN" "/events/sample-cme-session/?ics=1" 200 'BEGIN:VCALENDAR'
+check "$TMC_BASE_DOMAIN" "/departments/"             200 'Medical Oncology'
+check "$TMC_BASE_DOMAIN" "/doctors/"                 200 'filter-form' 'doctor-card'
+check "tmh.$TMC_BASE_DOMAIN" "/tenders/eoi-website-design-development-service/" 200 'TMH/TMH/2026-27/CAP/EO/0009' 'doc-list'
+check "$TMC_BASE_DOMAIN" "/"                         200 'tmc-opportunities' 'dated-list'
 check "$TMC_BASE_DOMAIN" "/does-not-exist-$RANDOM/" 404 'Go to home page'
 check "$TMC_BASE_DOMAIN" "/wp-content/themes/tmc/assets/css/main.css" 200
 check "$TMC_BASE_DOMAIN" "/wp-login.php"             200
 check "$TMC_BASE_DOMAIN" "/xmlrpc.php"               403
+
+# Feature checks: each scripts/smoke.d/*.sh calls `check` (one file per feature).
+for extra in scripts/smoke.d/*.sh; do
+  [ -f "$extra" ] || continue
+  echo "--- $(basename "$extra")"
+  # shellcheck disable=SC1090
+  . "$extra"
+done
 
 if [ "$FAILED" -ne 0 ]; then
   echo "==> smoke test FAILED"

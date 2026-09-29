@@ -1,0 +1,118 @@
+# TMC Website Ecosystem — WordPress Multisite (1 CMS, 6 sites on subdomains)
+#
+# Base file, shared by every environment. The .env of each machine sets COMPOSE_FILE to add
+# one override on top:
+#   compose.local.yml   developer Mac / CI  — http://tmc.localhost on port 80
+#   compose.server.yml  hetser (UAT)        — behind nginx-proxy-manager on the homelab network
+#
+#   docker compose up -d --build          start / rebuild
+#   docker compose run --rm wpcli <cmd>   run WP-CLI, e.g. `site list`
+#
+# Secrets live in .env (chmod 600, never committed) — see scripts/make-env.sh.
+
+name: tmc-website
+
+x-wp-env: &wp-env
+  WORDPRESS_DB_HOST: db
+  WORDPRESS_DB_NAME: ${DB_NAME}
+  WORDPRESS_DB_USER: ${DB_USER}
+  WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+  WORDPRESS_TABLE_PREFIX: tmc_
+  # HMAC key for the tamper-evident audit log — kept out of the database on purpose
+  TMC_AUDIT_KEY: ${TMC_AUDIT_KEY}
+  WORDPRESS_CONFIG_EXTRA: |
+    /* ---- TMC project settings ---- */
+    define('WP_ENVIRONMENT_TYPE', 'staging');
+    define('DISALLOW_FILE_EDIT', true);
+    define('WP_MEMORY_LIMIT', '256M');
+    define('WP_AUTO_UPDATE_CORE', 'minor');
+    define('WP_REDIS_HOST', 'redis');
+    define('WP_REDIS_PORT', 6379);
+    define('WP_CACHE_KEY_SALT', 'tmc_');
+    /* Behind reverse proxy (nginx-proxy-manager / Cloudflare) */
+    if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($$_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) { $$_SERVER['HTTPS'] = 'on'; }
+    /* Multisite: one CMS, six websites on subdomains.
+       TMC_MULTISITE=0 is used only for the one-time network install. */
+    define('WP_ALLOW_MULTISITE', true);
+    if (getenv('TMC_MULTISITE') !== '0') {
+      define('MULTISITE', true);
+      define('SUBDOMAIN_INSTALL', true);
+      define('DOMAIN_CURRENT_SITE', '${TMC_BASE_DOMAIN}');
+      define('PATH_CURRENT_SITE', '/');
+      define('SITE_ID_CURRENT_SITE', 1);
+      define('BLOG_ID_CURRENT_SITE', 1);
+    }
+
+x-wp-volumes: &wp-volumes
+  - wp_html:/var/www/html
+  - ./src/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+  - ./src/themes/tmc:/var/www/html/wp-content/themes/tmc:ro
+
+services:
+  db:
+    image: mariadb:11.4
+    container_name: tmc-db
+    restart: unless-stopped
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max-allowed-packet=64M
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks: [tmc_internal]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    container_name: tmc-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
+    networks: [tmc_internal]
+
+  wordpress:
+    build: ./wordpress
+    image: tmc-wordpress:latest
+    container_name: tmc-wp
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    environment: *wp-env
+    volumes: *wp-volumes
+    # No host ports here; each environment's override decides how traffic reaches it.
+    networks: [tmc_internal, tmc_edge]
+
+  wpcli:
+    image: wordpress:cli-php8.3
+    user: "33:33"
+    profiles: ["tools"]
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      <<: *wp-env
+      HOME: /tmp
+      WP_CLI_CACHE_DIR: /tmp/wp-cli-cache
+    volumes: *wp-volumes
+    networks: [tmc_internal, tmc_edge]
+    entrypoint: ["wp"]
+    command: ["--info"]
+
+volumes:
+  db_data:
+  wp_html:
+
+networks:
+  # DB + cache: no internet, not reachable from any other container on the host
+  tmc_internal:
+    internal: true
+  # Outbound internet for WordPress / WP-CLI (updates, language packs)
+  tmc_edge:

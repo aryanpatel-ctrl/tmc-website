@@ -1,0 +1,15 @@
+# secrets and per-machine state
+.env
+.env.*
+demo-users.txt
+backups/
+.deployed
+.release-history
+*.sql
+*.sql.gz
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+node_modules/

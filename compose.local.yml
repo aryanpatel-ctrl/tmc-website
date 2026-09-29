@@ -1,0 +1,7 @@
+# Developer Mac and CI: publish WordPress on port 80 of the loopback interface.
+# Browsers resolve *.localhost to 127.0.0.1, so the sites are http://tmc.localhost,
+# http://tmh.tmc.localhost, ... (WordPress Multisite needs port 80/443).
+services:
+  wordpress:
+    ports:
+      - "127.0.0.1:80:80"

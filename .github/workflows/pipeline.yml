@@ -1,0 +1,92 @@
+# CI/CD for the TMC website ecosystem.
+#
+#   pull request  → lint + integration test (GitHub-hosted runners only; never touches the server)
+#   push to main  → lint + integration test → deploy to UAT (self-hosted runner on hetser)
+#   manual run    → redeploy or roll back: Actions → Pipeline → Run workflow → enter a commit/tag
+#
+# Every deployment is tested first, backed up, smoke-tested and recorded (tender §4.7: controlled,
+# auditable promotion between environments with rollback).
+name: Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit SHA, tag or branch to deploy (use an older commit to roll back)"
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+env:
+  REF: ${{ inputs.ref || github.sha }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
+      - name: Static checks (PHP, JSON, JS, shell)
+        run: ./scripts/lint.sh
+      - name: Compose files resolve
+        run: |
+          ./scripts/make-env.sh ci
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f compose.server.yml config --quiet
+
+  integration:
+    name: Integration test
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
+      - name: Environment
+        run: ./scripts/make-env.sh ci
+      - name: Build and provision all six sites
+        run: ./scripts/setup.sh
+      - name: Demo accounts
+        run: ./scripts/create-demo-users.sh
+      - name: Workflow, permissions, Hindi and audit-log tests
+        run: docker compose run --rm -T wpcli --url=tmh.tmc.localhost eval-file - < scripts/tests/workflow-test.php
+      - name: HTTP smoke test
+        run: ./scripts/smoke-test.sh
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --tail=200 wordpress db
+
+  deploy:
+    name: Deploy to UAT (hetser)
+    needs: [lint, integration]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, tmc-server]
+    timeout-minutes: 30
+    concurrency:
+      group: deploy-uat
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
+      - name: Deploy
+        run: ./scripts/deploy.sh "$GITHUB_WORKSPACE" "$HOME/docker/tmc-website"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deployment to UAT"
+            echo "- Commit: \`$(git rev-parse --short HEAD)\` — $(git log -1 --pretty=%s)"
+            echo "- Triggered by: ${GITHUB_ACTOR} (${GITHUB_EVENT_NAME})"
+            echo "- Site: http://tmc.100-79-142-44.sslip.io (Tailscale only)"
+            echo "- Result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"

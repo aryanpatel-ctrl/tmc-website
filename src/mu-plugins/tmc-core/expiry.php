@@ -21,6 +21,9 @@ add_filter(
 add_action(
 	'init',
 	function () {
+		if ( function_exists( 'tmc_site_installed' ) && ! tmc_site_installed() ) {
+			return; // tables do not exist yet during the network/site install
+		}
 		if ( ! wp_next_scheduled( 'tmc_expire_content' ) ) {
 			wp_schedule_event( time() + 60, 'tmc_five_minutes', 'tmc_expire_content' );
 		}

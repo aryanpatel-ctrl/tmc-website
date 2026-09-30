@@ -11,7 +11,7 @@ addresses, the security zones, the permitted flows, how administrative access is
 activity is logged, and how keys and secrets are managed.
 
 **Status markers.** Each control is marked **In place** (implemented in this repository and tested),
-**In progress** (being built in a parallel work stream; *verify at integration*), or **TMC
+**In progress** (not yet complete; the gap is stated), or **TMC
 infrastructure** (provided by TMC's network, firewall or hosting and configured jointly).
 
 ---
@@ -108,9 +108,14 @@ flowchart TB
 | Real client IP behind proxy (for audit log) | `mod_remoteip` trusting private proxy ranges only | `apache-tmc.conf` |
 | TRACE disabled | `TraceEnable Off` | `apache-tmc.conf` |
 
-**In progress (W2, verify at integration):** Content-Security-Policy and HSTS headers, login rate
-limiting, TOTP MFA for privileged roles, administrative network allow-list, CI security gate (image
-scan, secret scan, DAST baseline), OWASP Top 10 mapping.
+| Content-Security-Policy | Per-request nonce for every script on public pages (`script-src 'self' 'nonce-…'`), `object-src 'none'`, `frame-ancestors 'self'`, `form-action 'self'`; baseline policy on login/admin screens; exact extra origins only through the `tmc_csp_directives` filter (the OpenStreetMap embed for the location map; the analytics origin when configured) | `tmc-core/security-headers.php`, `scripts/smoke.d/security.sh` |
+| HSTS | `Strict-Transport-Security` on every HTTPS response (one year; `includeSubDomains` only when `TMC_HSTS_INCLUDE_SUBDOMAINS=1`) | `tmc-core/security-headers.php` |
+| Cross-origin isolation headers | `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-site`, `X-Permitted-Cross-Domain-Policies: none`; `Permissions-Policy` switches off unused browser features | `apache-tmc.conf` |
+| security.txt | `/.well-known/security.txt` (RFC 9116); the contact is a marked placeholder until TMC confirms it (`TMC_SECURITY_CONTACT`) | `tmc-core/security-headers.php` |
+
+All of the above are **In place** and verified in CI by `scripts/tests/security-test.php` and
+`scripts/smoke.d/security.sh`; the full OWASP Top 10 (2021) mapping with evidence is
+[docs/security/owasp-top10.md](../security/owasp-top10.md).
 
 ## 3. Segregation from clinical systems (R-4.8-1, R-2-6)
 
@@ -118,7 +123,7 @@ scan, secret scan, DAST baseline), OWASP Top 10 mapping.
 |---|---|---|---|
 | Website and CMS in a network zone segregated from clinical systems | Zones Z1–Z4 hosted on infrastructure (VPC/VLAN/subnet) separate from Z6 | TMC infrastructure + project | Network diagram signed by TMC IT; firewall rule export |
 | No direct connectivity to clinical systems, databases, patient data stores or internal file shares | Default-deny egress from Z1–Z4 towards TMC internal ranges; the only exception is Z2 → Z5 allow-listed endpoints | TMC firewall; project provides the required rule set | Segregation test (below) |
-| Interaction only through approved, controlled, allow-listed endpoints | Application gateway: server-side registry of approved endpoints, unknown endpoints refused, upstream URLs never exposed to browsers (R-4.12-1) | Project (W4) | Gateway tests in CI (verify at integration) |
+| Interaction only through approved, controlled, allow-listed endpoints | Application gateway: server-side registry of approved endpoints, unknown endpoints refused, upstream URLs never exposed to browsers (R-4.12-1) | Project (W4) | `scripts/tests/apps-test.php`, `scripts/smoke.d/apps.sh` and the network segregation check (`.github/workflows/apps-gateway.yml`) in every CI run |
 | Separate accounts, databases, credentials | Own MariaDB instance and users, own `.env` secrets, own cloud/host accounts | Project + TMC | Credential inventory in handover |
 
 ### 3.1 Segregation validation test (performed at M2 and before each Go-Live)
@@ -186,20 +191,22 @@ The built-in "Author" role is removed because it can publish without review (`ro
 Editors lack `publish_*` and `edit_published_*` capabilities and therefore cannot change live content;
 this is verified by `scripts/tests/workflow-test.php`, which drives the REST API as each role.
 
-**Centralised TMC-wide publishing** (a TMC publisher pushes a notice to selected unit sites) is being
-built in work stream W5 (network publishing). **Verify at integration.**
+**Centralised TMC-wide publishing** (a TMC Reviewer / Publisher publishes an item once and selects the
+unit sites that receive a synced copy) is in place: `tmc-core/network-publishing.php`, verified by
+`scripts/tests/editorial-test.php`. Copies keep the original's dates and point their canonical URL
+at the original.
 
 ### 5.2 Authentication
 
 | Control | Status |
 |---|---|
 | Unique named accounts; shared accounts prohibited | Policy ([Access Control Policy](access-control-policy.md)) |
-| Passwords hashed by WordPress core; strong-password policy | In place (core); enforcement settings: W2, verify at integration |
-| TOTP multi-factor authentication mandatory for Super Admin, Site Administrator and Reviewer / Publisher | In progress (W2), verify at integration |
-| Administrative network restriction (`/wp-admin`, `/wp-login.php` limited to TMC/VPN address ranges) | In progress (W2 in application; reverse proxy/firewall at TMC), verify at integration |
+| Passwords hashed by WordPress core; strong-password policy | In place: at least 12 characters (`TMC_PASSWORD_MIN_LENGTH`) and three of four character classes for privileged accounts, checked on profile save, reset and sign-in (`security-session.php`) |
+| TOTP multi-factor authentication mandatory for Super Admin, Site Administrator and Reviewer / Publisher | In place: Two Factor plugin 0.17.0 (TOTP + backup codes; e-mailed codes switched off), enforced by `security-mfa.php`; until a privileged account enrols, every admin screen redirects to its profile and other REST calls are refused. `TMC_ENFORCE_MFA=0` exists for automated test stacks only and is never set on UAT or production |
+| Administrative network restriction (`/wp-admin`, `/wp-login.php` limited to TMC/VPN address ranges) | In place in the application (`TMC_ADMIN_ALLOW_CIDRS`; default private ranges and the VPN range only; HTTP 403 and an audit entry otherwise, `security-network.php`); the reverse proxy / firewall rule is TMC infrastructure |
 | Login failure logging | In place: `login_failed` audit event with reason code |
-| Login rate limiting / lockout | In progress (W2), verify at integration |
-| Session expiry for privileged roles | In progress (W2), verify at integration |
+| Login rate limiting / lockout | In place: lockout after 5 failures per account or 20 per IP address within 15 minutes, doubling from 60 seconds up to 1 hour; one generic error message; no user enumeration (`security-login.php`) |
+| Session expiry for privileged roles | In place: every signed-in session ends after 30 minutes of inactivity (`TMC_ADMIN_IDLE_MINUTES`); privileged sessions last at most 12 hours per sign-in, even with "Remember me" (`TMC_ADMIN_SESSION_HOURS`) (`security-session.php`) |
 | Infrastructure access (SSH, cloud console) with MFA and key-based authentication only | TMC infrastructure; vendor access per [Access Control Policy](access-control-policy.md) |
 
 ### 5.3 Infrastructure access
@@ -266,13 +273,13 @@ within Indian jurisdiction. TMC may specify a longer period.
 | A04 Insecure design | Segregation by zone; no clinical data; review workflow; threat-led design (this document) | In place |
 | A05 Security misconfiguration | Hardened Apache/PHP, file editing disabled, XML-RPC denied, uploads non-executable, reproducible provisioning | In place; CSP/HSTS in W2 |
 | A06 Vulnerable and outdated components | Pinned versions; patch SLA of 30 days; image and dependency scanning in CI (W2) | Partly in place |
-| A07 Identification and authentication failures | MFA, rate limiting, session policy (W2); failed-login logging | In progress |
+| A07 Identification and authentication failures | MFA, rate limiting, session policy (W2); failed-login logging | In place (`security-test.php`) |
 | A08 Software and data integrity failures | All releases from Git through CI; no plugin/theme installation from the admin UI in Production; tamper-evident audit log | In place |
 | A09 Security logging and monitoring failures | Audit log + container logs + central retention; monitoring (W7) | Partly in place |
-| A10 Server-side request forgery | Gateway accepts only registered endpoints; no user-supplied upstream URLs (W4) | In progress |
+| A10 Server-side request forgery | Gateway accepts only registered endpoints; no user-supplied upstream URLs (W4) | In place (`apps-test.php`) |
 
-**Verify at integration:** the full OWASP mapping with test evidence is produced by W2 and attached to
-the pre-VAPT readiness pack.
+The full OWASP mapping with test evidence is [docs/security/owasp-top10.md](../security/owasp-top10.md);
+the pre-VAPT readiness checklist is [docs/security/pre-vapt-checklist.md](../security/pre-vapt-checklist.md).
 
 ## 8. Key and secret management
 
@@ -284,7 +291,7 @@ the pre-VAPT readiness pack.
 | `TMC_AUDIT_KEY` | HMAC key of the audit chain | `make-env.sh` (48 characters) | `.env`; **escrow copy held by TMC IT offline** | Rotation starts a new chain segment (see policy); never delete an old key while entries signed with it are retained |
 | WordPress salts (`AUTH_KEY` etc.) | Cookies and nonces | Generated by the WordPress image at first start (in `wp-config.php` in volume `wp_html`) | `wp_html` volume | Rotating logs everyone out; do after an incident |
 | TLS private keys | HTTPS | TMC / certificate authority | Perimeter or reverse proxy | Per certificate validity |
-| MFA secrets | TOTP | Users at enrolment (W2) | Database (verify at integration) | On device loss |
+| MFA secrets | TOTP | Users at enrolment (Two Factor plugin) | Database (user meta of the network's users table); backup codes stored hashed | On device loss: an administrator resets the user's second factor |
 | CI/CD secrets | Deployment | Not needed today: the self-hosted runner reads the server `.env` in place | — | — |
 
 Rules: secrets are never committed (`.gitignore` excludes `.env`, `.env.*`, `demo-users.txt`,
@@ -295,11 +302,14 @@ credentials are handed over to TMC separately and securely (SOW §8.2), never in
 
 1. Every change is made on a branch and merged by pull request; `main` is protected.
 2. CI builds all six sites from scratch and runs lint, PHP test suites and HTTP smoke tests.
-3. The CI security gate (W2, verify at integration) adds: secret scanning of the repository, container
-   image vulnerability scanning, and an automated DAST baseline against the CI stack. A release with
-   unresolved High or Critical findings does not proceed.
-4. UAT deployment is automatic after CI on `main`; Production promotion requires the UAT sign-off
-   (W7, verify at integration).
+3. The CI security gate (`.github/workflows/security.yml`, required by the deploy job) adds: gitleaks
+   secret scanning of the whole Git history, Trivy scanning of the WordPress image (the gate fails on
+   any Critical vulnerability that has a fix; the full High/Critical report is kept as an artifact),
+   and an OWASP ZAP baseline against a freshly built stack (fails on the rules marked FAIL in
+   `security/zap-baseline.conf`). Accepted findings are recorded with a justification and review date.
+4. UAT deployment is automatic after every gate passes on `main`; Production promotion is a `vX.Y.Z`
+   tag on a commit that passed the Pipeline on `main`, re-tested and approved by a required reviewer
+   (`.github/workflows/release.yml`, [environments](../operations/environments.md)).
 5. Vulnerability assessment before promotion to production: the CI gate on every release plus the
    CERT-In empanelled VAPT before each Go-Live and annually (R-4.8-7).
 

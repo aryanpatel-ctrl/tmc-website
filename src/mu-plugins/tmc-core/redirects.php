@@ -38,7 +38,8 @@ function tmc_redirects_table() {
 
 /** Create or upgrade the table of the current site (cheap no-op when up to date). */
 function tmc_redirects_install() {
-	if ( (int) get_option( 'tmc_redirects_db_version' ) === TMC_REDIRECTS_DB_VERSION ) {
+	// Not while WordPress or a site is still being installed (its tables do not exist yet).
+	if ( ( function_exists( 'tmc_site_installed' ) && ! tmc_site_installed() ) || (int) get_option( 'tmc_redirects_db_version' ) === TMC_REDIRECTS_DB_VERSION ) {
 		return true;
 	}
 	global $wpdb;

@@ -74,6 +74,9 @@ function tmc_page_cache_request_rules() {
 /* ================================================================ purge API */
 
 function tmc_page_cache_blog_host( $blog_id ) {
+	if ( ! function_exists( 'get_site' ) ) {
+		return ''; // single-site bootstrap of the one-time network install: nothing is cached yet
+	}
 	$site = get_site( (int) $blog_id );
 	return $site ? tmc_pc_normalize_host( $site->domain ) : '';
 }
@@ -84,6 +87,9 @@ function tmc_page_cache_blog_host( $blog_id ) {
  * change was being saved cannot survive.
  */
 function tmc_page_cache_purge_blog( $blog_id = 0 ) {
+	if ( wp_installing() ) {
+		return; // network or site being installed: no page of it can be cached yet
+	}
 	$blog_id = $blog_id ? (int) $blog_id : get_current_blog_id();
 	foreach ( array_unique( array( $blog_id, (int) get_main_site_id() ) ) as $id ) {
 		$host = tmc_page_cache_blog_host( $id );

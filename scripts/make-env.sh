@@ -56,5 +56,15 @@ TMC_HTTP_PORT=8080
 SMOKE_ORIGIN=http://127.0.0.1:8080
 EOF
 fi
+if [ "$ENVIRONMENT" != local ] && [ "$ENVIRONMENT" != ci ]; then
+  cat >> .env <<'EOF'
+
+# Off-host backup copy to TMC's backup target in India (scripts/backup/offsite-copy.sh, run from
+# cron; docs/operations/backup-and-dr.md section 2). Fill in and uncomment:
+# TMC_OFFSITE_TARGET=tmcbackup@backup.example:/
+# TMC_OFFSITE_SSH_KEY=/home/deploy/.ssh/tmc_offsite
+# TMC_OFFSITE_KNOWN_HOSTS=/home/deploy/.ssh/tmc_offsite_known_hosts
+EOF
+fi
 chmod 600 .env
 echo ".env created for '$ENVIRONMENT' ($DOMAIN) — secrets not shown."

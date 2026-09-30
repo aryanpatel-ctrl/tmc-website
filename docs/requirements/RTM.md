@@ -136,13 +136,13 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 |---|---|---|---|---|---|
 | R-4.7-1 | Hosting on TMC-owned/subscribed infra; MeitY-empanelled cloud in TMC's name; all data, logs, backups in India | OPS/DOC | 🔲 container stack is host-agnostic; data residency statement | W8 | doc |
 | R-4.7-2 | Data residency compliance statement | DOC | 🔲 | W8 | doc |
-| R-4.7-3 | Separate **Dev, UAT, Production, DR** environments | OPS | 🟡 Dev (local) + CI + UAT; 🔲 Production promotion + DR stack | W7 | pipeline + DR drill |
+| R-4.7-3 | Separate **Dev, UAT, Production, DR** environments | OPS | 🟡 Dev + CI + UAT live; Production (`compose.prod.yml`, `release.yml`: tag → gate → approval) and DR (`make-env.sh dr`, isolated drill project) built — ⛔ production/DR hosts are TMC infrastructure | W7 | ops-checks.yml (compose), dr-drill.yml, docs/operations/environments.md |
 | R-4.7-4 | Controlled, auditable promotion of code; version control; rollback | OPS | ✅ Git + pipeline + release history + DB backup; rollback via workflow_dispatch | — | pipeline |
 | R-4.7-5 | Prod/DR infra owned by TMC; vendor access limited and logged | OPS/DOC | 🟡 key-restricted, switchable access; 🔲 access policy doc | W8 | doc |
-| R-4.7-6 | **RPO 15 minutes, RTO 1 hour**, demonstrated through periodic drills | OPS | 🔲 15-min backups + scripted restore drill with timed report | W7 | DR drill report |
+| R-4.7-6 | **RPO 15 minutes, RTO 1 hour**, demonstrated through periodic drills | OPS | ✅ backup every 15 min + off-host copy; timed drill (RPO/RTO measured) from the off-host copy, monthly in CI | W7 | dr-drill.yml report; health `backup`/`offsite` ages |
 | R-4.7-7 | Single CMS and security framework for TMC and all unit subdomains | BUILD | ✅ | — | — |
-| R-4.7-8 | Scheduled backup of content, databases, configurations; documented, tested restore | OPS | 🟡 pre-deploy DB backups; 🔲 scheduled DB + uploads + config, restore tested | W7 | restore test |
-| R-4.7-9 | Sustain peak load without degrading agreed thresholds; scale for more units/languages/modules | OPS | 🔲 object cache + page cache + load test | W7/W6 | k6 report |
+| R-4.7-8 | Scheduled backup of content, databases, configurations; documented, tested restore | OPS | ✅ DB + uploads/plugins/languages + config, checksummed, retention 48 h/30 d/12 m, audit-logged; restore.sh; docs/operations/backup-and-dr.md | W7 | backup-test.php, backup-retention-test.sh, dr-drill.yml |
+| R-4.7-9 | Sustain peak load without degrading agreed thresholds; scale for more units/languages/modules | OPS | ✅ Redis object cache + full-page cache (purge on change) + Brotli/static caching; k6 capacity test; thresholds to agree with TMC (docs/operations/capacity.md) | W7/W6 | perf-test.php, smoke.d/cache.sh, capacity.yml report |
 
 ## 4.8 Security and segregation from clinical systems — SOW p.8–9
 
@@ -212,7 +212,7 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 | R-4.14-1 | Test plan for TMC approval | DOC | 🔲 | W8 | doc |
 | R-4.14-2 | Functional + integration tests of all templates, interfaces, CMS workflows | BUILD | 🟡 47 checks + smoke; 🔲 e2e for every template | W6 | CI |
 | R-4.14-3 | Cross-browser and cross-device | BUILD | 🔲 | W6 | CI |
-| R-4.14-4 | Performance and load testing against thresholds | BUILD | 🔲 | W6/W7 | reports |
+| R-4.14-4 | Performance and load testing against thresholds | BUILD | 🟡 capacity/load test with thresholds (W7, capacity.yml); 🔲 front-end performance budgets (W6) | W6/W7 | reports |
 | R-4.14-5 | Security testing incl. VAPT | BUILD/CERT | 🔲 | W2 | reports |
 | R-4.14-6 | UAT support: defect logging, tracking, closure; defect closure report before each Go-Live | PROC | 🔲 issue templates + report script | W8 | doc |
 
@@ -251,10 +251,10 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 |---|---|---|---|---|---|
 | R-6-1 | 12-month warranty from Project Closure (defects, security fixes, performance, support) | PROC | 🔲 | W8 | doc |
 | R-6-2 | 4-year AMC: preventive maintenance, CMS/content support, hardening, tuning, minor enhancements | PROC | 🔲 | W8 | doc |
-| R-6-3 | Upgrades of core/plugins/frameworks/DB; security patches within 30 days, critical on priority | OPS | 🔲 automated update PRs + patch runbook | W7/W8 | Dependabot config |
+| R-6-3 | Upgrades of core/plugins/frameworks/DB; security patches within 30 days, critical on priority | OPS | ✅ Dependabot (actions, images, compose) + weekly wordpress.org check of pinned plugins/core (updates.yml) + docs/operations/patching.md | W7/W8 | Dependabot config, updates.yml |
 | R-6-4 | Annual VAPT, Safe-to-Host renewal, STQC re-certification, annual security review report | CERT/DOC | 🔲 report template | W8 | doc |
 | R-6-5 | Points of contact, escalation matrix, logged support channel; **monthly support report** (incidents, resolution times, SLA) | PROC | 🔲 | W8 | template |
-| R-6-6 | SLA: availability 99.5% monthly | OPS | 🔲 uptime monitoring + monthly availability report | W7 | report |
+| R-6-6 | SLA: availability 99.5% monthly | OPS | ✅ health endpoint + Uptime Kuma monitor set (docs/operations/monitoring.md) + monthly availability report script; monitoring host provided at go-live | W7 | health-test.php, availability-report-test.sh |
 | R-6-7 | SLA: critical 4 business hours, high 1 business day, medium 3 business days | PROC | 🔲 | W8 | doc |
 | R-6-8 | Quarterly security and performance review report | DOC | 🔲 template (inputs from CI reports) | W8 | doc |
 

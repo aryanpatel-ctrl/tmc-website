@@ -14,6 +14,7 @@
  * Other environment variables:
  *   QUALITY_WORKERS          parallel workers (default: 2 in CI, half the CPU cores locally)
  *   QUALITY_LOCALHOST_PROXY  1 = route WebKit through lib/localhost-proxy.js (developer Macs)
+ *   QUALITY_UPDATE_BASELINES 1 = write new visual baselines (only inside the CI container)
  */
 const path = require('path');
 const { defineConfig, devices } = require('@playwright/test');
@@ -80,6 +81,9 @@ module.exports = defineConfig({
   outputDir: path.join(OUT, 'artifacts'),
   // Baselines are platform-specific; only the Linux ones (made in the pinned CI container) are committed.
   snapshotPathTemplate: '{testDir}/baselines/{arg}-{projectName}-{platform}{ext}',
+  // Visual baselines change only on purpose: QUALITY_UPDATE_BASELINES=1 rewrites them all
+  // (docs/testing/quality-gates.md#visual-regression-baselines); otherwise missing ones are skipped.
+  updateSnapshots: process.env.QUALITY_UPDATE_BASELINES === '1' ? 'all' : 'none',
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI && SUITE === 'e2e' ? 1 : 0,

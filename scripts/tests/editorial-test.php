@@ -67,7 +67,18 @@ try {
 
 	/* ============================================================ page templates */
 	WP_CLI::log( '— Page templates (R-4.3-2)' );
-	tmc_register_page_templates(); // normally on rest_api_init / admin_init
+	wp_set_current_user( $unit_editor->ID );
+	$res     = $rest( 'GET', '/wp/v2/block-patterns/patterns' ); // what the block editor loads
+	$offered = array();
+	foreach ( (array) $res->get_data() as $pattern ) {
+		if ( in_array( 'core/post-content', (array) ( $pattern['block_types'] ?? array() ), true ) ) {
+			$offered[] = $pattern['name'];
+		}
+	}
+	$foreign = array_filter( wp_list_pluck( (array) $res->get_data(), 'name' ), fn( $name ) => ! str_starts_with( (string) $name, 'tmc/' ) );
+	$t( 'block editor (REST) offers the Content Editor the page templates (' . count( $offered ) . ') and only TMC patterns', 200 === $res->get_status() && ! array_diff( array( 'tmc/page-standard', 'tmc/page-landing', 'tmc/page-contact', 'tmc/page-documents', 'tmc/page-service', 'tmc/page-people', 'tmc/page-faq' ), $offered ) && ! $foreign );
+	wp_set_current_user( 0 );
+	tmc_register_page_templates(); // no-op when rest_api_init already registered them
 	$registry  = WP_Block_Patterns_Registry::get_instance();
 	$templates = tmc_page_templates();
 	$names     = function ( array $blocks ) use ( &$names ) {
@@ -145,7 +156,7 @@ try {
 		$pages['pattern'] = (int) $res->get_data()['id'];
 	}
 	$t( 'REST: Content Editor cannot create reusable patterns (HTTP ' . $res->get_status() . ')', in_array( $res->get_status(), array( 401, 403 ), true ) );
-	$t( 'HTML outside blocks counts as a Classic block', array( 'core/freeform' ) === tmc_unapproved_blocks( '<p>raw</p>' ) );
+	$t( 'nested unapproved blocks are found; plain text is left to kses', array( 'core/html' ) === tmc_unapproved_blocks( '<!-- wp:group --><div class="wp-block-group"><!-- wp:html --><b>x</b><!-- /wp:html --></div><!-- /wp:group -->' ) && array() === tmc_unapproved_blocks( 'Plain text from an API client.' ) );
 
 	wp_set_current_user( $unit_reviewer->ID );
 	$t( 'Reviewer / Publisher: same restriction', is_array( get_allowed_block_types( $context ) ) );
@@ -205,6 +216,16 @@ try {
 	$origin_url = get_permalink( $en );
 	$copies_en  = tmc_syndication_copies( $en );
 	$copies_hi  = tmc_syndication_copies( $hi );
+	ob_start();
+	tmc_syndication_box( get_post( $en ) );
+	$box = (string) ob_get_clean();
+	$t( 'panel lists every unit website with its sync state', substr_count( $box, 'name="tmc_syndication_targets[]"' ) === count( tmc_syndication_sites() ) && false !== strpos( $box, '(synced)' ) && false === strpos( $box, 'disabled' ) );
+	wp_set_current_user( $central_editor->ID );
+	ob_start();
+	tmc_syndication_box( get_post( $en ) );
+	$box = (string) ob_get_clean();
+	$t( 'panel is read-only for a TMC Content Editor', false !== strpos( $box, "disabled='disabled'" ) );
+	wp_set_current_user( $central->ID );
 	restore_current_blog();
 
 	$c_en = $copies_en[ $tmh ] ?? 0;
@@ -217,6 +238,7 @@ try {
 	$t( 'expiry date travels with the copy', $expires === get_post_meta( $c_en, '_tmc_expires_at', true ) );
 	$t( 'canonical URL of the copy is the original', $origin_url === wp_get_canonical_url( $c_en ) );
 	$t( 'copies never syndicate further (sync is a no-op on unit sites)', array() === tmc_syndication_sync( $c_en ) && ! tmc_syndication_busy() );
+	$t( 'unit site lists the copy as "Synced from … (read-only)"', isset( tmc_syndication_post_states( array(), get_post( $c_en ) )['tmc_synced'] ) );
 
 	WP_CLI::log( '— Network publishing: copies are read-only on unit sites' );
 	wp_set_current_user( $unit_reviewer->ID );
@@ -296,6 +318,22 @@ try {
 	$t( 'audit log records selection, create, update, unpublish, delete (' . implode( ', ', $logged ) . ')', ! array_diff( array( 'network_publish_targets_changed', 'network_copy_created', 'network_copy_updated', 'network_copy_unpublished', 'network_copy_deleted' ), $logged ) );
 	$t( 'audit chain intact', tmc_audit_verify()['ok'] );
 	wp_set_current_user( 0 );
+
+	// Writing on other sites must not corrupt their Polylang language cache (front page IDs).
+	$front_ok = function ( $blog ) use ( $wpdb ) {
+		switch_to_blog( $blog );
+		$front  = (int) $wpdb->get_var( "SELECT option_value FROM {$wpdb->options} WHERE option_name = 'page_on_front'" ); // raw: Polylang filters get_option()
+		$cached = get_transient( 'pll_languages_list' );
+		$en     = null;
+		foreach ( is_array( $cached ) ? $cached : array() as $language ) {
+			if ( 'en' === ( $language['slug'] ?? '' ) ) {
+				$en = (int) ( $language['page_on_front'] ?? 0 );
+			}
+		}
+		restore_current_blog();
+		return null === $en || $en === $front; // null: not cached (rebuilt correctly on next use)
+	};
+	$t( 'Polylang front-page cache stays correct on the TMC site and both unit sites', $front_ok( $main ) && $front_ok( $tmh ) && $front_ok( $viz ) );
 
 	/* ============================================================ information architecture */
 	WP_CLI::log( '— Audience entry points (R-1-1)' );

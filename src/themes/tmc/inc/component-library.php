@@ -512,7 +512,7 @@ function tmc_component_library_html() {
 		$body .= sprintf( '<section class="cl-group" aria-labelledby="cl-%1$s"><h2 id="cl-%1$s">%2$s</h2>', esc_attr( $group_id ), esc_html( $group['title'] ) );
 		foreach ( $group['items'] as list( $id, $title, $description, $render, $usage ) ) {
 			$toc  .= sprintf( '<li><a href="#%s">%s</a></li>', esc_attr( $id ), esc_html( $title ) );
-			$body .= sprintf( '<article class="cl-item" aria-labelledby="%1$s-title"><h3 id="%1$s-title"><a class="cl-anchor" id="%1$s" href="#%1$s">%2$s</a></h3><p>%3$s</p>', esc_attr( $id ), esc_html( $title ), esc_html( $description ) );
+			$body .= sprintf( '<article class="cl-item" aria-labelledby="cl-h-%1$s"><h3 id="cl-h-%1$s"><a class="cl-anchor" id="%1$s" href="#%1$s">%2$s</a></h3><p>%3$s</p>', esc_attr( $id ), esc_html( $title ), esc_html( $description ) );
 			if ( $render ) {
 				$body .= '<div class="cl-specimen">' . call_user_func( $render ) . '</div>';
 			}

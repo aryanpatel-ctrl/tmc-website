@@ -66,8 +66,9 @@ function tmc_user_has_full_block_palette( $user_id = 0 ) {
 }
 
 /**
- * Block names in $content that are not approved. Non-blank HTML outside blocks counts as
- * "core/freeform" (Classic block).
+ * Block names in $content that are not approved. Text outside block delimiters (plain text sent by
+ * API clients, legacy content) is not a block choice and stays subject to kses like all content;
+ * the Classic block itself is not in the inserter.
  *
  * @return string[]
  */
@@ -77,11 +78,7 @@ function tmc_unapproved_blocks( $content ) {
 	$walk     = function ( array $blocks ) use ( &$walk, &$found, $approved ) {
 		foreach ( $blocks as $block ) {
 			$name = $block['blockName'];
-			if ( null === $name ) {
-				if ( '' !== trim( (string) $block['innerHTML'] ) ) {
-					$found[] = 'core/freeform';
-				}
-			} elseif ( ! in_array( $name, $approved, true ) ) {
+			if ( null !== $name && ! in_array( $name, $approved, true ) ) {
 				$found[] = $name;
 			}
 			$walk( $block['innerBlocks'] );

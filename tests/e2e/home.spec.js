@@ -49,6 +49,11 @@ for (const site of SITES) {
     await expect(page.locator('html')).toHaveAttribute('lang', 'hi-IN');
     await expect(page.locator('h1')).toHaveCount(1);
     await expect(page.locator('.lang-switch a[hreflang="hi"]')).toHaveAttribute('aria-current', 'true');
+    // Network links stay in Hindi, and the current site's link is its own Hindi home (was /hi/hi/).
+    await expect(page.locator('.network-card a[aria-current="page"]')).toHaveAttribute('href', `${origin(site)}/hi/`);
+    for (const other of SITES) {
+      await expect(page.locator(`.network-card a[href="${origin(other)}/hi/"]`)).toHaveCount(1);
+    }
     await expectNoHorizontalScroll(page);
     expect(errors, 'JavaScript errors').toEqual([]);
   });

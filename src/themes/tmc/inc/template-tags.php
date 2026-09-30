@@ -72,11 +72,14 @@ function tmc_network_sites() {
 	foreach ( get_sites( array( 'number' => 50, 'archived' => 0, 'deleted' => 0, 'spam' => 0, 'orderby' => 'id' ) ) as $site ) {
 		$id      = (int) $site->blog_id;
 		$city    = get_blog_option( $id, 'hi' === $lang ? 'tmc_city_hi' : 'tmc_city' );
+		// The raw "home" option: get_home_url() of the current site already carries /hi/ on Hindi
+		// pages (Polylang filters it), which made the link /hi/hi/ (found by the W6 link crawler).
+		$home    = (string) get_blog_option( $id, 'home' );
 		$sites[] = array(
 			'id'      => $id,
 			'name'    => tmc_site_name( $id, $lang ),
 			'city'    => (string) $city,
-			'url'     => get_home_url( $id, '/' ) . ( 'hi' === $lang ? 'hi/' : '' ),
+			'url'     => set_url_scheme( trailingslashit( $home ), is_ssl() ? 'https' : wp_parse_url( $home, PHP_URL_SCHEME ) ) . ( 'hi' === $lang ? 'hi/' : '' ),
 			'current' => get_current_blog_id() === $id,
 		);
 	}

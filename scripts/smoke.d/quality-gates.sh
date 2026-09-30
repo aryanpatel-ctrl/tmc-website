@@ -15,3 +15,10 @@ check "$TMC_BASE_DOMAIN" "/privacy-policy/" 200 'personal information'
 check "$TMC_BASE_DOMAIN" "/" 200 "/privacy-policy/\">Privacy Policy</a>"
 check "tmh.$TMC_BASE_DOMAIN" "/sample-page/" 404
 check "tmh.$TMC_BASE_DOMAIN" "/hello-world/" 404
+
+# TMC network links on Hindi pages go to /hi/ of each site (the current site's link was /hi/hi/).
+check "tmh.$TMC_BASE_DOMAIN" "/hi/" 200 "href=\"http://tmh.$TMC_BASE_DOMAIN/hi/\" aria-current=\"page\""
+
+# The unit home pages have descriptive link text (migration 061). Meta descriptions are checked
+# by tests/e2e/templates.spec.js (markup-independent) and Lighthouse.
+check "tmh.$TMC_BASE_DOMAIN" "/" 200 '>More about us</a>'

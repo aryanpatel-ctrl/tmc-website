@@ -456,7 +456,7 @@ $build_home = function ( $lang ) use ( $is_main, $name, $name_hi, $url ) {
 		$sections[] = tmc_section_about(
 			$hi ? 'हमारे बारे में' : 'About us',
 			$hi ? "$name_hi टाटा मेमोरियल केंद्र की एक इकाई है, जो परमाणु ऊर्जा विभाग, भारत सरकार के अंतर्गत एक सहायता-अनुदान प्राप्त संस्थान है। यह क्षेत्र के रोगियों को टाटा मेमोरियल केंद्र के मानकों के अनुरूप कैंसर देखभाल, अनुसंधान एवं शिक्षा उपलब्ध कराता है।" : "$name is a unit of Tata Memorial Centre, a Grant-in-Aid institution under the Department of Atomic Energy, Government of India. It brings Tata Memorial Centre's standards of cancer care, research and education to patients in the region.",
-			array( $hi ? 'और पढ़ें' : 'Read more', $url( 'about-us', $lang ) )
+			array( $hi ? 'और पढ़ें' : 'More about us', $url( 'about-us', $lang ) )
 		);
 	}
 

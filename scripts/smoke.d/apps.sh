@@ -1,4 +1,5 @@
-# shellcheck shell=bash
+# shellcheck shell=bash disable=SC2034
+# (SC2034: FAILED and BODY belong to scripts/smoke-test.sh, which sources this file.)
 # W4 smoke checks, sourced by scripts/smoke-test.sh (uses its check function, $BODY and $FAILED).
 # Application front ends, location map (no map request before consent), share links, gateway
 # refusals; in demo environments (TMC_DEMO=1) also real round trips through the gateway to the mock.

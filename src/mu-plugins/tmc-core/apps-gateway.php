@@ -997,8 +997,18 @@ function tmc_apps_rest( WP_REST_Request $request ) {
 	}
 
 	if ( $refuse ) {
-		$result = $refuse;
-		tmc_apps_log( array( 'service' => $service, 'action' => $action, 'channel' => 'rest', 'request_id' => '' ), $result, 405 === $result['status'] ? 'refused_method' : 'refused_token' );
+		// Refusals count against the rate limit too, so a flood cannot fill the audit log.
+		$meta = array( 'service' => $service, 'action' => $action, 'channel' => 'rest', 'request_id' => '' );
+		$over = tmc_apps_rate_hit( $service, $svc['rate_limit'] );
+		if ( $over ) {
+			$result = tmc_apps_result( 429, 'rate' );
+			if ( 1 === $over ) {
+				tmc_apps_log( $meta, $result, 'rate_limited' );
+			}
+		} else {
+			$result = $refuse;
+			tmc_apps_log( $meta, $result, 405 === $result['status'] ? 'refused_method' : 'refused_token' );
+		}
 	} else {
 		$input = 'GET' === $method ? $request->get_query_params() : ( $request->get_json_params() ? $request->get_json_params() : $request->get_body_params() );
 		unset( $input['_tmc_token'], $input['lang'], $input['page'], $input['return_url'] );

@@ -671,6 +671,9 @@ function tmc_app_demo_checkout() {
 	}
 	nocache_headers();
 	header( 'X-Robots-Tag: noindex, nofollow' );
+	if ( tmc_apps_rate_hit( 'demo_checkout', 30 ) ) {
+		wp_die( esc_html( tmc_apps_messages()['rate'] ), esc_html__( 'Demo payment gateway', 'tmc' ), array( 'response' => 429 ) );
+	}
 	$order = sanitize_text_field( wp_unslash( $_GET['tmc_demo_checkout'] ) );
 	$error = '';
 	if ( 'POST' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {

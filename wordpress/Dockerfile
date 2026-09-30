@@ -12,6 +12,13 @@ RUN set -eux; \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
     rm -rf /var/lib/apt/lists/* /tmp/pear
 
+# pdftotext (poppler-utils, GPL-2.0) extracts the text of uploaded PDFs for site search.
+# Upstream version pinned; the Debian revision may move for security fixes.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends 'poppler-utils=25.03.0-5*'; \
+    rm -rf /var/lib/apt/lists/*
+
 RUN a2enmod remoteip headers expires
 
 COPY php.ini /usr/local/etc/php/conf.d/zz-tmc.ini

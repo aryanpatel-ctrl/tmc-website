@@ -76,7 +76,7 @@ function tmc_w4_seed_site() {
 			wp_update_post( array( 'ID' => $id, 'post_content' => wp_slash( $content ) ) );
 		}
 		$placed[] = $path;
-		$done[]   = "$m[1] placed on /$path/ (+ Hindi)";
+		$done[]   = "$m[1] placed on /$path/" . ( count( $ids ) > 1 ? ' (EN + HI)' : '' );
 	}
 	update_option( 'tmc_w4_placed', $placed, false );
 	return $done;

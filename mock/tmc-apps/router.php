@@ -215,7 +215,7 @@ if ( $route( 'POST', '/v1/appointments/requests' ) ) {
 	if ( $errors ) {
 		mock_out( 422, array( 'error' => 'validation_failed', 'fields' => $errors ) );
 	}
-	if ( 'DEMO-FAIL-500' === $body['patient_name'] ) {
+	if ( 'Demo Server Error' === $body['patient_name'] ) {
 		mock_out( 500, array( 'error' => 'internal', 'trace' => 'PDOException at /app/router.php:1 while connecting to db.' . MOCK_HOST . ':5432' ) );
 	}
 	if ( ! in_array( $body['department'], array_column( mock_departments(), 'code' ), true ) || ! mock_valid_date( $body['date'] ) ) {

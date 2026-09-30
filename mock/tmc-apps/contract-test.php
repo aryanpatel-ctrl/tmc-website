@@ -79,8 +79,8 @@ if ( $taken ) {
 	[ $s ] = $call( 'POST', '/v1/appointments/requests', array( 'slot' => $taken[0]['id'] ) + $request );
 	$t( 'request for a booked slot → 409', 409 === $s );
 }
-[ $s ] = $call( 'POST', '/v1/appointments/requests', array( 'patient_name' => 'DEMO-FAIL-500' ) + $request );
-$t( 'DEMO-FAIL-500 simulates a backend fault → 500', 500 === $s );
+[ $s ] = $call( 'POST', '/v1/appointments/requests', array( 'patient_name' => 'Demo Server Error' ) + $request );
+$t( 'patient name "Demo Server Error" simulates a backend fault → 500', 500 === $s );
 
 echo "— results\n";
 [ $s, $b ] = $call( 'POST', '/v1/results/lookup', array( 'roll_number' => 'DEMO1001', 'date_of_birth' => '2000-01-15' ) );

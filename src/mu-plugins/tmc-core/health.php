@@ -8,16 +8,20 @@
  *
  *   {"status":"ok","time":"2026-09-30T10:00:00Z","checks":{
  *     "database":{"ok":true}, "redis":{"ok":true}, "object_cache":{"ok":true}, "page_cache":{"ok":true},
- *     "cron":{"ok":true,"age_seconds":41}, "backup":{"ok":true,"age_seconds":312}, "disk":{"ok":true}}}
+ *     "cron":{"ok":true,"age_seconds":41}, "backup":{"ok":true,"age_seconds":312}, "disk":{"ok":true},
+ *     "offsite":{"ok":true,"age_seconds":1210}}}
  *
  * HTTP 200 when every check passes, 503 when any fails (so a plain HTTP monitor alerts). Limits:
  * cron heartbeat ≤ 10 min, newest good backup ≤ 30 min (two 15-minute intervals), ≥ 10 % free disk
- * for WordPress files and for the backup volume. See docs/operations/monitoring.md.
+ * for WordPress files and for the backup volume. "offsite" appears once an off-host copy has been
+ * recorded (scripts/backup/offsite-copy.sh): the data in the newest verified copy is ≤ 45 min old.
+ * See docs/operations/monitoring.md.
  *
  * Also here:
  *   - a one-minute cron heartbeat on the main site (proves the cron container is running);
  *   - copying each backup run (written by the backup container to <prefix>tmc_backup_log) into the
- *     tamper-evident audit log as backup_completed / backup_failed;
+ *     tamper-evident audit log as backup_completed / backup_failed, and each off-host copy as
+ *     backup_offsite_copied / backup_offsite_failed;
  *   - Network Admin → Health & Backups: current checks, recent backups, purge page cache.
  */
 
@@ -30,6 +34,7 @@ function tmc_health_limits() {
 		array(
 			'cron_max_age'     => 10 * MINUTE_IN_SECONDS,
 			'backup_max_age'   => 30 * MINUTE_IN_SECONDS,
+			'offsite_max_age'  => 45 * MINUTE_IN_SECONDS,
 			'disk_min_free_pc' => 10,
 		)
 	);
@@ -73,6 +78,35 @@ function tmc_backup_age( $utc_datetime ) {
 	return $time ? max( 0, time() - $time ) : null;
 }
 
+/** Seconds since the moment a snapshot was taken, from its name (YYYYMMDDTHHMMSSZ, UTC). */
+function tmc_backup_snapshot_age( $name ) {
+	if ( ! preg_match( '/^([0-9]{4})([0-9]{2})([0-9]{2})T([0-9]{2})([0-9]{2})([0-9]{2})Z$/', (string) $name, $m ) ) {
+		return null;
+	}
+	$time = gmmktime( (int) $m[4], (int) $m[5], (int) $m[6], (int) $m[2], (int) $m[3], (int) $m[1] );
+	return max( 0, time() - $time );
+}
+
+/** Off-host copies are configured once one has ever been recorded (success or failure). */
+function tmc_backup_offsite_configured() {
+	global $wpdb;
+	if ( ! tmc_backup_log_exists() ) {
+		return false;
+	}
+	$table = tmc_backup_log_table();
+	return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE status IN (%s, %s) LIMIT 1", 'offsite-ok', 'offsite-failed' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+}
+
+/** Audit action and screen label for each status the backup container writes. */
+function tmc_backup_statuses() {
+	return array(
+		'success'        => array( 'backup_completed', 'Backup: success (verified)' ),
+		'failed'         => array( 'backup_failed', 'Backup: failed' ),
+		'offsite-ok'     => array( 'backup_offsite_copied', 'Off-host copy: success (verified)' ),
+		'offsite-failed' => array( 'backup_offsite_failed', 'Off-host copy: failed' ),
+	);
+}
+
 /**
  * Copy new backup runs into the audit log (each exactly once). Runs from the cron heartbeat.
  *
@@ -91,9 +125,10 @@ function tmc_backup_audit_import( $limit = 50 ) {
 		if ( 1 !== (int) $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET audited = 1 WHERE id = %d AND audited = 0", $id ) ) ) {
 			continue;
 		}
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ) );
+		$row      = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ) );
+		$statuses = tmc_backup_statuses();
 		tmc_audit(
-			'success' === $row->status ? 'backup_completed' : 'backup_failed',
+			isset( $statuses[ $row->status ] ) ? $statuses[ $row->status ][0] : 'backup_failed',
 			array(
 				'user_id'      => 0,
 				'user_login'   => 'system',
@@ -191,6 +226,12 @@ function tmc_health_report( $fresh = false ) {
 	$backup_free    = $backup ? (int) $backup->volume_free_percent : null;
 	$checks['disk'] = array( 'ok' => null !== $web_free && $web_free >= $limits['disk_min_free_pc'] && ( null === $backup_free || $backup_free >= $limits['disk_min_free_pc'] ) );
 
+	if ( tmc_backup_offsite_configured() ) {
+		$copy              = tmc_backup_last( 'offsite-ok' );
+		$copy_age          = $copy ? tmc_backup_snapshot_age( $copy->name ) : null;
+		$checks['offsite'] = array( 'ok' => null !== $copy_age && $copy_age <= $limits['offsite_max_age'], 'age_seconds' => $copy_age );
+	}
+
 	$ok     = ! in_array( false, wp_list_pluck( $checks, 'ok' ), true );
 	$report = array(
 		'status' => $ok ? 'ok' : 'fail',
@@ -263,7 +304,9 @@ function tmc_health_admin_page() {
 		'cron'         => 'Scheduled jobs (cron container)',
 		'backup'       => 'Newest good backup',
 		'disk'         => 'Free disk space (web files and backup volume)',
+		'offsite'      => 'Newest verified off-host copy (age of its data)',
 	);
+	$statuses = tmc_backup_statuses();
 	$age    = static function ( $seconds ) {
 		return null === $seconds ? 'never' : human_time_diff( time() - (int) $seconds, time() ) . ' ago';
 	};
@@ -294,9 +337,9 @@ function tmc_health_admin_page() {
 	}
 	echo '</tbody></table>';
 
-	echo '<h2>Recent backups</h2><p>Taken every 15 minutes by the backup container; kept every 15 minutes for 48 hours, daily for 30 days and monthly for 12 months. Restore procedure: <code>docs/operations/backup-and-dr.md</code>.</p>';
+	echo '<h2>Recent backups</h2><p>Taken every 15 minutes by the backup container; kept every 15 minutes for 48 hours, daily for 30 days and monthly for 12 months. Off-host copies to TMC\'s backup target are listed too. Restore procedure: <code>docs/operations/backup-and-dr.md</code>.</p>';
 	$runs = tmc_backup_recent( 20 );
-	echo '<table class="widefat striped"><caption class="screen-reader-text">Twenty most recent backup runs</caption><thead><tr><th scope="col">Finished (IST)</th><th scope="col">Result</th><th scope="col">Snapshot</th><th scope="col">Type</th><th scope="col">Database</th><th scope="col">Files (new / total)</th><th scope="col">Duration</th><th scope="col">Message</th></tr></thead><tbody>';
+	echo '<table class="widefat striped"><caption class="screen-reader-text">Twenty most recent backup runs and off-host copies</caption><thead><tr><th scope="col">Finished (site time)</th><th scope="col">Result</th><th scope="col">Snapshot</th><th scope="col">Type</th><th scope="col">Database</th><th scope="col">Files (new / total)</th><th scope="col">Duration</th><th scope="col">Message</th></tr></thead><tbody>';
 	if ( ! $runs ) {
 		echo '<tr><td colspan="8">No backup has been recorded yet. Check that the backup container is running.</td></tr>';
 	}
@@ -304,7 +347,7 @@ function tmc_health_admin_page() {
 		printf(
 			'<tr><td>%s</td><td>%s</td><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s / %s</td><td>%s s</td><td>%s</td></tr>',
 			esc_html( wp_date( 'd/m/Y H:i:s', (int) strtotime( $run->finished_at . ' UTC' ) ) ),
-			esc_html( 'success' === $run->status ? 'Success (verified)' : 'Failed' ),
+			esc_html( isset( $statuses[ $run->status ] ) ? $statuses[ $run->status ][1] : $run->status ),
 			esc_html( $run->name ),
 			esc_html( $run->tier ),
 			esc_html( size_format( (int) $run->db_bytes ) ),

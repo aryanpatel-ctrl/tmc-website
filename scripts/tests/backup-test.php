@@ -61,5 +61,48 @@ $t( 'a failed run does not count as the newest good backup', ! $last || tmc_back
 $t( 'audit chain intact', tmc_audit_verify()['ok'] );
 $wpdb->delete( $table, array( 'id' => $row_id ) ); // test row only; the audit entry stays, by design
 
+WP_CLI::log( '— Off-host copies (scripts/backup/offsite-copy.sh → tmc-backup record-offsite)' );
+$configured_before = tmc_backup_offsite_configured();
+$fresh_name        = gmdate( 'Ymd\THis\Z', time() - 5 * MINUTE_IN_SECONDS );
+$stale_name        = gmdate( 'Ymd\THis\Z', time() - 2 * HOUR_IN_SECONDS );
+$offsite_row       = function ( $status, $name ) use ( $wpdb, $table ) {
+	$wpdb->insert(
+		$table,
+		array(
+			'started_at'  => gmdate( 'Y-m-d H:i:s', time() - 30 ),
+			'finished_at' => gmdate( 'Y-m-d H:i:s' ),
+			'status'      => $status,
+			'name'        => $name,
+			'tier'        => 'offsite',
+			'verified'    => 'offsite-ok' === $status ? 1 : 0,
+			'message'     => 'test row (backup-test.php)',
+		)
+	);
+	return (int) $wpdb->insert_id;
+};
+$rows   = array();
+$rows[] = $offsite_row( 'offsite-ok', $fresh_name );
+$check  = tmc_health_report( true )['checks']['offsite'] ?? null;
+$t( 'a recorded copy adds the "offsite" health check', is_array( $check ) );
+$t( 'fresh verified copy → ok, age measured from the snapshot time (' . ( $check['age_seconds'] ?? 'none' ) . 's)', $check && true === $check['ok'] && abs( $check['age_seconds'] - 5 * MINUTE_IN_SECONDS ) <= 60 );
+$rows[] = $offsite_row( 'offsite-failed', '' );
+$check  = tmc_health_report( true )['checks']['offsite'];
+$t( 'a failed copy after it does not hide the last good one (still ok)', true === $check['ok'] );
+$t( 'a failed copy does not count as a backup', tmc_backup_last( 'success' ) == $last ); // phpcs:ignore Universal.Operators.StrictComparisons -- same row, separate objects
+$rows[] = $offsite_row( 'offsite-ok', $stale_name );
+$check  = tmc_health_report( true )['checks']['offsite'];
+$t( 'newest copy holds 2-hour-old data → not ok (limit ' . tmc_health_limits()['offsite_max_age'] . 's)', false === $check['ok'] && $check['age_seconds'] >= 2 * HOUR_IN_SECONDS );
+$before = (int) $wpdb->get_var( 'SELECT COALESCE(MAX(id),0) FROM ' . tmc_audit_table() );
+tmc_backup_audit_import();
+$actions = $wpdb->get_col( $wpdb->prepare( 'SELECT action FROM ' . tmc_audit_table() . ' WHERE id > %d AND object_type = %s AND object_id IN (%d, %d, %d) ORDER BY id', $before, 'backup', $rows[0], $rows[1], $rows[2] ) );
+// The cron heartbeat may have imported some of the rows already (before $before): all that were left must map correctly.
+$t( 'copies reach the audit log as backup_offsite_copied / backup_offsite_failed', ! array_diff( $actions, array( 'backup_offsite_copied', 'backup_offsite_failed' ) ) && 3 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE audited = 1 AND id IN (%d, %d, %d)", $rows[0], $rows[1], $rows[2] ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+foreach ( $rows as $id ) {
+	$wpdb->delete( $table, array( 'id' => $id ) );
+}
+wp_cache_delete( 'report', 'tmc_health' );
+$t( 'without recorded copies the check disappears again (as before this test)', $configured_before === tmc_backup_offsite_configured() );
+$t( 'audit chain intact after the imports', tmc_audit_verify()['ok'] );
+
 WP_CLI::log( '' );
 $fail ? WP_CLI::error( "$fail failed, $pass passed" ) : WP_CLI::success( "all $pass checks passed" );

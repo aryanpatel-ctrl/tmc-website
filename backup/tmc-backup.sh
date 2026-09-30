@@ -26,6 +26,8 @@
 #   tmc-backup run [tier]        one backup now (tier: manual, pre-deploy, …)
 #   tmc-backup verify [name]     re-check every checksum of a snapshot (default: latest)
 #   tmc-backup list | latest | status | health | prune
+#   tmc-backup record-offsite ok|failed <name> <started> <finished> <message>
+#                                record an off-host copy (scripts/backup/offsite-copy.sh, run on the host)
 set -Eeuo pipefail
 umask 077
 
@@ -402,6 +404,31 @@ cmd_status() {
   cmd_health || true
 }
 
+# Off-host copies are made from the Docker host (this container has no route out of tmc_internal);
+# scripts/backup/offsite-copy.sh reports each one here so it reaches the backup log, the audit log
+# and the "offsite" check of /wp-json/tmc/v1/health.
+cmd_record_offsite() { # ok|failed name started finished message
+  local result="${1:-}" name="${2:-}" started finished status env_file db_bytes=0 files_total=0
+  case "$result" in
+    ok) status=offsite-ok ;;
+    failed) status=offsite-failed ;;
+    *) die "usage: tmc-backup record-offsite ok|failed <name> <started> <finished> <message>" ;;
+  esac
+  if [ -n "$name" ] && ! [[ "$name" =~ $NAME_RE ]]; then die "invalid snapshot name: $name"; fi
+  started="$(num "${3:-}")"; finished="$(num "${4:-}")"
+  env_file="$SNAPSHOTS/$name/backup.env"
+  if [ -n "$name" ] && [ -f "$env_file" ]; then
+    db_bytes="$(field DB_BYTES "$env_file")"; files_total="$(field FILES_TOTAL "$env_file")"
+  fi
+  mkdir -p "$STATUS_DIR"
+  db_cnf
+  wait_for_db || die "database $DB_HOST unreachable — off-host copy not recorded"
+  ensure_table >/dev/null 2>&1 || log "warning: could not create $TABLE"
+  record "$status" "$name" offsite "$started" "$finished" "$db_bytes" "$files_total" 0 \
+    "$(snapshot_names | wc -l | tr -d ' ')" "$(volume_free_percent)" "$([ "$result" = ok ] && echo 1 || echo 0)" "${5:-}"
+  log "off-host copy $result${name:+: $name}${5:+ — $5}"
+}
+
 cmd_daemon() {
   local period now last
   [[ "$INTERVAL_MINUTES" =~ ^[0-9]+$ ]] && [ "$INTERVAL_MINUTES" -ge 1 ] || die "invalid TMC_BACKUP_INTERVAL_MINUTES"
@@ -423,7 +450,7 @@ cmd_daemon() {
   done
 }
 
-usage() { sed -n '2,32p' "$SELF" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,30p' "$SELF" | sed 's/^# \{0,1\}//'; }
 
 cmd="${1:-daemon}"
 if [ "$#" -gt 0 ]; then shift; fi
@@ -437,6 +464,7 @@ case "$cmd" in
   latest)     latest_name ;;
   status)     cmd_status ;;
   health)     cmd_health ;;
+  record-offsite) cmd_record_offsite "$@" ;;
   help|-h|--help) usage ;;
   *)          usage >&2; exit 2 ;;
 esac

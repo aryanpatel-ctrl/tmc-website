@@ -1,8 +1,10 @@
 # DR drill in CI — tender §4.7: RPO 15 minutes and RTO 1 hour, demonstrated through periodic drills.
 #
 #   provision all six sites → create labelled test content (post + uploaded file) → take a backup →
-#   restore it into the isolated compose project "tmc-dr" (own volumes/networks, no published ports)
-#   → smoke test inside that network → verify the test content → Markdown report (job summary + artifact)
+#   copy the backups off the host (scripts/backup/offsite-copy.sh; here to a separate directory) →
+#   restore the newest backup FROM THAT COPY (the primary host is assumed lost) into the isolated
+#   compose project "tmc-dr" (own volumes/networks, no published ports) → smoke test inside that
+#   network → verify the test content → Markdown report (job summary + artifact)
 #
 # Reusable (the integrator calls it from pipeline.yml with `uses: ./.github/workflows/dr-drill.yml`);
 # also runs monthly and on demand, so a current drill report always exists.
@@ -48,12 +50,25 @@ jobs:
           docker compose exec -T backup tmc-backup verify latest
           docker compose exec -T backup tmc-backup list
 
-      - name: DR drill — restore into tmc-dr, measure RPO and RTO
+      - name: Off-host copy (to a directory standing in for TMC's backup target)
+        run: |
+          set -a; . ./.env; set +a
+          TMC_OFFSITE_TARGET="$RUNNER_TEMP/offsite" ./scripts/backup/offsite-copy.sh
+          # A second run copies nothing new (incremental) and still verifies.
+          TMC_OFFSITE_TARGET="$RUNNER_TEMP/offsite" ./scripts/backup/offsite-copy.sh
+          test -d "$RUNNER_TEMP/offsite/snapshots/$(docker compose exec -T backup tmc-backup latest | tr -d '\r')"
+          grep -q '^LAST_RESULT=ok$' backups/offsite.status
+          body="$(curl -s -H "Host: $TMC_BASE_DOMAIN" http://127.0.0.1/wp-json/tmc/v1/health)"
+          echo "$body"
+          grep -q '"offsite":{"ok":true' <<<"$body"
+
+      - name: DR drill — restore the off-host copy into tmc-dr, measure RPO and RTO
         env:
           CANARY_TITLE: ${{ steps.canary.outputs.title }}
           CANARY_UPLOAD: ${{ steps.canary.outputs.upload }}
         run: |
-          ./scripts/dr/drill.sh --dr-dir "$RUNNER_TEMP/tmc-dr" --report "$RUNNER_TEMP/dr-report/dr-drill-report.md" \
+          ./scripts/dr/drill.sh --source-dir "$RUNNER_TEMP/offsite" --dr-dir "$RUNNER_TEMP/tmc-dr" \
+            --report "$RUNNER_TEMP/dr-report/dr-drill-report.md" \
             --expect-site tmh. --expect-post "$CANARY_TITLE" --expect-upload "$CANARY_UPLOAD"
 
       - name: Drill report in the job summary

@@ -28,7 +28,11 @@ $t( 'cron container has run the heartbeat (' . ( $beat ? ( time() - $beat ) . 's
 WP_CLI::log( '— Report' );
 $report = tmc_health_report( true );
 $checks = $report['checks'];
-$t( 'reports database, redis, object_cache, page_cache, cron, backup, disk', array( 'database', 'redis', 'object_cache', 'page_cache', 'cron', 'backup', 'disk' ) === array_keys( $checks ) );
+$expected = array( 'database', 'redis', 'object_cache', 'page_cache', 'cron', 'backup', 'disk' );
+if ( tmc_backup_offsite_configured() ) {
+	$expected[] = 'offsite'; // only where scripts/backup/offsite-copy.sh has run
+}
+$t( 'reports ' . implode( ', ', $expected ), $expected === array_keys( $checks ) );
 $shape = true;
 foreach ( $checks as $check ) {
 	$shape = $shape && is_bool( $check['ok'] ) && ! array_diff( array_keys( $check ), array( 'ok', 'age_seconds' ) );

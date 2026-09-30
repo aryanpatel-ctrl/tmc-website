@@ -80,10 +80,12 @@ t="$(date +%s)"
 HELPER=(docker run --rm --user 0 --network none)
 if [ -n "$SOURCE_DIR" ]; then
   SOURCE_DIR="$(cd "$SOURCE_DIR" && pwd)"; SRC_MOUNT=(-v "$SOURCE_DIR:/backups:ro"); RESTORE_SRC=(--source-dir "$SOURCE_DIR")
+  SOURCE_DESC="off-host copy \`$SOURCE_DIR\` (scripts/backup/offsite-copy.sh)"
 else
   vol="$(docker volume ls -q --filter "label=com.docker.compose.project=$SRC_PROJECT" --filter "label=com.docker.compose.volume=backup_data" | head -n 1)"
   [ -n "$vol" ] || die "no backup volume for project $SRC_PROJECT"
   SRC_MOUNT=(-v "$vol:/backups:ro"); RESTORE_SRC=(--source-volume "$vol")
+  SOURCE_DESC="backup volume \`$vol\` of the protected stack"
 fi
 docker image inspect tmc-backup:latest >/dev/null 2>&1 || docker build -q -t tmc-backup:latest "$SOURCE/backup" >/dev/null
 if [ "$BACKUP" = latest ]; then BACKUP="$("${HELPER[@]}" "${SRC_MOUNT[@]}" tmc-backup:latest latest)"; fi
@@ -219,6 +221,7 @@ if [ "${RECENT_COUNT:-0}" -ge 2 ]; then GAP_TEXT="$(fmt "$MAX_GAP") across $RECE
   echo "|---|---|"
   echo "| Protected stack | \`$SRC_PROJECT\` ($DOMAIN) on $(hostname) |"
   echo "| DR stack | \`$DR_PROJECT\` — isolated project, own volumes and networks, no published ports |"
+  echo "| Restored from | $SOURCE_DESC |"
   echo "| Backup restored | \`$BACKUP\` ($(bfield TIER)), database state $(utc "$DB_SNAPSHOT_AT") |"
   echo "| Backup size | database $(bfield DB_BYTES) bytes (compressed), $(bfield FILES_TOTAL) files |"
   release="$(bfield RELEASE)"

@@ -4,7 +4,7 @@
 
 seo_absent() { # host path needle — the response body must NOT contain needle
   local body
-  body="$(curl -s -m 20 -H "Host: $1" "http://127.0.0.1$2")"
+  body="$(curl -s -m 20 -H "Host: $1" "${ORIGIN:-http://127.0.0.1}$2")"
   if grep -qF -- "$3" <<<"$body"; then
     printf '  FAIL  %-48s %s\n' "$1$2" "unexpected '$3'"
     FAILED=1
@@ -15,7 +15,7 @@ seo_absent() { # host path needle — the response body must NOT contain needle
 
 seo_header() { # host path header-text — a response header must contain header-text
   local headers
-  headers="$(curl -s -m 20 -o /dev/null -D - -H "Host: $1" "http://127.0.0.1$2")"
+  headers="$(curl -s -m 20 -o /dev/null -D - -H "Host: $1" "${ORIGIN:-http://127.0.0.1}$2")"
   if grep -qiF -- "$3" <<<"$headers"; then
     printf '  ok    %-48s %s\n' "$1$2" "header '$3'"
   else

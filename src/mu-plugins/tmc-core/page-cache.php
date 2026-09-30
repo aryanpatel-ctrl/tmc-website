@@ -42,21 +42,31 @@ function tmc_page_cache_bypass_reason() {
 }
 
 /**
- * Nonce actions that do not make a page uncacheable. WordPress core creates a "wp_rest" nonce whenever
- * its script registry is set up (the inline configuration of wp-api-fetch), on every page, whether or
- * not the script is printed; it is the same for every logged-out visitor and nothing on a public page
- * relies on it.
+ * Nonce actions that do not make a page uncacheable: nothing on a public page relies on them.
  */
 function tmc_page_cache_nonce_exempt_actions() {
 	return (array) apply_filters( 'tmc_page_cache_nonce_exempt_actions', array( 'wp_rest' ) );
 }
 
+/*
+ * WordPress core creates nonces while it sets up its script registry, on every page and whether or not
+ * the scripts are printed (the inline configuration of wp-api-fetch, wp-api-request, user-profile …).
+ * They are not forms, so nonces created during the "wp_default_scripts" action are ignored.
+ */
+add_action( 'wp_default_scripts', fn() => $GLOBALS['tmc_page_cache_in_registry'] = true, PHP_INT_MIN );
+add_action( 'wp_default_scripts', fn() => $GLOBALS['tmc_page_cache_in_registry'] = false, PHP_INT_MAX );
+
 // A nonce for a logged-out visitor means a form: a cached copy would hand everyone the same nonce.
 add_filter(
 	'nonce_user_logged_out',
 	function ( $uid, $action = -1 ) {
-		if ( ! in_array( $action, tmc_page_cache_nonce_exempt_actions(), true ) ) {
+		if ( empty( $GLOBALS['tmc_page_cache_in_registry'] ) && ! in_array( $action, tmc_page_cache_nonce_exempt_actions(), true ) ) {
 			tmc_page_cache_bypass( 'nonce' );
+			// Outside production, name the first nonce action that made the page uncacheable (diagnosis).
+			if ( ! headers_sent() && 'production' !== wp_get_environment_type() && empty( $GLOBALS['tmc_page_cache_nonce_action'] ) ) {
+				$GLOBALS['tmc_page_cache_nonce_action'] = substr( preg_replace( '/[^A-Za-z0-9_.:-]/', '', (string) $action ), 0, 64 );
+				header( 'X-TMC-Cache-Nonce: ' . $GLOBALS['tmc_page_cache_nonce_action'] );
+			}
 		}
 		return $uid;
 	},

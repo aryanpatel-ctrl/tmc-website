@@ -17,7 +17,7 @@ w4_post() { # host path content-type data expected-status must-contain [token]
   local host="$1" path="$2" type="$3" data="$4" want="$5" needle="$6" token="${7:-}" got problem=""
   local extra=()
   [ -n "$token" ] && extra=(-H "X-TMC-Token: $token")
-  got="$(curl -s -o "$BODY" -w '%{http_code}' -m 20 -H "Host: $host" -H "Content-Type: $type" ${extra[@]+"${extra[@]}"} --data "$data" "http://127.0.0.1$path")"
+  got="$(curl -s -o "$BODY" -w '%{http_code}' -m 20 -H "Host: $host" -H "Content-Type: $type" ${extra[@]+"${extra[@]}"} --data "$data" "${ORIGIN:-http://127.0.0.1}$path")"
   [ "$got" = "$want" ] || problem="HTTP $got (want $want)"
   grep -qF -- "$needle" "$BODY" || problem="${problem:+$problem; }missing '$needle'"
   if [ -n "$problem" ]; then

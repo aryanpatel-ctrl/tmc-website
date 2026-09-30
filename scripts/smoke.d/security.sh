@@ -13,7 +13,7 @@ sec_result() { # label problem
 }
 
 sec_fetch() { # host path -> response headers on stdout (lower-cased names, no CR), body in $BODY
-  curl -s -o "$BODY" -D - -m 20 -H "Host: $1" "http://127.0.0.1$2" | tr -d '\r'
+  curl -s -o "$BODY" -D - -m 20 -H "Host: $1" "${ORIGIN:-http://127.0.0.1}$2" | tr -d '\r'
 }
 
 # sec_headers HOST PATH REGEX... : every extended regex must match a response header line (case-insensitive)
@@ -42,7 +42,7 @@ sec_no_headers() {
 sec_absent() {
   local host="$1" path="$2" want="$3" got problem="" needle
   shift 3
-  got="$(curl -s -o "$BODY" -w '%{http_code}' -m 20 -H "Host: $host" "http://127.0.0.1$path")"
+  got="$(curl -s -o "$BODY" -w '%{http_code}' -m 20 -H "Host: $host" "${ORIGIN:-http://127.0.0.1}$path")"
   [ "$got" = "$want" ] || problem="HTTP $got (want $want)"
   for needle in "$@"; do
     if grep -qiF -- "$needle" "$BODY"; then problem="${problem:+$problem; }reveals '$needle'"; fi
@@ -98,11 +98,11 @@ sec_absent "$TMC_BASE_DOMAIN" "/wp-sitemap-users-1.xml" 404 "${WP_ADMIN_USER:-tm
 # the Docker gateway / reverse proxy (a trusted proxy for mod_remoteip), which forwards the client
 # address in X-Forwarded-For. Only meaningful with the default list.
 if [ -z "${TMC_ADMIN_ALLOW_CIDRS:-}" ]; then
-  sec_code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 -H "Host: $TMC_BASE_DOMAIN" -H "X-Forwarded-For: 198.51.100.7" "http://127.0.0.1/wp-login.php")"
+  sec_code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 -H "Host: $TMC_BASE_DOMAIN" -H "X-Forwarded-For: 198.51.100.7" "${ORIGIN:-http://127.0.0.1}/wp-login.php")"
   sec_result "$TMC_BASE_DOMAIN/wp-login.php (from 198.51.100.7)" "$([ "$sec_code" = 403 ] || echo "HTTP $sec_code (want 403)")" "$sec_code"
-  sec_code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 -H "Host: $TMC_BASE_DOMAIN" -H "X-Forwarded-For: 198.51.100.7" "http://127.0.0.1/wp-admin/")"
+  sec_code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 -H "Host: $TMC_BASE_DOMAIN" -H "X-Forwarded-For: 198.51.100.7" "${ORIGIN:-http://127.0.0.1}/wp-admin/")"
   sec_result "$TMC_BASE_DOMAIN/wp-admin/ (from 198.51.100.7)" "$([ "$sec_code" = 403 ] || echo "HTTP $sec_code (want 403)")" "$sec_code"
-  sec_code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 -H "Host: $TMC_BASE_DOMAIN" -H "X-Forwarded-For: 198.51.100.7" "http://127.0.0.1/wp-admin/admin-ajax.php")"
+  sec_code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 -H "Host: $TMC_BASE_DOMAIN" -H "X-Forwarded-For: 198.51.100.7" "${ORIGIN:-http://127.0.0.1}/wp-admin/admin-ajax.php")"
   sec_result "$TMC_BASE_DOMAIN/admin-ajax.php public (from 198.51.100.7)" "$([ "$sec_code" != 403 ] || echo "HTTP 403: public endpoint blocked")" "$sec_code"
   unset sec_code
 fi

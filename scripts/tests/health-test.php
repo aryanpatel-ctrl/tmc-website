@@ -75,7 +75,7 @@ if ( $fp ) {
 }
 list( $head, $body ) = array_pad( explode( "\r\n\r\n", $raw, 2 ), 2, '' );
 $data                = json_decode( $body, true );
-$ok_http = 0 === strpos( $head, 'HTTP/1.1 200' ) && 'ok' === ( $data['status'] ?? '' );
+$ok_http = 1 === preg_match( '#^HTTP/1\.[01] 200#', $head ) && 'ok' === ( $data['status'] ?? '' ); // Apache answers an HTTP/1.0 request as 1.0 or 1.1
 $t( 'GET /wp-json/tmc/v1/health → 200 with JSON status ok' . ( $ok_http ? '' : ' (got: ' . strtok( $head, "\r\n" ) . ' ' . substr( preg_replace( '/\s+/', ' ', $body ), 0, 300 ) . ')' ), $ok_http );
 $t( 'never served from the page cache', 1 === preg_match( '/^X-TMC-Cache: BYPASS/mi', $head ) );
 

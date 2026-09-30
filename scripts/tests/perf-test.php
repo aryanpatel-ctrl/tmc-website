@@ -55,7 +55,7 @@ $http = function ( $url, array $headers = array(), $method = 'GET', $body = '' )
 	return array( 'status' => $status, 'headers' => $parsed, 'body' => $content );
 };
 $state = fn( $r ) => $r['headers']['x-tmc-cache'] ?? 'none';
-$why   = fn( $r ) => $state( $r ) . ( isset( $r['headers']['x-tmc-cache-reason'] ) ? ':' . $r['headers']['x-tmc-cache-reason'] : '' );
+$why   = fn( $r ) => $state( $r ) . ( isset( $r['headers']['x-tmc-cache-reason'] ) ? ':' . $r['headers']['x-tmc-cache-reason'] : '' ) . ( isset( $r['headers']['x-tmc-cache-nonce'] ) ? ' (' . $r['headers']['x-tmc-cache-nonce'] . ')' : '' );
 /** Request until the page is stored (first view may already be a HIT from an earlier request). */
 $warm = function ( $url ) use ( $http, $state ) {
 	$http( $url );
@@ -89,6 +89,11 @@ $t( 'a nonce created for an anonymous visitor (a form) makes the page uncacheabl
 $GLOBALS['tmc_page_cache_bypass'] = '';
 wp_create_nonce( 'wp_rest' );
 $t( 'the core "wp_rest" nonce (created with every script registry) does not stop caching', '' === tmc_page_cache_bypass_reason() );
+$saved_scripts         = $GLOBALS['wp_scripts'] ?? null;
+$GLOBALS['wp_scripts'] = null;
+wp_scripts(); // sets up the core script registry again, as on every page view
+$GLOBALS['wp_scripts'] = $saved_scripts;
+$t( 'nonces WordPress creates while registering its scripts do not stop caching (' . ( tmc_page_cache_bypass_reason() ? tmc_page_cache_bypass_reason() : 'none' ) . ')', '' === tmc_page_cache_bypass_reason() );
 $GLOBALS['tmc_page_cache_bypass'] = '';
 foreach ( array( 'save_post', 'transition_post_status', 'updated_post_meta', 'set_object_terms', 'wp_update_nav_menu', 'customize_save_after', 'updated_option', 'wp_update_site' ) as $hook ) {
 	$t( "purge wired to $hook", false !== has_action( $hook ) );

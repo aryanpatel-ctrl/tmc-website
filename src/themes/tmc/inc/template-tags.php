@@ -116,25 +116,7 @@ function tmc_contact_details() {
 	echo '</address>';
 }
 
-function tmc_social_links() {
-	$networks = array(
-		'tmc_facebook'  => 'Facebook',
-		'tmc_x'         => 'X',
-		'tmc_youtube'   => 'YouTube',
-		'tmc_instagram' => 'Instagram',
-		'tmc_linkedin'  => 'LinkedIn',
-	);
-	$links    = array();
-	foreach ( $networks as $mod => $label ) {
-		$url = get_theme_mod( $mod );
-		if ( $url ) {
-			$links[] = '<li>' . tmc_external_link( $url, $label, 'social social-' . sanitize_html_class( strtolower( $label ) ) ) . '</li>';
-		}
-	}
-	if ( $links ) {
-		printf( '<h2 class="footer-heading">%s</h2><ul class="social-links">%s</ul>', esc_html__( 'Follow us', 'tmc' ), implode( '', $links ) ); // phpcs:ignore WordPress.Security.EscapeOutput
-	}
-}
+// tmc_social_links() (footer "Follow us") lives in inc/social.php with the share links.
 
 /* ---------------------------------------------------------------- dates */
 

@@ -1,0 +1,40 @@
+/* Footer social links and share links (inc/social.php). */
+
+.footer-social-heading { margin-top: 1rem; }
+.site-footer .social-links a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	padding: 0.35rem 0.85rem;
+	border: 1px solid rgb(255 255 255 / 40%);
+	border-radius: 999px;
+	text-decoration: none;
+}
+.site-footer .social-links a:hover { background: rgb(255 255 255 / 10%); text-decoration: underline; }
+.social-demo-note { margin: 0.6rem 0 0; font-size: 0.8125rem; color: #c3cfdd; }
+
+.share-links { margin: 2rem 0 1rem; padding-top: 1.25rem; border-top: 1px solid var(--c-line); }
+.share-title { font-size: 1rem; margin-bottom: 0.6rem; color: var(--c-primary-dark); }
+.share-links ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; }
+.share-link {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	padding: 0.4rem 0.9rem;
+	border: 2px solid var(--c-primary);
+	border-radius: var(--radius);
+	background: var(--c-white);
+	color: var(--c-primary);
+	font: inherit;
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+}
+.share-link:hover { background: var(--c-tint); color: var(--c-primary-dark); }
+
+html[data-contrast="high"] .share-link,
+html[data-contrast="high"] .site-footer .social-links a { border-color: #ff0 !important; background: #000 !important; }
+
+@media print {
+	.share-links { display: none; }
+}

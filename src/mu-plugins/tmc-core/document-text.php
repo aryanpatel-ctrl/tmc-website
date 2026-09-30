@@ -30,9 +30,17 @@ function tmc_document_text_table() {
 	return $wpdb->prefix . 'tmc_document_text';
 }
 
+/**
+ * False while WordPress or a new site is being installed (no core tables yet): TMC tables, options
+ * and terms are created on the first normal load instead.
+ */
+function tmc_site_installed() {
+	return ! wp_installing() && is_blog_installed();
+}
+
 /** Create/upgrade the extracted-text table of the current site. */
 function tmc_document_text_install() {
-	if ( (int) get_option( 'tmc_doc_text_db_version' ) === TMC_DOC_TEXT_DB_VERSION ) {
+	if ( (int) get_option( 'tmc_doc_text_db_version' ) === TMC_DOC_TEXT_DB_VERSION || ! tmc_site_installed() ) {
 		return;
 	}
 	global $wpdb;
@@ -117,9 +125,12 @@ function tmc_document_extract( $attachment_id ) {
 		update_post_meta( $attachment_id, '_tmc_doc_text_method', 'missing' );
 		return 'missing';
 	}
+	tmc_document_text_install();
+	if ( (int) get_option( 'tmc_doc_text_db_version' ) !== TMC_DOC_TEXT_DB_VERSION ) {
+		return 'none'; // site not installed yet; migration 010 / "Extract text now" catch up
+	}
 	list( $text, $method ) = tmc_document_text_from_file( $file, (string) get_post_mime_type( $attachment_id ) );
 	global $wpdb;
-	tmc_document_text_install();
 	$wpdb->replace(
 		tmc_document_text_table(),
 		array(

@@ -86,7 +86,7 @@ add_filter(
 /** Create the standard document types on each site (once per TMC_DOC_TYPES_VERSION). */
 add_action( 'init', 'tmc_document_types_install', 20 );
 function tmc_document_types_install() {
-	if ( (int) get_option( 'tmc_doc_types_version' ) === TMC_DOC_TYPES_VERSION ) {
+	if ( (int) get_option( 'tmc_doc_types_version' ) === TMC_DOC_TYPES_VERSION || ! tmc_site_installed() ) {
 		return;
 	}
 	foreach ( tmc_document_types() as $slug => $name ) {

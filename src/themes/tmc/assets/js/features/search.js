@@ -18,7 +18,7 @@
 	if ( ! settings || ! settings.endpoint || ! window.fetch ) {
 		return;
 	}
-	const minChars = settings.minChars || 2;
+	const minChars = parseInt( settings.minChars, 10 ) || 2; // localized values arrive as strings
 
 	document.querySelectorAll( 'form[data-tmc-suggest]' ).forEach( ( form, formIndex ) => {
 		const input = form.querySelector( 'input[name="s"]' );

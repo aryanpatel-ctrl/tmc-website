@@ -35,7 +35,7 @@ function tmc_search_table() {
 
 /** Create/upgrade the index table of the current site. */
 function tmc_search_install() {
-	if ( (int) get_option( 'tmc_search_db_version' ) === TMC_SEARCH_DB_VERSION ) {
+	if ( (int) get_option( 'tmc_search_db_version' ) === TMC_SEARCH_DB_VERSION || ! tmc_site_installed() ) {
 		return;
 	}
 	global $wpdb;
@@ -126,10 +126,11 @@ function tmc_search_build_row( WP_Post $post ) {
 	$parts       = array( $post->post_excerpt );
 	if ( $is_document ) {
 		$parts[] = $post->post_content; // description
+		$parts[] = tmc_document_get_text( $post->ID );
+		// File name and type last, so snippets show the document's own text first.
 		$parts[] = wp_basename( (string) get_attached_file( $post->ID ) );
 		$type    = tmc_document_type( $post->ID );
 		$parts[] = $type ? $type->name : '';
-		$parts[] = tmc_document_get_text( $post->ID );
 		$date    = tmc_document_date( $post->ID ) . ' 00:00:00';
 		$lang    = ''; // media is shared by all languages
 	} else {
@@ -166,6 +167,9 @@ function tmc_search_index_post( $post_id ) {
 		return false;
 	}
 	tmc_search_install();
+	if ( (int) get_option( 'tmc_search_db_version' ) !== TMC_SEARCH_DB_VERSION ) {
+		return false; // site not installed yet; the rebuild in migration 010 indexes it later
+	}
 	if ( tmc_search_is_indexable( $post ) ) {
 		$wpdb->replace( tmc_search_table(), tmc_search_build_row( $post ), array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' ) );
 		$indexed = true;
@@ -299,7 +303,7 @@ function tmc_search_rebuild() {
 add_action(
 	'init',
 	function () {
-		if ( ! wp_next_scheduled( 'tmc_search_reconcile' ) ) {
+		if ( tmc_site_installed() && ! wp_next_scheduled( 'tmc_search_reconcile' ) ) {
 			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'tmc_search_reconcile' );
 		}
 	}

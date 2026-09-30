@@ -354,14 +354,13 @@ function tmc_seo_canonical() {
 		$url = wp_get_canonical_url( $post_id );
 		return $url ? $url : '';
 	}
-	$url = '';
+	$url  = '';
+	$view = '';
 	if ( is_post_type_archive() ) {
 		$type = get_query_var( 'post_type' );
 		$url  = get_post_type_archive_link( is_array( $type ) ? reset( $type ) : $type );
 		$view = function_exists( 'tmc_view' ) ? tmc_view() : '';
-		if ( $url && in_array( $view, array( 'archive', 'past', 'calendar' ), true ) ) {
-			$url = add_query_arg( 'view', $view, $url );
-		}
+		$view = in_array( $view, array( 'archive', 'past', 'calendar' ), true ) ? $view : ''; // listing views are separate pages
 	} elseif ( is_category() || is_tag() || is_tax() ) {
 		$link = get_term_link( get_queried_object() );
 		$url  = is_wp_error( $link ) ? '' : $link;
@@ -371,10 +370,11 @@ function tmc_seo_canonical() {
 		$url = function_exists( 'pll_home_url' ) ? pll_home_url() : home_url( '/' );
 	}
 	$paged = (int) get_query_var( 'paged' );
-	if ( $url && $paged > 1 && false === strpos( $url, '?' ) ) {
-		$url = trailingslashit( $url ) . user_trailingslashit( 'page/' . $paged, 'paged' );
-	} elseif ( $url && $paged > 1 ) {
-		$url = add_query_arg( 'paged', $paged, $url );
+	if ( $url && $paged > 1 ) {
+		$url = false === strpos( $url, '?' ) ? trailingslashit( $url ) . user_trailingslashit( 'page/' . $paged, 'paged' ) : add_query_arg( 'paged', $paged, $url );
+	}
+	if ( $url && $view ) {
+		$url = add_query_arg( 'view', $view, $url );
 	}
 	return $url ? $url : '';
 }

@@ -1,0 +1,74 @@
+# Provision a fresh TMC stack on a GitHub-hosted runner and prepare the quality tooling.
+# Used by .github/workflows/quality.yml (one fresh stack per quality gate).
+#
+#   1. .env for CI, all six sites built from scratch, demo accounts
+#   2. /etc/hosts entries for the six *.localhost host names (WebKit and Java use the system
+#      resolver; Chromium, Firefox and tests/lib/http.js resolve *.localhost themselves)
+#   3. pinned Node.js + `npm ci` in tests/, Playwright browsers, Java for the Nu HTML Checker
+name: TMC stack for quality gates
+description: Build all six TMC websites from scratch and install the pinned quality tooling.
+
+inputs:
+  browsers:
+    description: Playwright browsers to install with their system dependencies (space-separated; empty = none)
+    required: false
+    default: ""
+  java:
+    description: "Install Java for the Nu HTML Checker (true/false)"
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Environment (.env with generated secrets)
+      shell: bash
+      run: ./scripts/make-env.sh ci
+
+    - name: Build and provision all six sites
+      shell: bash
+      run: ./scripts/setup.sh
+
+    - name: Demo accounts
+      shell: bash
+      run: ./scripts/create-demo-users.sh
+
+    - name: Host names of the six sites
+      shell: bash
+      run: |
+        base="$(grep -E '^TMC_BASE_DOMAIN=' .env | cut -d= -f2-)"
+        hosts="$base"
+        for sub in tmh hbchrcv mpmmcc hbchrcmzp hbchpunjab; do hosts="$hosts $sub.$base"; done
+        echo "127.0.0.1 $hosts" | sudo tee -a /etc/hosts
+        for host in $hosts; do
+          code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 "http://$host/")"
+          echo "http://$host/ → $code"
+          [ "$code" = "200" ] || { echo "::error::$host does not answer 200"; exit 1; }
+        done
+
+    - name: Node.js (pinned)
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      with:
+        node-version: "24.21.0"
+        cache: npm
+        cache-dependency-path: tests/package-lock.json
+
+    - name: Quality tooling (tests/package-lock.json)
+      shell: bash
+      run: npm ci --prefix tests --no-audit --no-fund
+
+    - name: Playwright browsers
+      if: inputs.browsers != ''
+      shell: bash
+      working-directory: tests
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      # shellcheck disable=SC2086 -- one argument per browser name
+      run: npx --no-install playwright install --with-deps $BROWSERS
+
+    - name: Java (Nu HTML Checker)
+      if: inputs.java == 'true'
+      uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+      with:
+        distribution: temurin
+        java-version: "21"

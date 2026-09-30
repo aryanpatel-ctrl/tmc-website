@@ -53,6 +53,13 @@ jobs:
               assert "tmc_apps" not in s[name]["networks"], name + " must not join tmc_apps"
           for name in ("wordpress", "wpcli"):
               assert "tmc_apps" in s[name]["networks"], name + " must join tmc_apps"
+          # Internal hosts are reached by aliases that exist only on tmc_internal, never by plain
+          # service names that a shared network (homelab on UAT) could resolve to another project.
+          assert "tmc-mariadb" in (s["db"]["networks"]["tmc_internal"] or {}).get("aliases", []), "db needs alias tmc-mariadb"
+          assert "tmc-valkey" in (s["redis"]["networks"]["tmc_internal"] or {}).get("aliases", []), "redis needs alias tmc-valkey"
+          env = s["wordpress"]["environment"]
+          assert env["WORDPRESS_DB_HOST"] == "tmc-mariadb", "WordPress must use the tmc-mariadb alias"
+          assert "define('WP_REDIS_HOST', 'tmc-valkey')" in env["WORDPRESS_CONFIG_EXTRA"], "WordPress must use the tmc-valkey alias"
           print("segregation ok:", sys.argv[2])
           EOF
           done

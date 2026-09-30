@@ -22,6 +22,13 @@ Separation:
 - **Own project, containers and volumes.** Production uses project `tmc-prod` and containers
   `tmc-prod-*`; the drill `tmc-dr` / `tmc-dr-*`. A UAT and a production stack on the same Docker host
   cannot share a volume, network or container name.
+- **Unambiguous internal host names.** WordPress, WP-CLI, cron and backup reach the database and the
+  cache as `tmc-mariadb` and `tmc-valkey`, network aliases that exist only on the stack's own
+  `tmc_internal` network. On UAT the web container also joins the shared `homelab` network, where
+  another project's container is called `redis`; with the plain service name the site used that
+  server while WP-CLI used ours, so cache purges never reached visitors (found at the first UAT
+  deploy of 30/09/2026). The gateway CI job enforces the aliases, and the smoke test proves after
+  every deploy that a purge from WP-CLI reaches the site.
 - **Deploy guard.** `scripts/deploy.sh` needs `TMC_DEPLOY_TARGET` (`uat` | `production`) to match
   `TMC_ENV` in the target directory's `.env` (`server` | `prod`); a UAT deploy can never land on
   production or the other way round.

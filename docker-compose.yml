@@ -13,7 +13,9 @@
 name: tmc-website
 
 x-wp-env: &wp-env
-  WORDPRESS_DB_HOST: db
+  # Internal service names are network aliases that exist only on tmc_internal. Plain names such as
+  # "db" or "redis" can resolve to another project's container on a shared network (homelab on UAT).
+  WORDPRESS_DB_HOST: tmc-mariadb
   WORDPRESS_DB_NAME: ${DB_NAME}
   WORDPRESS_DB_USER: ${DB_USER}
   WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
@@ -58,7 +60,7 @@ x-wp-env: &wp-env
     if (getenv('TMC_ENV') === 'server' && PHP_SAPI !== 'cli') { define('DISALLOW_FILE_MODS', true); }
     define('WP_MEMORY_LIMIT', '256M');
     define('WP_AUTO_UPDATE_CORE', 'minor');
-    define('WP_REDIS_HOST', 'redis');
+    define('WP_REDIS_HOST', 'tmc-valkey');
     define('WP_REDIS_PORT', 6379);
     define('WP_CACHE_KEY_SALT', 'tmc_');
     define('WP_CACHE', true); // full-page cache for anonymous visitors: src/mu-plugins/tmc-page-cache (advanced-cache.php)
@@ -98,7 +100,9 @@ services:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
-    networks: [tmc_internal]
+    networks:
+      tmc_internal:
+        aliases: [tmc-mariadb]
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -111,7 +115,9 @@ services:
     container_name: tmc-redis
     restart: unless-stopped
     command: valkey-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
-    networks: [tmc_internal]
+    networks:
+      tmc_internal:
+        aliases: [tmc-valkey]
 
   wordpress:
     build: ./wordpress
@@ -207,7 +213,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
     environment:
-      DB_HOST: db
+      DB_HOST: tmc-mariadb
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}

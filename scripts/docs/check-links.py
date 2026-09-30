@@ -35,8 +35,8 @@ def markdown_files():
     return [f for f in files if os.path.isfile(f)]
 
 
-def strip_code(lines):
-    """Yield (line_no, text) outside fenced code blocks, with inline code removed."""
+def strip_code(lines, keep_inline=False):
+    """Yield (line_no, text) outside fenced code blocks; inline code is removed unless keep_inline."""
     in_fence = False
     for number, line in enumerate(lines, 1):
         if FENCE.match(line):
@@ -44,7 +44,7 @@ def strip_code(lines):
             continue
         if in_fence:
             continue
-        yield number, re.sub(r"`[^`]*`", "", line)
+        yield number, line if keep_inline else re.sub(r"`[^`]*`", "", line)
 
 
 def slugify(text):
@@ -69,7 +69,7 @@ def anchors(path):
         seen = {}
         result = set()
         with open(path, encoding="utf-8") as handle:
-            for _, line in strip_code(handle.read().splitlines()):
+            for _, line in strip_code(handle.read().splitlines(), keep_inline=True):
                 match = HEADING.match(line)
                 if not match:
                     continue

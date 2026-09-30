@@ -111,8 +111,22 @@ notices and tender closing dates. These figures must be replaced by the traffic 
 (current analytics of tmc.gov.in). Only the **peak** profile counts as Go-Live evidence
 (`tests/report/acceptance.js`).
 
+## Capacity test connection model (CI gate)
+
+The CI capacity gate (`scripts/perf/capacity-test.sh`, `scripts/perf/capacity.js`) sends load straight to
+the WordPress container, so it opens **one connection per request** (`noConnectionReuse`). That is how
+production and UAT behave: visitors keep their connections open to the reverse proxy (nginx), and the
+proxy opens a short, fresh upstream connection to Apache for each request. Letting the load generator
+hold idle keep-alive connections to Apache instead (6 sites × up to 400 virtual users) exhausts Apache's
+worker pool with idle sockets — a condition real traffic never produces behind the proxy — and turns a
+2 ms cached response into a 15 s queue. Measured on the integrated build (Docker Desktop, 30 s, 100
+page views/s + 5 searches/s, default Apache prefork settings): cached pages p95 2 ms, uncached search
+p95 71 ms, 100 % cache hits, 0 dropped requests. Keep-alive behaviour towards real clients is tested
+through the proxy by the UAT load test (`tests/load/`).
+
 ## Change log
 
 | Date | Change | Reason | Approved by |
 |---|---|---|---|
 | 2026-09-30 | Initial thresholds (this file) | Tender W6 quality gates; values proposed pending TMC's targets | — (awaiting TMC) |
+| 2026-09-30 | Capacity gate uses one connection per request | Models the reverse proxy in front of Apache (see above); thresholds unchanged | — (awaiting TMC) |

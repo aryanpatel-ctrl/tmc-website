@@ -56,10 +56,21 @@ $http = function ( $url, array $headers = array(), $method = 'GET', $body = '' )
 };
 $state = fn( $r ) => $r['headers']['x-tmc-cache'] ?? 'none';
 $why   = fn( $r ) => $state( $r ) . ( isset( $r['headers']['x-tmc-cache-reason'] ) ? ':' . $r['headers']['x-tmc-cache-reason'] : '' ) . ( isset( $r['headers']['x-tmc-cache-nonce'] ) ? ' (' . $r['headers']['x-tmc-cache-nonce'] . ')' : '' );
-/** Request until the page is stored (first view may already be a HIT from an earlier request). */
+/**
+ * Request until the page is served from the cache. Retries because a legitimate purge can land between
+ * two requests: on a freshly provisioned server the cron container is closing expired sample items and
+ * flagging content at the same time as this test runs, and each such content change correctly purges.
+ */
 $warm = function ( $url ) use ( $http, $state ) {
-	$http( $url );
-	return $state( $http( $url ) );
+	$last = 'none';
+	for ( $attempt = 0; $attempt < 4; $attempt++ ) {
+		$http( $url );
+		$last = $state( $http( $url ) );
+		if ( 'HIT' === $last ) {
+			break;
+		}
+	}
+	return $last;
 };
 
 WP_CLI::log( '— Installation' );
@@ -104,8 +115,13 @@ $page = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish'
 pll_set_post_language( $page, 'en' );
 $cleanup[] = $page;
 $url       = get_permalink( $page );
-$r1        = $http( $url );
-$r2        = $http( $url );
+for ( $attempt = 0; $attempt < 3; $attempt++ ) { // retry only if a background purge interleaved (see $warm)
+	$r1 = $http( $url );
+	$r2 = $http( $url );
+	if ( 'HIT' === $state( $r2 ) ) {
+		break;
+	}
+}
 $t( "first view MISS (HTTP {$r1['status']}, " . $why( $r1 ) . ')', 200 === $r1['status'] && 'MISS' === $state( $r1 ) && false !== strpos( $r1['body'], "Perf test page $tag" ) );
 $t( 'second view HIT, identical page (' . $why( $r2 ) . ', Age ' . ( $r2['headers']['age'] ?? '?' ) . ')', 'HIT' === $state( $r2 ) && $r2['body'] === $r1['body'] );
 $r = $http( $url, array( 'If-None-Match' => $r2['headers']['etag'] ?? 'none' ) );
@@ -134,6 +150,7 @@ if ( ! $login ) {
 	$admins = get_super_admins();
 	$login  = get_user_by( 'login', reset( $admins ) );
 }
+$warm( $url ); // creating the protected test page above purged the site; re-cache before the logged-in check
 $cookie = wp_generate_auth_cookie( $login->ID, time() + 600, 'logged_in' );
 $r      = $http( $url, array( 'Cookie' => LOGGED_IN_COOKIE . '=' . rawurlencode( $cookie ) ) );
 $t( "logged-in view ({$login->user_login}) → BYPASS, rendered for the user (" . $why( $r ) . ')', 'BYPASS' === $state( $r ) && preg_match( '/wpadminbar|class="[^"]*\blogged-in\b/', $r['body'] ) );

@@ -237,6 +237,9 @@ function tmc_schema_webpage( array $seo, $has_breadcrumb ) {
 
 /** Limited HTML for JobPosting descriptions (search engines accept basic formatting). */
 function tmc_schema_html( WP_Post $post ) {
+	if ( '' !== $post->post_password ) {
+		return tmc_schema_text( $post->post_title ); // protected content never enters structured data
+	}
 	$allowed = array(
 		'p'      => array(),
 		'br'     => array(),

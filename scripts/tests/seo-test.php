@@ -130,6 +130,12 @@ $long = $make( 'post', "SEO test long $tag", array(), array( 'post_content' => '
 $visit( array( 'p' => $long ) );
 $desc = tmc_seo_context()['description'];
 $t( 'no excerpt: start of the content, at most 160 characters, words separated', mb_strlen( $desc ) <= 160 && str_starts_with( $desc, 'Heading Word' ) );
+// Security regression: text of a password-protected page must not leak into meta, Open Graph,
+// structured data or the theme's fallback description (all of <head>).
+$locked = $make( 'page', "SEO locked $tag", array(), array( 'post_password' => "pw-$tag", 'post_excerpt' => "Locked excerpt $tag", 'post_content' => "<p>Locked secret $tag</p>" ) );
+$visit( array( 'page_id' => $locked ) );
+$locked_head = $head();
+$t( 'password-protected page: no excerpt or content anywhere in <head>', '' !== $locked_head && false === strpos( $locked_head, "Locked secret $tag" ) && false === strpos( $locked_head, "Locked excerpt $tag" ) );
 
 WP_CLI::log( '— Structured data per content type' );
 $event = $make( 'tmc_event', "SEO test event $tag", array( '_tmc_start_at' => $stamp( 10 ), '_tmc_end_at' => $stamp( 10.2 ), '_tmc_venue' => 'Test auditorium' ) );

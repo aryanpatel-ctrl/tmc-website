@@ -293,8 +293,15 @@ function tmc_seo_plain( $html, $max = TMC_SEO_DESC_MAX ) {
 	return rtrim( ( $space && $space > $max / 2 ) ? mb_substr( $cut, 0, $space ) : $cut, " ,;:.-–" ) . '…';
 }
 
-/** Default meta description of a post: excerpt, else the start of the content. */
+/**
+ * Default meta description of a post: excerpt, else the start of the content. Never for a
+ * password-protected post — its text must not leak into meta, social or structured data (as core
+ * also hides the excerpt of a protected post). An editor-entered SEO description still applies.
+ */
 function tmc_seo_post_description( WP_Post $post ) {
+	if ( '' !== $post->post_password ) {
+		return '';
+	}
 	if ( '' !== trim( $post->post_excerpt ) ) {
 		return tmc_seo_plain( $post->post_excerpt );
 	}

@@ -47,6 +47,7 @@ const cacheHit = new Rate('page_cache_hit');
 export const options = {
   hosts,
   discardResponseBodies: true,
+  noConnectionReuse: true, // as the reverse proxy does: one short upstream connection per request
   summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
   scenarios: {
     pages: {

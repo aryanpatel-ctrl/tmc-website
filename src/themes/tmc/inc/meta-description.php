@@ -42,7 +42,9 @@ function tmc_fallback_meta_description() {
 		$text = sprintf( $pair, $site, tmc_site_tagline() );
 	} elseif ( is_singular() ) {
 		$post = get_queried_object();
-		if ( $post instanceof WP_Post ) {
+		if ( $post instanceof WP_Post && '' !== $post->post_password ) {
+			$text = sprintf( $pair, single_post_title( '', false ), $site ); // never summarise protected content
+		} elseif ( $post instanceof WP_Post ) {
 			$text = has_excerpt( $post ) ? $post->post_excerpt : $post->post_content;
 			$text = trim( preg_replace( '/\s+/u', ' ', wp_strip_all_tags( strip_shortcodes( $text ) ) ) );
 			if ( '' === $text ) {

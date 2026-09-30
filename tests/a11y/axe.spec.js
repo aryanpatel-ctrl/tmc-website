@@ -1,34 +1,20 @@
 'use strict';
 /**
  * R-4.9-1 — automated WCAG 2.0 / 2.1 / 2.2 Level A + AA scan (axe-core) of every template type on
- * every website, at desktop (1280 px) and phone (360 px) width. Any violation fails the test.
+ * every website, at desktop (1280 px) and phone (360 px) width, plus the high-contrast view.
+ * Any violation fails the test. What is scanned: a11y/targets.js.
  *
- * Each test also writes its raw axe result to $QUALITY_OUT/a11y/axe/<project>/<site>--<template>.json;
+ * Each test writes its axe result to $QUALITY_OUT/a11y/axe/<project>/<site>--<template>.json;
  * a11y/report.js turns those into the HTML/JSON report used by the Go-Live acceptance report.
  *
- * Automated tools find roughly a third to a half of WCAG failures; the remaining success criteria
- * are covered by the manual checklist in docs/testing/quality-gates.md.
+ * Automated tools find only part of all WCAG failures; the remaining success criteria are covered
+ * by the manual checklist in docs/testing/quality-gates.md.
  */
 const path = require('path');
 const { test, expect } = require('@playwright/test');
 const { AxeBuilder } = require('@axe-core/playwright');
-const { allPages } = require('../lib/sites');
+const { TARGETS, WCAG_TAGS, resultName } = require('./targets');
 const { outDir, writeJson } = require('../lib/paths');
-
-// WCAG 2.0, 2.1 and 2.2, Levels A and AA (axe tags). Best-practice rules are not part of the gate.
-const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'];
-
-/**
- * Pages to scan: every template on every site in the default view, plus every template on the TMC
- * site in the high-contrast view (GIGW: the contrast option must itself be accessible). The
- * high-contrast styles are the same on every site, so one site is enough.
- */
-const TARGETS = [
-  ...allPages().map((target) => ({ ...target, contrast: 'normal' })),
-  ...allPages()
-    .filter((target) => target.site.id === 'tmc')
-    .map((target) => ({ ...target, contrast: 'high' })),
-];
 
 for (const target of TARGETS) {
   const { site, template, contrast } = target;
@@ -43,7 +29,7 @@ for (const target of TARGETS) {
           try {
             window.localStorage.setItem('tmc-contrast', 'high');
           } catch (e) {
-            // storage unavailable: the test below then fails on the missing attribute
+            // storage unavailable: the attribute check below then fails
           }
         });
       }
@@ -68,11 +54,11 @@ for (const target of TARGETS) {
         })),
       }));
 
-      writeJson(path.join(outDir('a11y'), 'axe', testInfo.project.name, `${site.id}--${template.id}${high ? '--high-contrast' : ''}.json`), {
+      writeJson(path.join(outDir('a11y'), 'axe', testInfo.project.name, resultName(target)), {
         site: site.id,
         template: template.id,
-        contrast,
         label: template.label,
+        contrast,
         url: target.url,
         project: testInfo.project.name,
         axeVersion: results.testEngine.version,

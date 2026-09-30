@@ -483,5 +483,13 @@ foreach ( array( 'en' => $home_en, 'hi' => $home_hi ) as $lang => $home_id ) {
 	$log( "home ($lang): sections built" );
 }
 
+/* ================================================================ document library (W1) */
+
+if ( function_exists( 'tmc_documents_ensure_page' ) ) {
+	if ( tmc_documents_ensure_menu_item( tmc_documents_ensure_page() ) ) {
+		$log( 'menu: Documents added to footer quick links (en)' );
+	}
+}
+
 flush_rewrite_rules( false );
 WP_CLI::success( "$host seeded" );

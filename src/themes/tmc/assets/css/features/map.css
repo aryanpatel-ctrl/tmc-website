@@ -1,0 +1,33 @@
+/* Location map block (inc/location-map.php). The map loads only on request. */
+
+.tmc-map { margin: 2rem 0; }
+.tmc-map-title { font-size: 1.5rem; color: var(--c-primary-dark); }
+.tmc-map-grid { display: grid; gap: 1.25rem; }
+@media (min-width: 900px) { .tmc-map-grid { grid-template-columns: minmax(16rem, 1fr) 2fr; align-items: start; } }
+.tmc-map-name { margin: 0 0 0.25rem; }
+.tmc-map-address { font-style: normal; margin-bottom: 1rem; }
+.tmc-map-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+.tmc-map-note,
+.tmc-map-credit { font-size: 0.875rem; color: var(--c-muted); }
+
+.tmc-map-frame {
+	position: relative;
+	display: flex;
+	align-items: center;
+	min-height: 18rem;
+	border: 1px solid var(--c-line);
+	border-radius: var(--radius);
+	background: repeating-linear-gradient(45deg, var(--c-surface) 0 12px, var(--c-tint) 12px 24px);
+	overflow: hidden;
+}
+.tmc-map-consent { max-width: 34rem; margin: 1rem; padding: 1.25rem; border-radius: var(--radius); background: var(--c-white); box-shadow: var(--shadow); }
+.tmc-map-consent p:last-child { margin-bottom: 0; }
+.tmc-map-iframe { display: block; width: 100%; height: 22rem; border: 0; }
+.tmc-map-frame.is-loaded { background: var(--c-surface); }
+
+html[data-contrast="high"] .tmc-map-frame,
+html[data-contrast="high"] .tmc-map-consent { background: #000 !important; border-color: #fff !important; box-shadow: none; }
+
+@media print {
+	.tmc-map-frame { display: none; }
+}

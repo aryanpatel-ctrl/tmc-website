@@ -13,9 +13,8 @@ scaling. The security view (zones, segregation, access control, MFA, logging and
 the companion [Security Architecture Document](security-architecture.md) (TMC-WEB-ARC-02), which is the
 Milestone M2 deliverable required by SOW §4.8.
 
-**Conventions:** "**Verify at integration**" marks a detail (route, variable name, container name) that
-belongs to a work stream being built in parallel and is confirmed when the work streams are merged. Every
-other statement is taken from the code in this repository.
+**Conventions:** every statement is taken from the code in this repository as integrated on branch
+`feat/integration` (all work streams W1–W8 merged) and verified by the CI pipeline.
 
 ---
 
@@ -99,7 +98,7 @@ flowchart TB
         audit["audit-log.php<br/>HMAC-chained audit log"]
         types["content-types.php + content-fields.php<br/>tenders, events, careers, departments, doctors"]
         expiry["expiry.php<br/>automatic closure / expiry"]
-        more["Further modules from parallel work streams:<br/>search, security/MFA, SEO/redirects, gateway,<br/>templates, backup (verify at integration)"]
+        more["Further modules: search + documents, security/MFA/CSP,<br/>SEO/redirects/analytics, application gateway,<br/>editorial governance + network publishing,<br/>page cache, health + backups"]
     end
     subgraph platform["WordPress Multisite + Polylang"]
         wpcore["WordPress core<br/>(posts, revisions, users, media, REST)"]
@@ -157,8 +156,8 @@ flowchart LR
 | `db` (`tmc-db`) | `mariadb:11.4.13` | `tmc_internal` | none | volume `db_data` | Health-checked; `max-allowed-packet=64M` |
 | `redis` (`tmc-redis`) | `valkey/valkey:8.1.10-alpine` (Redis-compatible, BSD-3-Clause) | `tmc_internal` | none | none (`--save ""`) | Cache only; losing it loses no data |
 | `wordpress` (`tmc-wp`) | `tmc-wordpress:latest` built from `wordpress/Dockerfile` (base `wordpress:7.1.2-php8.3-apache`) | `tmc_internal`, `tmc_edge` (+ `homelab` on UAT) | Dev/CI: `127.0.0.1:80`; UAT: none | volume `wp_html` (core + uploads); theme and mu-plugins bind-mounted **read-only** | Hardened Apache/PHP config (`wordpress/apache-tmc.conf`, `php.ini`) |
-| `cron` (`tmc-cron`) | `wordpress:cli-php8.3` | `tmc_internal` only | none | shares `wp_html` | Runs `wp cron event run --due-now` for each site every 60 seconds |
-| `wpcli` | `wordpress:cli-php8.3` | `tmc_internal`, `tmc_edge` | none | shares `wp_html`; `scripts/` mounted read-only at `/tmc-scripts` | Not running; started only for provisioning, migrations and tests |
+| `cron` (`tmc-cron`) | `wordpress:cli-2.12.0-php8.3` | `tmc_internal` only | none | shares `wp_html` | Runs `wp cron event run --due-now` for each site every 60 seconds |
+| `wpcli` | `wordpress:cli-2.12.0-php8.3` | `tmc_internal`, `tmc_edge`, `tmc_apps` | none | shares `wp_html`; `scripts/` mounted read-only at `/tmc-scripts` | Not running; started only for provisioning, migrations and tests |
 
 The environment-specific override file is selected by `COMPOSE_FILE` in `.env`:
 
@@ -167,8 +166,15 @@ The environment-specific override file is selected by `COMPOSE_FILE` in `.env`:
 | `compose.local.yml` | Developer machine, CI | Publishes WordPress on `127.0.0.1:80` only (loopback) |
 | `compose.server.yml` | UAT server | No published port; joins the external `homelab` network so the reverse proxy can reach `tmc-wp` |
 
-**Verify at integration:** the Production and DR overrides, page cache and the backup/monitoring
-containers are delivered by work stream W7 (performance, backup/DR, environments and monitoring).
+| `compose.prod.yml` | Production and a real DR failover | Own project (`tmc-prod`) and container names; WordPress on `127.0.0.1:8080` behind TMC's reverse proxy; the DEMO application mock is not started |
+| `compose.dr.yml` | DR drill (CI, monthly) | Isolated project `tmc-dr`, no published ports |
+
+Further services: `backup` (`tmc-backup`, built from `backup/Dockerfile`, `tmc_internal` only; snapshot
+every 15 minutes into volume `backup_data`) and, in demonstration environments only, `tmc-apps-mock`
+(the DEMO stand-in for TMC's application backends on the internal `tmc_apps` network). The page cache is
+a WordPress drop-in (`src/mu-plugins/tmc-page-cache/`) backed by the Valkey cache. Details:
+[environments](../operations/environments.md), [backup and DR](../operations/backup-and-dr.md),
+[gateway](../integration/gateway.md).
 
 ## 6. Data flows
 
@@ -227,10 +233,10 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    dev["Developer branch<br/>feat/*"] -- "pull request" --> ci["CI (GitHub-hosted):<br/>lint + build 6 sites<br/>+ tests + smoke"]
+    dev["Developer branch<br/>feat/*"] -- "pull request" --> ci["CI (GitHub-hosted):<br/>lint, integration, security gate,<br/>quality gates, DR drill, capacity"]
     ci -- "merge to main" --> ci2["CI again on main"]
     ci2 -- "self-hosted runner" --> uat["UAT deploy:<br/>1 DB backup, 2 sync, 3 provision,<br/>4 proxy route, 5 smoke, 6 record"]
-    uat -- "TMC UAT sign-off<br/>(verify at integration: W7)" --> prod["Production promotion"]
+    uat -- "TMC UAT sign-off, tag vX.Y.Z,<br/>re-test + approval (release.yml)" --> prod["Production promotion"]
     prod -. "replication / restore" .-> dr["DR"]
 ```
 
@@ -248,9 +254,9 @@ earlier commit or tag through *Actions → Pipeline → Run workflow* (R-4.7-4).
 | **Production** | Live websites | TMC-owned or TMC-subscribed infrastructure, MeitY-empanelled cloud in TMC's name where cloud is used (SOW §4.7) | Same scripts; promotion after UAT sign-off | Public (websites); MFA + restricted network (administration) | Live content |
 | **Disaster Recovery** | Continuity: RPO 15 min, RTO 1 h | Separate TMC-owned site/region in India | Same scripts + restore of the latest backup set | As Production | Replica / backups of Production |
 
-Production and DR provisioning, the 15-minute backup schedule and the timed restore drill are delivered
-by work stream W7. **Verify at integration:** Production/DR compose overrides, promotion workflow and
-backup schedule names; see [Backup and Restoration Procedures](../operations/backup-restore.md).
+Production and DR use `compose.prod.yml`; promotion is `.github/workflows/release.yml`; the 15-minute
+backups, the off-host copy and the timed restore drill are described in
+[Backup and DR](../operations/backup-and-dr.md) and [Backup and Restoration Procedures](../operations/backup-restore.md).
 
 ### 7.1 Environment parity
 
@@ -259,10 +265,11 @@ The same repository commit produces every environment. What differs is only `.en
 
 | Setting | Dev | CI | UAT | Production (proposed) |
 |---|---|---|---|---|
-| `TMC_ENV` | `local` | `ci` | `server` | `production` (verify at integration) |
-| `COMPOSE_FILE` | base + `compose.local.yml` | base + `compose.local.yml` | base + `compose.server.yml` | base + production override (W7) |
+| `TMC_ENV` | `local` | `ci` | `server` | `prod` (DR host: `dr`) |
+| `COMPOSE_FILE` | base + `compose.local.yml` | base + `compose.local.yml` | base + `compose.server.yml` | base + `compose.prod.yml` |
+| `TMC_WP_ENVIRONMENT` (`WP_ENVIRONMENT_TYPE`) | `staging` | `staging` | `staging` | `production` |
 | `TMC_BASE_DOMAIN` | `tmc.localhost` | `tmc.localhost` | `tmc.100-79-142-44.sslip.io` | `tmc.gov.in` (confirmed at award) |
-| Search-engine visibility (`blog_public`) | off | off | off | on (W3: robots per environment) |
+| Search-engine visibility (`blog_public`, robots, sitemaps) | off | off | off | on (set by `install-network.sh` from the environment type) |
 | Secrets | generated per machine | generated per run | generated once on the server | generated on TMC infrastructure, held by TMC |
 
 ## 8. Hosting requirements (SOW §4.7)
@@ -322,7 +329,8 @@ integrity of the restored audit log cannot be verified.
    without template rewrites. Deviations are recorded in the
    [Design Deviation Register](../governance/design-deviation-register.md).
 2. **No clinical or patient data** is stored on the website platform (SOW §4.4). Application front ends
-   pass data through to TMC-approved endpoints without persisting it (W4, verify at integration).
+   pass data through to TMC-approved endpoints without persisting it (`apps-gateway.php`; verified by
+   `scripts/tests/apps-test.php`).
 3. **No vendor branding, promotional links or advertisements** (SOW §13). The WordPress generator tag
    is removed; the theme has no credits.
 4. **Reproducibility**: servers are never changed by hand. Data changes ship as migrations; settings ship

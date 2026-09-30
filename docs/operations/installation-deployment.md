@@ -77,9 +77,9 @@ git clone <repository-url> .      # first time only; afterwards the pipeline syn
 
 | Variable | Set to |
 |---|---|
-| `TMC_ENV` | `server` for UAT; for Production/DR the value defined by W7 (**verify at integration**) |
+| `TMC_ENV` | `server` for UAT; `prod` for Production; `dr` on the DR host (`make-env.sh prod` / `dr` write it) |
 | `TMC_BASE_DOMAIN` | The base domain of this environment, e.g. `tmc.gov.in` for Production |
-| `COMPOSE_FILE` | `docker-compose.yml:compose.server.yml` for UAT; Production/DR override from W7 (**verify at integration**) |
+| `COMPOSE_FILE` | `docker-compose.yml:compose.server.yml` for UAT; `docker-compose.yml:compose.prod.yml` for Production and DR |
 | `WP_ADMIN_EMAIL` | TMC IT's administrative mailbox |
 
 `TMC_BASE_DOMAIN` is written into the network configuration during the first install. Changing it later
@@ -115,8 +115,8 @@ container as `/data/nginx/custom/http.conf`, tests it with `nginx -t` and reload
 previous route is restored automatically.
 
 **Production/DR.** Configure the TMC reverse proxy with a server block equivalent to the following
-(TLS termination shown; adapt to TMC's proxy product). **Verify at integration** with W7's production
-override.
+(TLS termination shown; adapt to TMC's proxy product). With `compose.prod.yml` WordPress listens on the
+host's loopback interface, port `TMC_HTTP_PORT` (default 8080); see [environments](environments.md).
 
 ```nginx
 server {
@@ -126,7 +126,7 @@ server {
     ssl_certificate_key /etc/ssl/tmc/privkey.pem;
     client_max_body_size 64m;                     # matches upload_max_filesize in wordpress/php.ini
     location / {
-        proxy_pass http://tmc-wp:80;
+        proxy_pass http://127.0.0.1:8080;          # TMC_HTTP_PORT (compose.prod.yml)
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
@@ -180,9 +180,12 @@ flowchart LR
 
 The job summary in GitHub Actions shows the commit, trigger, actor and result.
 
-**Production promotion (verify at integration, W7).** Promotion to Production is a separate, manually
-approved workflow run on the Production runner, for a commit that has passed UAT and has TMC's UAT
-sign-off recorded in the change ticket.
+**Production promotion.** Promotion to Production is a separate, manually approved workflow
+(`.github/workflows/release.yml`): push a tag `vX.Y.Z` on a commit that passed the Pipeline on `main`
+(and therefore runs on UAT) and has TMC's UAT sign-off recorded in the change ticket. The workflow checks
+the tag, re-runs lint and the integration test, waits for a required reviewer (GitHub environment
+`production`) and deploys with `TMC_DEPLOY_TARGET=production` on the production runner. Rolling back is
+the same workflow with an older tag ([environments](environments.md)).
 
 ## 5. Rollback
 
@@ -224,8 +227,10 @@ Also before Go-Live:
 
 - delete the demonstration accounts (`tmcreviewer`, `tmceditor`, `tmhadmin`, `tmhreviewer`, `tmheditor`)
   if they exist on that environment, and `demo-users.txt`;
-- enable search-engine visibility for the Production site only (W3 manages robots per environment,
-  **verify at integration**);
+- confirm search-engine visibility on Production: `install-network.sh` sets it on for
+  `TMC_WP_ENVIRONMENT=production` only, and the SEO module sends `noindex` everywhere else;
+- set `TMC_SECURITY_CONTACT` (security.txt) to the contact TMC confirms, and `TMC_DEMO=0`
+  (`make-env.sh prod` already does; the DEMO application mock is not started by `compose.prod.yml`);
 - complete the Go-Live acceptance checklist in the [Test Plan](../testing/test-plan.md#9-go-live-acceptance-per-website-sow-71).
 
 ## 8. Troubleshooting
@@ -239,4 +244,4 @@ Also before Go-Live:
 | Scheduled items do not close | `docker compose logs cron` | Recreate the cron container: `docker compose up -d cron` |
 | Smoke test fails with "PHP error in page" | `docker compose logs --tail=200 wordpress` | Fix forward or roll back (§5) |
 | Proxy route update failed during deploy | Deploy log step 4 | The previous route was restored; fix `nginx/tmc-website.conf` and redeploy |
-| E-mail notifications not received | Outbound mail is not configured in this release | Configure the TMC SMTP relay (EOI query Q-23; W2/W7, verify at integration) |
+| E-mail notifications not received | Outbound mail is not configured in this release | Needs the TMC SMTP relay (EOI query Q-23); configuring it is a change request once TMC provides the relay |

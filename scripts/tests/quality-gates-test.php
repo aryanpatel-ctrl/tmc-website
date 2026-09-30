@@ -56,6 +56,13 @@ $t( 'home page listed as the site address', in_array( home_url( '/' ), array_col
 $langs = array_unique( array_column( $inventory, 'lang' ) );
 $t( 'both languages present', in_array( 'en', $langs, true ) && in_array( 'hi', $langs, true ) );
 $t( 'no duplicate URLs', count( $inventory ) === count( array_unique( array_column( $inventory, 'url' ) ) ) );
+if ( function_exists( 'tmc_component_library_page_id' ) ) {
+	switch_to_blog( get_main_site_id() );
+	$library      = tmc_component_library_page_id();
+	$main_entries = array_column( tmc_published_urls(), 'id' );
+	restore_current_blog();
+	$t( 'the deliberately unlinked component library (TMC site) is not reported as an orphan', $library && ! in_array( $library, $main_entries, true ) && count( $main_entries ) > 0 );
+}
 
 $script = '/tmc-scripts/published-urls.php';
 if ( file_exists( $script ) ) {
@@ -78,7 +85,9 @@ rsort( $want );
 $t( 'items that tie on date and relevance are ordered by ID (newest first)', array_map( 'intval', wp_list_pluck( $search->posts, 'ID' ) ) === $want );
 $t( 'main query ORDER BY ends with the ID tiebreaker', false !== strpos( $search->request, "{$wpdb->posts}.ID DESC" ) );
 $by_id_order = $as_main( array( 'post_type' => 'post', 'lang' => '', 'orderby' => 'ID', 'order' => 'ASC', 'posts_per_page' => 1 ) );
-$t( 'queries already ordered by ID are left alone', 1 === substr_count( $by_id_order->request, "{$wpdb->posts}.ID" ) );
+// Only the ORDER BY clause matters: other modules may reference the ID column elsewhere (joins, filters).
+$order_clause = preg_match( '/ORDER BY\s+(.*?)(?:\s+LIMIT\s|$)/is', $by_id_order->request, $order_match ) ? $order_match[1] : '';
+$t( 'queries already ordered by ID are left alone (ORDER BY ' . trim( $order_clause ) . ')', 1 === substr_count( $order_clause, "{$wpdb->posts}.ID" ) );
 $secondary = new WP_Query( array( 's' => "qgorder$tag", 'post_type' => 'post', 'lang' => '' ) );
 $t( 'secondary queries are not changed', false === strpos( $secondary->request, "{$wpdb->posts}.ID DESC" ) );
 

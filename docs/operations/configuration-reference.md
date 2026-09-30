@@ -19,7 +19,7 @@ committed (`.gitignore`). `make-env.sh` never overwrites an existing `.env`.
 
 | Variable | Example / default | Used by | Purpose | Change after install? |
 |---|---|---|---|---|
-| `TMC_ENV` | `local`, `ci`, `server` | Scripts (messages); W7 environment logic (verify at integration) | Environment name | Yes |
+| `TMC_ENV` | `local`, `ci`, `server` (UAT), `prod`, `dr` | Scripts; `deploy.sh` guard (`server` for UAT, `prod` for production); file-modification lock on servers; demo settings | Environment name | Yes |
 | `COMPOSE_FILE` | `docker-compose.yml:compose.local.yml` | Docker Compose | Base file plus the environment override | Yes (then `docker compose up -d`) |
 | `TMC_BASE_DOMAIN` | `tmc.localhost`; UAT `tmc.100-79-142-44.sslip.io` | `docker-compose.yml` (`DOMAIN_CURRENT_SITE`), all scripts | Base domain of the network; unit sites are `<slug>.<base>` | Only by the procedure in §5 |
 | `DB_NAME` | `tmc_wp` | `db`, `wordpress`, `wpcli`, `cron` | Database schema | No |
@@ -38,18 +38,33 @@ Variables used only transiently:
 | `TMC_MULTISITE=0` | `install-network.sh` for the one-time `core multisite-install` | Loads WordPress without the Multisite constants so the network can be created |
 | `GITHUB_ACTOR`, `GITHUB_RUN_ID`, `GITHUB_WORKSPACE` | GitHub Actions | Recorded by `deploy.sh` in `.release-history` |
 
-### 1.1 Variables added by parallel work streams (verify at integration)
+### 1.1 Feature settings
 
-The names below are placeholders for the categories expected; the integrator replaces this table with
-the actual names and defaults from the merged code.
+All optional: unset or empty means the default shown. They are passed to the containers by
+`docker-compose.yml` (`x-wp-env`); change `.env`, then `docker compose up -d` to recreate the containers.
 
-| Work stream | Expected settings |
-|---|---|
-| W2 Security | MFA enforcement for privileged roles; administrative network allow-list (CIDR list); login rate-limit thresholds |
-| W3 SEO/analytics | Search-engine visibility per environment; analytics endpoint/site ID (TMC-approved tool) |
-| W4 Gateway | Per-endpoint base URLs and credentials for TMC applications; payment gateway merchant parameters |
-| W7 Backup/DR/monitoring | Backup destination and credentials; backup schedule; retention; DR target; monitoring endpoint |
-| Mail (TMC relay) | SMTP host, port, user, password, sender address (EOI query Q-23) |
+| Variable | Default | Purpose |
+|---|---|---|
+| `TMC_ENFORCE_MFA` | `1` | TOTP MFA for privileged roles. `0` only for automated test stacks, never on UAT or production |
+| `TMC_MFA_GRACE_HOURS` | `0` | Hours a new privileged account may work before enrolling |
+| `TMC_ADMIN_ALLOW_CIDRS` | private ranges, `100.64.0.0/10` (VPN) and loopback | Networks allowed to open `/wp-admin` and `/wp-login.php`; a list with no valid entry blocks everyone |
+| `TMC_ADMIN_IDLE_MINUTES` / `TMC_ADMIN_SESSION_HOURS` | `30` / `12` | Inactivity sign-out; longest privileged session |
+| `TMC_PASSWORD_MIN_LENGTH` | `12` | Minimum password length for privileged accounts |
+| `TMC_LOGIN_MAX_ATTEMPTS`, `TMC_LOGIN_MAX_ATTEMPTS_IP`, `TMC_LOGIN_WINDOW`, `TMC_LOGIN_LOCKOUT_BASE`, `TMC_LOGIN_LOCKOUT_MAX` | `5`, `20`, `900`, `60`, `3600` | Login throttling (failures per account / per IP, window and lockout in seconds) |
+| `TMC_APP_PASSWORD_ROLES` | empty (off) | Roles that may use WordPress application passwords |
+| `TMC_HSTS_MAX_AGE` / `TMC_HSTS_INCLUDE_SUBDOMAINS` | one year / `0` | HSTS on HTTPS responses |
+| `TMC_SECURITY_CONTACT` / `TMC_SECURITY_TXT_EXPIRES` | placeholder / 180 days ahead | `security.txt` contact (`mailto:` or `https:`; **TMC to confirm**) and expiry |
+| `TMC_DISALLOW_FILE_MODS` | on for `TMC_ENV=server` | Blocks plugin/theme installs from the admin screens |
+| `TMC_SUGGEST_RATE_LIMIT` | `120` | Search suggestions per minute per IP address |
+| `TMC_MATOMO_URL` | empty | Matomo address (overrides the network setting; analytics stay off until configured) |
+| `TMC_DEMO` / `TMC_APPS_MOCK_KEY` | `1` + generated key on local, CI and UAT; `0` on production | Demonstration data and the DEMO application mock |
+| `TMC_APP_<SERVICE>_KEY` | the mock key in demo environments | API key of each registered TMC application service ([gateway](../integration/gateway.md)) |
+| `TMC_WP_ENVIRONMENT` | `staging`; `production` on production | Sets `WP_ENVIRONMENT_TYPE` (robots, sitemaps, search-engine visibility) |
+| `TMC_OFFSITE_TARGET`, `TMC_OFFSITE_SSH_KEY`, `TMC_OFFSITE_KNOWN_HOSTS`, `TMC_OFFSITE_PORT`, `TMC_OFFSITE_BWLIMIT`, `TMC_OFFSITE_PRUNE` | unset | Off-host backup copy ([backup and DR](backup-and-dr.md)) |
+| `TMC_BACKUP_INTERVAL_MINUTES`, `TMC_BACKUP_KEEP_RECENT_HOURS`, `TMC_BACKUP_KEEP_DAILY_DAYS`, `TMC_BACKUP_KEEP_MONTHLY_MONTHS` | `15`, `48`, `30`, `12` | Backup schedule and retention |
+| `COMPOSE_PROJECT_NAME`, `TMC_PROXY_ROUTE`, `TMC_HTTP_PORT`, `SMOKE_ORIGIN` | set by `make-env.sh prod`/`dr` | Production stack identity, proxy handling and smoke-test origin ([environments](environments.md)) |
+
+Outbound mail through a TMC SMTP relay is not configured in this release (EOI query Q-23).
 
 ## 2. Docker Compose
 
@@ -70,7 +85,7 @@ Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with int
 
 | Constant | Value | Why |
 |---|---|---|
-| `WP_ENVIRONMENT_TYPE` | `staging` | Environment type reported to WordPress (Production value set by W7, verify at integration) |
+| `WP_ENVIRONMENT_TYPE` | `${TMC_WP_ENVIRONMENT:-staging}` | Environment type reported to WordPress; `production` only on the production stack |
 | `DISALLOW_FILE_EDIT` | `true` | No theme/plugin editor in the admin |
 | `WP_MEMORY_LIMIT` | `256M` | PHP memory for WordPress |
 | `WP_AUTO_UPDATE_CORE` | `minor` | Minor core updates allowed; see [Patch Management §4](patch-management.md#4-how-updates-are-applied) for how updates are actually applied |
@@ -88,7 +103,8 @@ Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with int
 |---|---|
 | `compose.local.yml` | `wordpress.ports: 127.0.0.1:80:80` |
 | `compose.server.yml` | `wordpress.networks: [tmc_internal, tmc_edge, homelab]`; external network `homelab` |
-| Production/DR overrides | W7 (verify at integration) |
+| `compose.prod.yml` | Production / real failover: project `tmc-prod`, own container names, WordPress on `127.0.0.1:${TMC_HTTP_PORT:-8080}`, DEMO mock not started |
+| `compose.dr.yml` | DR drill: project `tmc-dr`, own container names, no published ports |
 
 ## 3. Web server and PHP (image `wordpress/`)
 
@@ -118,7 +134,7 @@ Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with int
 | Time zone | `Asia/Kolkata` | `install-network.sh` |
 | Date / time format | `d/m/Y` / `h:i A` | `install-network.sh` |
 | Permalinks | `/%postname%/` | `install-network.sh` |
-| Search-engine visibility (`blog_public`) | `0` (discouraged) | `install-network.sh` (Production handled by W3, verify at integration) |
+| Search-engine visibility (`blog_public`) | `1` on production (`WP_ENVIRONMENT_TYPE=production`), `0` everywhere else | `install-network.sh` |
 | Active theme | `tmc` (network-enabled) | `setup.sh` |
 | Plugin | Polylang `3.8.10`, network-active | `setup.sh` (`POLYLANG_VERSION`) |
 | Language packs | `hi_IN`, `en_GB` (core and plugins) | `setup.sh` |
@@ -168,20 +184,21 @@ wp --url="$NEW" cache flush
 ```
 
 The search-replace also updates the domains in the network tables (`tmc_blogs`, `tmc_site`). Update DNS,
-TLS and the proxy server names at the same time. **Verify at integration** whether W3 redirects need
-entries for the old domain.
+TLS and the proxy server names at the same time. The redirect manager works on paths within a site, so
+redirect the old domain to the new one at the reverse proxy (301, path kept).
 
 ## 6. CI/CD configuration
 
 | Item | Value | File |
 |---|---|---|
 | Triggers | push to `main` and `feat/**`; pull requests; manual run with input `ref` | `.github/workflows/pipeline.yml` |
-| Jobs | `lint` → `integration` → `deploy` (main or manual only) | same |
-| Runners | `ubuntu-latest` (lint, integration); `[self-hosted, tmc-server]` (deploy) | same |
+| Jobs | `lint`, `ops`, `gateway`, `docs` → `integration`, `security`, `quality`, `dr-drill`, `capacity` (in parallel, each on a fresh stack) → `deploy` (main or manual only; needs every other job) | same |
+| Runners | `ubuntu-latest` (all checks); `[self-hosted, tmc-server]` (deploy) | same |
 | Concurrency | One pipeline per ref (feature branches cancel older runs); deployments serialised in group `deploy-uat` | same |
 | Permissions | `contents: read` | same |
-| Pinned action | `actions/checkout@v5` | same |
-| Reusable workflows from work streams | Wired by the integrator (verify at integration) | `.github/workflows/*.yml` |
+| Pinned action | `actions/checkout@v5` (the gate workflows pin actions by commit SHA) | same |
+| Reusable workflows | `ops-checks.yml`, `apps-gateway.yml`, `docs.yml`, `security.yml`, `quality.yml`, `dr-drill.yml`, `capacity.yml` | `.github/workflows/` |
+| Standalone workflows | `release.yml` (production, `v*` tags), `load-test.yml` (manual, UAT), `updates.yml` (weekly), `dr-drill.yml` (also monthly) | same |
 
 ## 7. Make targets (developer convenience)
 

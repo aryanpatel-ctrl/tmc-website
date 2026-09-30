@@ -21,11 +21,16 @@ Hindi versions are under `/hi/` on every site.
  Mac (dev)                     GitHub (private repo)                     hetser (UAT)
  ─────────                     ─────────────────────                     ────────────
  edit code, make check  ──push──►  Pipeline
-                                   1. Lint (PHP, JSON, JS, shell)
-                                   2. Integration: build all 6 sites,
-                                      run workflow tests + smoke test
-                                   3. main only ─────────────────────►  self-hosted runner
-                                                                          backup DB → sync → provision
+                                   1. Lint · operations · gateway · docs/licences
+                                   2. in parallel, each on a fresh 6-site stack:
+                                      integration (PHP suites + smoke test)
+                                      security gate (gitleaks, Trivy, OWASP ZAP)
+                                      quality gates (E2E ×3 browsers, visual,
+                                        axe, HTML validity, Lighthouse, links,
+                                        Go-Live acceptance report)
+                                      DR drill · capacity test
+                                   3. main only, all green ──────────►  self-hosted runner
+                                                                          backup → sync → provision
                                                                           → proxy route → smoke test
 ```
 
@@ -57,7 +62,12 @@ created by the idempotent seed scripts, so a fresh machine or CI ends up with th
 | Path | What |
 |---|---|
 | `src/themes/tmc/` | GIGW theme: design tokens (`theme.json`), templates, accessibility bar, mega-menu, blocks, Hindi UI strings |
-| `src/mu-plugins/tmc-core/` | Roles, review workflow, tamper-evident audit log |
+| `src/mu-plugins/tmc-core/` | Roles, review workflow, audit log, content types, search, documents, security, SEO, redirects, analytics, application gateway, editorial governance, network publishing, page cache, health |
+| `src/mu-plugins/tmc-page-cache/` | Full-page cache engine (loaded by the `advanced-cache.php` drop-in) |
+| `scripts/migrations/` | Run-once data migrations per site (001 core, 010–011 search, 030 redirects, 040 gateway, 050 editorial, 060–061 quality) |
+| `scripts/import/` | Content inventory importer for migration ([docs/migration/importer.md](docs/migration/importer.md)) |
+| `security/` | Accepted-finding files of the security gate (ZAP rules, Trivy ignore list, gitleaks config) |
+| `.github/workflows/` | `pipeline.yml` (CI/CD) calling `security.yml`, `quality.yml`, `dr-drill.yml`, `capacity.yml`, `ops-checks.yml`, `apps-gateway.yml`, `docs.yml`; `release.yml` (production), `load-test.yml`, `updates.yml` |
 | `scripts/setup.sh` | Brings any environment to the expected state (runs on every deploy) |
 | `scripts/seed-*.php`, `setup-languages.php` | Sites, languages, pages, menus, home sections |
 | `scripts/deploy.sh` | Server deploy (backup → sync → provision → proxy → smoke test) |
@@ -94,14 +104,18 @@ portable (PDF) set in `dist/docs/`.
 | Tender | Implementation |
 |---|---|
 | §4.1 six sites, common CMS | WordPress Multisite, subdomains |
-| §4.3 templates, code-free editing | Theme templates + locked (`contentOnly`) section patterns |
+| §4.3 templates, code-free editing | Theme templates + locked (`contentOnly`) section patterns; page-template picker with seven locked starter templates; living component library; approved-blocks governance ([docs/editorial/editorial-platform.md](docs/editorial/editorial-platform.md)) |
+| §4.6 centralised publishing | TMC publishes news, notices and events once to selected unit sites (read-only synced copies that follow the original) |
+| §4.6 document library, §4.12 search | Document types and dates, `/documents/` library with filters, network media overview; ranked site search including text inside PDFs, facets, accessible suggestions combobox ([docs/features/search-and-documents.md](docs/features/search-and-documents.md)) |
 | §4.6 roles + review workflow | Content Editor → Reviewer / Publisher → Site Admin → Super Admin; review queue, return-with-note |
 | §4.6 version history, audit trail | Revisions + HMAC-chained audit log with integrity check and CSV export |
 | §4.8 segregation | DB/cache on an internal network with no internet and no host ports |
 | §4.8 secured admin access, OWASP | TOTP two-factor mandatory for privileged roles, admin network allow-list, login lockout, no user enumeration, nonce-based CSP, security.txt; CI security gate (gitleaks, Trivy, OWASP ZAP) — see `docs/security/` |
 | §4.4, §4.12 TMC applications | Allow-listed server-side gateway (`/wp-json/tmc/v1/apps/…`) + appointment, results, online form and donation front ends; nothing stored ([spec](docs/integration/gateway.md)) |
 | §4.9 accessibility | Skip link, text size, high contrast, keyboard mega-menu, focus ring, pause for moving content |
-| §4.10 SEO | Clean URLs, hreflang, sitemap, per-page last-updated |
+| §4.10 SEO | Clean URLs, hreflang, editor metadata, JSON-LD, environment-aware robots and sitemaps, redirect manager (301/302/410, CSV), Matomo (cookieless) / GA4 (consent denied) off until configured ([docs/seo/seo-redirects-analytics.md](docs/seo/seo-redirects-analytics.md)) |
+| §4.11 content migration | CSV inventory importer (dry run, idempotent, redirects, report); link and orphan crawler |
+| §4.9, §4.14, §7.1 quality | Every template on every site: axe WCAG 2.2 AA, W3C HTML validity, Lighthouse budgets, E2E in Chromium/Firefox/WebKit at 360/768/1280 px, visual regression, link crawl; Go-Live acceptance report per site ([docs/testing/quality-gates.md](docs/testing/quality-gates.md)) |
 | §4.13 multilingual | Polylang: English + Hindi, more languages without code changes |
 | §4.7 environments, promotion, rollback | Dev (local) → CI → UAT → Production (tag + approval) → DR; backup per deploy |
 | §4.7 RPO 15 min / RTO 1 h, backups | backup every 15 min (DB + files + config, checksummed, retention), off-host copy, timed DR drill in CI |

@@ -28,6 +28,15 @@ function tmc_is_component_library() {
 	return $id && is_page( $id );
 }
 
+// Deliberately unlinked (a reference for TMC's web team, not a page for visitors): not an orphan.
+add_filter(
+	'tmc_published_urls',
+	function ( $urls ) {
+		$id = tmc_component_library_page_id();
+		return $id ? array_filter( (array) $urls, fn( $row ) => (int) ( $row['id'] ?? 0 ) !== $id ) : $urls;
+	}
+);
+
 add_filter( 'wp_robots', 'tmc_component_library_robots' );
 function tmc_component_library_robots( array $robots ) {
 	if ( tmc_is_component_library() ) {

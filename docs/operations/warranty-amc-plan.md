@@ -70,7 +70,7 @@ translation (content is TMC's).
 
 | Frequency | Activity | Output |
 |---|---|---|
-| Daily (automated) | Backup jobs and verification; uptime monitoring of each website; CI on every change | Monitoring alerts (W7, verify at integration) |
+| Daily (automated) | Backup jobs and verification; uptime monitoring of each website; CI on every change | Monitoring alerts on `/wp-json/tmc/v1/health` ([monitoring](monitoring.md)) |
 | Weekly | Review of vulnerability sources ([Patch Management §3](patch-management.md#3-sources-of-vulnerability-information)); check of backup success and disk usage; check of `cron` container and expiry job | Patch register entries |
 | Monthly | Maintenance release (patches, language packs, image refresh) through the pipeline; broken-link scan of all sites; audit-log review of privileged events; account review of vendor access; monthly support report | [Monthly Support Report](templates/monthly-support-report.md) |
 | Quarterly | Audit-log integrity verification and archive export; DR restore drill with measured RPO/RTO; performance benchmark of every template; accessibility scan; user-access review by site administrators; Quarterly Security and Performance Review | [Quarterly Review](templates/quarterly-security-performance-review.md), DR drill record |

@@ -118,7 +118,10 @@ inventory, the crawler then takes the published URLs from the REST API or the XM
 (EN/HI), page with section navigation, child page, Hindi page, policy page, sitemap (EN/HI), news
 list and item, tender list (current, archive, Hindi) and single tender, careers list and job, event
 list, calendar and single event, department list and single, Find a Doctor and doctor profile,
-search results and 404. Flags choose which tools use a page (`lighthouse`, `visual`). **A new
+search results (all types and filtered by type) and 404, the document library, the application front
+ends (appointment, results, online form, donation), the contact page with the location map, the two
+audience entry pages and the component library (TMC site only: a template can be limited to some sites
+with `sites: [...]`). Flags choose which tools use a page (`lighthouse`, `visual`). **A new
 template is added in this one place** and is picked up by E2E (`templates.spec.js`), axe, the
 validator, Lighthouse and visual regression.
 
@@ -140,7 +143,7 @@ because all six use the same templates.
 | `navigation.spec.js` | main menu disclosure pattern: Enter/Space opens, Escape closes and returns focus, one submenu open, mobile "Menu" button; current section, breadcrumbs; every submenu link reachable without JavaScript |
 | `preferences.spec.js` | text size and high contrast: applied, `aria-pressed`, remembered across reloads and pages; largest text size without sideways scrolling |
 | `language.spec.js` | English ⇄ Hindi switch goes to the translation of the same page, sets `lang` |
-| `search.spec.js` | header search on every width, result count announced (`role="status"`), no-result message |
+| `search.spec.js` | header search on every width, result count announced (`role="status"`), no-result help, "Refine search" form, filter by content type, suggestions combobox by keyboard (Down, Up, Escape, Enter) |
 | `tenders.spec.js` | current list, archive, single tender with key facts, document type/size, PDF download |
 | `events.spec.js` | upcoming/past, month calendar (table on wide screens, agenda on phones), month navigation, `.ics` |
 | `doctors.spec.js` | Find a Doctor: filter by department (with and without JavaScript), by name, no-match case |

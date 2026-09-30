@@ -87,6 +87,9 @@ wp_set_current_user( 0 );
 wp_create_nonce( 'tmc-perf-test' );
 $t( 'a nonce created for an anonymous visitor (a form) makes the page uncacheable', 'nonce' === tmc_page_cache_bypass_reason() );
 $GLOBALS['tmc_page_cache_bypass'] = '';
+wp_create_nonce( 'wp_rest' );
+$t( 'the core "wp_rest" nonce (created with every script registry) does not stop caching', '' === tmc_page_cache_bypass_reason() );
+$GLOBALS['tmc_page_cache_bypass'] = '';
 foreach ( array( 'save_post', 'transition_post_status', 'updated_post_meta', 'set_object_terms', 'wp_update_nav_menu', 'customize_save_after', 'updated_option', 'wp_update_site' ) as $hook ) {
 	$t( "purge wired to $hook", false !== has_action( $hook ) );
 }

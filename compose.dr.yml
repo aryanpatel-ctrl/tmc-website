@@ -21,3 +21,5 @@ services:
     container_name: tmc-dr-cron
   backup:
     container_name: tmc-dr-backup
+  tmc-apps-mock:
+    container_name: tmc-dr-apps-mock

@@ -41,13 +41,27 @@ function tmc_page_cache_bypass_reason() {
 	return (string) ( $GLOBALS['tmc_page_cache_bypass'] ?? '' );
 }
 
+/**
+ * Nonce actions that do not make a page uncacheable. WordPress core creates a "wp_rest" nonce whenever
+ * its script registry is set up (the inline configuration of wp-api-fetch), on every page, whether or
+ * not the script is printed; it is the same for every logged-out visitor and nothing on a public page
+ * relies on it.
+ */
+function tmc_page_cache_nonce_exempt_actions() {
+	return (array) apply_filters( 'tmc_page_cache_nonce_exempt_actions', array( 'wp_rest' ) );
+}
+
 // A nonce for a logged-out visitor means a form: a cached copy would hand everyone the same nonce.
 add_filter(
 	'nonce_user_logged_out',
-	function ( $uid ) {
-		tmc_page_cache_bypass( 'nonce' );
+	function ( $uid, $action = -1 ) {
+		if ( ! in_array( $action, tmc_page_cache_nonce_exempt_actions(), true ) ) {
+			tmc_page_cache_bypass( 'nonce' );
+		}
 		return $uid;
-	}
+	},
+	10,
+	2
 );
 
 add_action( 'template_redirect', 'tmc_page_cache_request_rules', PHP_INT_MAX );

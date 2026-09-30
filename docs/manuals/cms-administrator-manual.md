@@ -10,8 +10,7 @@ Administrators** (one website). Content editing itself is covered by the
 [System and Security Administration Manual](system-security-administration-manual.md).
 
 **Conventions.** *Italic arrows* such as *Network Admin → Sites* describe where to click in the
-WordPress administration screens (`/wp-admin/`). Items marked **(verify at integration)** belong to a
-feature being delivered in parallel; the screen name is confirmed when it is merged.
+WordPress administration screens (`/wp-admin/`).
 
 ---
 
@@ -42,14 +41,17 @@ linked to its translation.
 ## 2. Signing in and protecting your account
 
 1. Open `https://<site>/wp-login.php` from a TMC network or the TMC-approved VPN. Administrative
-   access from other networks is blocked (W2, verify at integration).
+   access from other networks is refused with "403 Forbidden" (the allowed ranges are set by TMC IT in
+   `TMC_ADMIN_ALLOW_CIDRS`).
 2. Enter your username and password, then the six-digit code from your authenticator application
    (multi-factor authentication is mandatory for Super Admins, Site Administrators and Reviewer /
-   Publishers; W2, verify at integration).
+   Publishers). At your first sign-in you are taken to *Users → Profile* to set up the authenticator
+   (scan the QR code, enter one code) and to download your backup codes; nothing else opens until then.
 3. Never share an account. Never send a password by e-mail or chat. Use *Users → Profile* to change
-   your password (at least 12 characters).
+   your password (at least 12 characters, with three of: capitals, small letters, digits, symbols).
+   After five wrong passwords sign-in pauses for a minute, and longer after further failures.
 4. Sign out when you leave the workstation (*top bar → your name → Log Out*). Privileged sessions end
-   automatically after inactivity (W2, verify at integration).
+   automatically after 30 minutes of inactivity, and after at most 12 hours in any case.
 
 Every sign-in, failed sign-in and sign-out is recorded in the audit log (§9).
 
@@ -67,8 +69,10 @@ technical names are `administrator`, `editor` and `contributor`; the labels abov
 `tmc-core` plugin (`roles.php`).
 
 **TMC-wide content.** Centralised publishing of TMC-wide notices to selected unit websites is provided by
-the network publishing feature (W5, verify at integration). Until then a TMC-level Reviewer / Publisher
-needs a role on each unit site where the content must appear.
+network publishing: on the TMC site, a news item, notice or event has a **Publish to unit websites**
+panel where a TMC Reviewer / Publisher, Site Administrator or Super Admin selects the unit sites. Each
+selected site receives a read-only synced copy that follows the original (updates, scheduling,
+unpublishing, deletion). Changes are made once, on the original.
 
 ## 4. Users and roles
 
@@ -76,7 +80,7 @@ needs a role on each unit site where the content must appear.
 
 1. *Network Admin → Users → Add New*: enter the username (use the TMC convention, e.g. `firstname.lastname`)
    and the official e-mail address. The user receives an e-mail to set a password (outbound e-mail must
-   be configured; see [Configuration Reference §1.1](../operations/configuration-reference.md#11-variables-added-by-parallel-work-streams-verify-at-integration)).
+   be configured; see [Configuration Reference §1.1](../operations/configuration-reference.md#11-feature-settings)).
 2. *Network Admin → Sites → <site> → Edit → Users → Add Existing User*: choose the user and the role.
 3. Record the request reference (the written request from the unit head) in the access register
    ([Access Control Policy §7](../architecture/access-control-policy.md#7-access-register)).
@@ -118,7 +122,7 @@ list. The result goes into the
 | Site title and tagline | *Settings → General* | The Hindi site name is kept in the site option `tmc_name_hi` (set by provisioning). Changes are logged (`setting_changed`). |
 | Time zone, date and time format | *Settings → General* | Provisioned as Asia/Kolkata, `d/m/Y`, `h:i A`. Do not change. |
 | Permalinks | *Settings → Permalinks* | Provisioned as `/%postname%/`. Do not change: it would break links. |
-| Search-engine visibility | *Settings → Reading* | Off on UAT; on for Production only (W3 per environment, verify at integration). |
+| Search-engine visibility | *Settings → Reading* | Set by provisioning from the environment: off on Dev, CI and UAT; on for Production only. Outside production the sites also send `noindex` and a restrictive `robots.txt`. |
 | Contact details and social media links | *Appearance → Customize → TMC contact details* | Address, phone, e-mail; Facebook, X, YouTube, Instagram, LinkedIn URLs. Shown in the footer and contact areas. |
 | Hindi version of the address | *Languages → Translations*, group "TMC contact details" | Enter the Hindi text and save. |
 | Menus | *Appearance → Menus* | See §5.1. |
@@ -179,7 +183,7 @@ TMC design system, SOW §5):
 |---|---|---|
 | Colours, fonts, sizes, spacing (design tokens) | `theme.json` (code); editors cannot pick custom colours or sizes | Change Request |
 | Page templates and locked sections | Theme templates and patterns (code); home-page sections are locked so editors change text and links only | Change Request |
-| Page template chosen for a page | Page editor (template picker; W5, verify at integration) | Editors |
+| Page template chosen for a page | Page editor: when a new page is created, the template picker offers seven locked starter templates (standard, section landing, contact, document listing, service, people, FAQ) | Editors |
 | Content types (Tenders & EOIs, Events, Careers, Departments, Doctors) and their fields | `tmc_field_schema()` in `src/mu-plugins/tmc-core/content-types.php` (code) | Change Request |
 | Which fields are required | Same schema (`required`) | Change Request |
 | Listing sizes (tenders/jobs/events 20 per page, doctors 24) | Theme (`inc/content-views.php`) | Change Request |
@@ -273,8 +277,10 @@ neutralised. Each export is logged (`audit_log_exported`). Store exports accordi
 - One media library per site, shared by English and Hindi.
 - Documents attached to tenders and job openings are chosen from the media library in the item's
   **Details** box.
-- The central document library with document types, filters and network-wide overview is delivered by
-  W1 (verify at integration).
+- Documents get a **Document type** and **Document date** in the media library; the public
+  **Documents** page (`/documents/`) lists them with type and year filters, and site search finds text
+  inside PDFs. Super Admins see every site's uploads under *Network Admin → Media & documents*, where
+  "Extract text now" processes documents whose text has not been read yet.
 
 ## 11. Review workflow administration
 

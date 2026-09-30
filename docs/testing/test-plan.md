@@ -181,7 +181,8 @@ only if listed in the defect closure report with TMC IT's written agreement and 
 
 For each website, before the Go-Live milestone payment, TMC IT verifies the criteria below. The evidence
 pack is generated from the CI reports of the release proposed for Go-Live; the automated per-site
-acceptance report is produced by W6 (verify at integration).
+acceptance report is produced by the quality gates (`.github/workflows/quality.yml`, job *Go-Live
+acceptance report*, artifact `quality-reports`; see [quality gates](quality-gates.md)).
 
 | # | SOW §7.1 criterion | Evidence | Produced by |
 |---|---|---|---|

@@ -93,8 +93,23 @@ Date-times are stored in site time (Asia/Kolkata) as `Y-m-d H:i:s`.
 | `tmc_address`, `tmc_phone`, `tmc_email`, `tmc_facebook`, `tmc_x`, `tmc_youtube`, `tmc_instagram`, `tmc_linkedin` | theme mods | Per-site contact details and social links (Customizer) |
 | `tmc_audit_db_version` | network option | Schema version of the audit table |
 
-**Verify at integration:** keys added by W1–W7 (search index, redirects, SEO metadata, gateway registry,
-MFA secrets, page templates, backup status) are appended to this table.
+Keys and tables added by the feature modules:
+
+| Key / table | Kind | Purpose |
+|---|---|---|
+| `<prefix>tmc_search_index`, `<prefix>tmc_document_text` | per-site tables | Search index and text extracted from uploaded documents (`search-index.php`, `document-text.php`) |
+| `tmc_search_db_version`, `tmc_doc_text_db_version`, `tmc_doc_types_version` | site options | Schema / seed versions of the above |
+| `tmc_doc_type` | taxonomy on attachments | Document type (annual report, circular, form, tender document …) |
+| `_tmc_doc_date`, `_tmc_doc_text_method`, `_tmc_doc_text_chars` | attachment meta | Document date; how and how much text was extracted |
+| `<prefix>tmc_redirects`, `tmc_redirects_db_version` | per-site table, site option | Redirect manager rules (301/302/410) |
+| `_tmc_seo_*` (e.g. `_tmc_seo_noindex`) | post meta | Editor SEO fields (title, description, image, robots) |
+| `tmc_analytics` | network option | Analytics and search-console settings (off until configured) |
+| `tmc_apps_registry` | network option | Application gateway endpoint registry (no secrets: keys come from the environment) |
+| `tmc_w4_placed` | site option | Pages that already received their application / map block (placed once) |
+| `tmc_map_lat`, `tmc_map_lon`, `tmc_map_zoom`, `tmc_map_approximate` | theme mods | Location map position per site |
+| `_tmc_syndicate_targets`, `_tmc_syndicated_copies`, `_tmc_origin_blog`, `_tmc_origin_post`, `_tmc_origin_url`, `_tmc_sync_hash` | post meta | Network publishing: selected unit sites, copies, origin and sync hash |
+| `tmc_mfa_required_since`, `tmc_password_change_required` | user meta | MFA grace-period start; weak-password flag. TOTP secrets and hashed backup codes are stored by the Two Factor plugin in user meta |
+| `<base_prefix>tmc_backup_log`, `tmc_cron_heartbeat` | network table, network option | Backup runs reported by the backup service; last cron run (health endpoint) |
 
 ## 4. Audit log table `tmc_tmc_audit_log`
 

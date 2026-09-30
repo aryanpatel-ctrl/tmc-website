@@ -88,11 +88,18 @@ test('suggestions combobox is operable with the keyboard', { tag: ['@e2e', '@sea
   await input.press('Escape');
   await expect(input).toHaveValue('');
 
-  // Enter on a highlighted suggestion opens it.
+  // Enter on a highlighted suggestion opens it. Documents (PDF) open as downloads, so choose the
+  // first suggestion that is a web page.
   await input.pressSequentially('sample', { delay: 30 });
   await expect(list).toBeVisible();
-  await input.press('ArrowDown');
-  const target = await options.first().locator('.suggest-title').textContent();
+  const types = await options.locator('.suggest-type').allTextContents();
+  const index = types.findIndex((type) => !/^\s*Document\s*$/i.test(type));
+  expect(index, `a suggestion that is a web page (types: ${types.join(', ')})`).toBeGreaterThanOrEqual(0);
+  for (let step = 0; step <= index; step++) {
+    await input.press('ArrowDown');
+  }
+  await expect(options.nth(index)).toHaveAttribute('aria-selected', 'true');
+  const target = await options.nth(index).locator('.suggest-title').textContent();
   await Promise.all([page.waitForURL((url) => url.pathname !== '/'), input.press('Enter')]);
   await expect(page.locator('h1')).toContainText((target || '').trim().slice(0, 20));
 });

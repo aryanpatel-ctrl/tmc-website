@@ -41,7 +41,7 @@ in the [Content Migration Methodology](../proposal/04-content-migration-methodol
 | `language` | `en` or `hi` | `en` |
 | `translation_of` | `inventory_id` of the other-language version | `TMH-0122` |
 | `content_type` | `page`, `post` (news/notice), `tmc_tender`, `tmc_job`, `tmc_event`, `tmc_department`, `tmc_doctor`, `document` | `page` |
-| `template` | Page template from Annexure B (W5 names, verify at integration) | `standard` |
+| `template` | Theme page template for the item (the importer's `template` column, see the [importer guide](../migration/importer.md)); the editor's starter templates (standard, landing, contact, documents, service, people, FAQ) are for new pages and are not needed for import | `default` |
 | `parent_id` | `inventory_id` of the parent page in the IA | `TMH-0100` |
 | `menu_order` | Position among siblings | `3` |
 | `title` | Title | `Patient Guide` |

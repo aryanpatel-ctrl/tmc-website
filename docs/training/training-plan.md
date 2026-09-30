@@ -97,7 +97,7 @@ completed by M6 (SOW §7: "training completed").
 | 6 | Media: images with alternative text, accessible PDFs, documents | ● | ● | Exercise E-5 |
 | 7 | Hindi versions (linked translations) | ● | ● | Exercise E-6 |
 | 8 | Review, return with note, publish, schedule (Reviewer / Publishers) | ● | ● | Exercise E-7 |
-| 9 | TMC-wide content and network publishing (W5, verify at integration) | ● | ○ | Demonstration |
+| 9 | TMC-wide content and network publishing (*Publish to unit websites* panel) | ● | ○ | Demonstration |
 | 10 | Writing for GIGW/WCAG: plain language, link text, tables; revisions and undo | ● | ● | Exercise E-8 |
 | 11 | Assessment and feedback | ● | ● | Practical assessment + quiz |
 

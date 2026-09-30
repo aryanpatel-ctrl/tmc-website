@@ -50,7 +50,14 @@ function tmc_published_urls() {
 			'url'   => $url,
 		);
 	}
-	return $urls;
+	/**
+	 * Filters the inventory. Pages that are deliberately kept out of the navigation and out of search
+	 * engines (for example the component library) remove themselves here, so they are not reported as
+	 * orphaned.
+	 *
+	 * @param array $urls Inventory rows.
+	 */
+	return array_values( (array) apply_filters( 'tmc_published_urls', $urls ) );
 }
 
 add_filter( 'posts_orderby', 'tmc_stable_orderby', 10, 2 );

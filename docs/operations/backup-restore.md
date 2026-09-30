@@ -41,15 +41,17 @@ image and provisioning, and the cache rebuilds itself.
 **In place:** before every deployment `scripts/deploy.sh` writes
 `backups/pre-deploy-<timestamp>-<commit>.sql.gz` (mode 600) and keeps the last 10.
 
-**Scheduled backups (W7, verify at integration):** the schedule that meets RPO 15 minutes is delivered by
-work stream W7. The proposed policy, to be confirmed with TMC, is:
+**Scheduled backups (in place):** the `backup` service takes a complete snapshot (database dump,
+uploads/plugins/language files, configuration; checksummed) every 15 minutes and copies it off the host
+with `scripts/backup/offsite-copy.sh`. Retention (policy to be confirmed with TMC; details in
+[Backup and DR](backup-and-dr.md)):
 
 | Set | Frequency | Retention | Storage |
 |---|---|---|---|
-| Database | Every 15 minutes | 48 hours | Backup storage in India, separate from the Production host |
-| Database + uploads | Daily (off-peak) | 30 days | As above, replicated to the DR site |
-| Database + uploads | Monthly | 12 months | As above |
-| Pre-deploy database | Each deployment | Last 10 | Production host `backups/` |
+| Database + files + configuration | Every 15 minutes | 48 hours | `backup_data` volume on the host and the off-host copy in India |
+| Same, first snapshot of each day | Daily | 30 days | As above |
+| Same, first snapshot of each month | Monthly | 12 months | As above |
+| Pre-deploy database dump + full snapshot | Each deployment | Last 10 dumps | Production host `backups/` and `backup_data` |
 
 Backups are encrypted in transit and at rest, accessible only to TMC IT and the named infrastructure
 administrator, and located in India (see [Data Residency Statement](../architecture/data-residency-statement.md)).
@@ -143,9 +145,10 @@ Running `setup.sh` on an empty database installs a fresh network; therefore on a
 the database **before** allowing editors in, and verify that the restored `tmc_migrations` option lists
 all migrations of the deployed release (`wp option get tmc_migrations` per site).
 
-**Verify at integration:** W7 delivers the DR-specific scripts (replication or continuous shipping of
-backups, DR compose override and the automated timed drill). Where W7 automates a step above, this table
-is updated with the script name.
+Automation of these steps: `scripts/backup/offsite-copy.sh` (continuous off-host copy),
+`scripts/dr/restore.sh` (restore a snapshot or a dump into a stack), `scripts/dr/drill.sh` with
+`compose.dr.yml` (timed drill in an isolated project; run in CI by `.github/workflows/dr-drill.yml` on
+every change and monthly). See [Backup and DR](backup-and-dr.md).
 
 ## 5. Verification of backups
 

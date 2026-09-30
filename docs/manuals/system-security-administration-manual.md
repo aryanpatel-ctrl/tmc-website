@@ -84,9 +84,10 @@ integration); the checks above remain the manual fallback.
 
 | Control | How to administer | Status |
 |---|---|---|
-| Multi-factor authentication for Super Admin, Site Administrator, Reviewer / Publisher | Enrolment at first login; reset for a user who lost their device after identity verification | W2, verify at integration |
-| Administrative network allow-list (`/wp-admin`, `/wp-login.php`) | Allowed ranges set in configuration (application) and at the reverse proxy/firewall (TMC) | W2 + TMC, verify at integration |
-| Login rate limiting / lockout | Thresholds in configuration | W2, verify at integration |
+| Multi-factor authentication for Super Admin, Site Administrator, Reviewer / Publisher | Enrolment at first login (TOTP + backup codes, Two Factor plugin 0.17.0); reset for a user who lost their device after identity verification (§6). `TMC_ENFORCE_MFA` must stay unset (on) | In place |
+| Administrative network allow-list (`/wp-admin`, `/wp-login.php`) | `TMC_ADMIN_ALLOW_CIDRS` in `.env` (comma-separated ranges; unset = private ranges and the VPN range only; an invalid list blocks everyone), recreate `wordpress`; plus the reverse proxy / firewall rule (TMC) | In place (application); TMC (perimeter) |
+| Login rate limiting / lockout | `TMC_LOGIN_MAX_ATTEMPTS` (5 per account), `TMC_LOGIN_MAX_ATTEMPTS_IP` (20 per address), `TMC_LOGIN_WINDOW` (900 s), `TMC_LOGIN_LOCKOUT_BASE` (60 s, doubling) and `TMC_LOGIN_LOCKOUT_MAX` (3600 s); lockouts are audit events `login_lockout` | In place |
+| Session timeout | `TMC_ADMIN_IDLE_MINUTES` (30) and `TMC_ADMIN_SESSION_HOURS` (12, privileged accounts) | In place |
 | Role assignments | CMS Administrator Manual §4 | In place |
 | File editing in the admin disabled | `DISALLOW_FILE_EDIT` (`docker-compose.yml`) | In place |
 | Theme and plugin code read-only at runtime | Read-only bind mounts | In place |
@@ -100,8 +101,10 @@ curl -sI "https://$TMC_BASE_DOMAIN/" | grep -iE "server:|x-content-type-options|
 curl -s -o /dev/null -w "%{http_code}\n" "https://$TMC_BASE_DOMAIN/xmlrpc.php"   # expect 403
 ```
 
-Expected: `Server: Apache` (no version), the four security headers present, `xmlrpc.php` refused. The
-Content-Security-Policy and HSTS headers are added by W2 (verify at integration).
+Expected: `Server: Apache` (no version), the four security headers present, `xmlrpc.php` refused.
+Every page also carries a `Content-Security-Policy` with a per-request nonce and, over HTTPS,
+`Strict-Transport-Security` (`tmc-core/security-headers.php`); `scripts/smoke.d/security.sh` checks all
+of them after every deployment.
 
 ### 5.3 Reviewing security events
 
@@ -201,9 +204,10 @@ export and archive with the old key, change, recreate `wordpress` and `cron`, re
 | Credential | Procedure |
 |---|---|
 | TLS certificates and keys | TMC infrastructure (perimeter/reverse proxy); renew before expiry |
-| MFA secret of a user | Reset the user's second factor (W2, verify at integration) |
-| Integration endpoint credentials (W4) | Change at the TMC application side and in the environment variables of the gateway (names verified at integration); recreate `wordpress` |
-| Backup storage, monitoring, log store (W7) | Per W7 procedure (verify at integration) |
+| MFA secret of a user | After verifying the person's identity: `wp user meta delete <login> _two_factor_totp_key` and `wp user meta delete <login> _two_factor_backup_codes` (run with `--url=<site>`); at the next sign-in the user must enrol again. Each removal is written to the audit log (`mfa_totp_removed`, `mfa_backup_codes_removed`) |
+| Integration endpoint credentials | Change at the TMC application side and in `TMC_APP_<SERVICE>_KEY` in `.env` ([gateway spec](../integration/gateway.md)); recreate `wordpress` |
+| Backup storage (off-host copy) | Replace the key in `TMC_OFFSITE_SSH_KEY` and the host key in `TMC_OFFSITE_KNOWN_HOSTS` ([backup and DR](../operations/backup-and-dr.md)) |
+| Monitoring, log store | [Monitoring](../operations/monitoring.md); the log store is TMC infrastructure |
 | Self-hosted runner registration | Remove and re-register the runner from the repository settings |
 
 ## 7. Backups, restores and DR

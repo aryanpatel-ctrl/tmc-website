@@ -186,7 +186,7 @@ function tmc_app_error_summary( $form_id, array $errors ) {
 		$items .= sprintf( '<li><a href="#%s-%s">%s</a></li>', esc_attr( $form_id ), esc_attr( $field ), esc_html( $message ) );
 	}
 	return sprintf(
-		'<div class="tmc-app-errors" id="%1$s-errors" tabindex="-1" aria-labelledby="%1$s-errors-title"%2$s><h3 class="tmc-app-errors-title" id="%1$s-errors-title">%3$s</h3><ul>%4$s</ul></div>',
+		'<div class="tmc-app-errors" id="%1$s-errors" role="group" tabindex="-1" aria-labelledby="%1$s-errors-title"%2$s><h3 class="tmc-app-errors-title" id="%1$s-errors-title">%3$s</h3><ul>%4$s</ul></div>',
 		esc_attr( $form_id ),
 		$errors ? ' autofocus' : ' hidden',
 		esc_html__( 'There is a problem', 'tmc' ),
@@ -365,7 +365,7 @@ function tmc_render_app_appointment( $attributes ) {
 	$fields .= $field( array( 'name' => 'patient_type', 'type' => 'radio', 'options' => $rules['patient_type']['options'] ) );
 	$fields .= $field( array( 'name' => 'registration_no', 'type' => 'text', 'hint' => __( 'Only if you are already registered at this hospital.', 'tmc' ), 'attrs' => array( 'maxlength' => 20, 'spellcheck' => 'false' ) ) );
 	$fields .= $field( array( 'name' => 'patient_name', 'type' => 'text', 'autocomplete' => 'name', 'attrs' => array( 'maxlength' => 100 ) ) );
-	$fields .= $field( array( 'name' => 'mobile', 'type' => 'tel', 'autocomplete' => 'tel-national', 'hint' => __( 'A 10-digit Indian mobile number.', 'tmc' ), 'attrs' => array( 'inputmode' => 'numeric', 'maxlength' => 15 ) ) );
+	$fields .= $field( array( 'name' => 'mobile', 'type' => 'tel', 'autocomplete' => 'tel', 'hint' => __( 'A 10-digit Indian mobile number.', 'tmc' ), 'attrs' => array( 'inputmode' => 'numeric', 'maxlength' => 15 ) ) );
 	$fields .= $field( array( 'name' => 'email', 'type' => 'email', 'autocomplete' => 'email', 'attrs' => array( 'maxlength' => 254, 'spellcheck' => 'false' ) ) );
 	$fields .= $field( array( 'name' => 'consent', 'type' => 'checkbox', 'label' => __( 'I confirm these details are correct and agree that they are sent to the hospital appointment system to process this request.', 'tmc' ) ) );
 	$fields .= tmc_app_submit( __( 'Request appointment', 'tmc' ) );
@@ -542,7 +542,7 @@ function tmc_render_app_donate( $attributes ) {
 	$fields .= '<h3 class="tmc-app-subtitle">' . esc_html__( 'Your details', 'tmc' ) . '</h3>';
 	$fields .= $field( array( 'name' => 'donor_name', 'type' => 'text', 'autocomplete' => 'name', 'attrs' => array( 'maxlength' => 100 ) ) );
 	$fields .= $field( array( 'name' => 'email', 'type' => 'email', 'autocomplete' => 'email', 'hint' => __( 'Your receipt is sent to this address.', 'tmc' ), 'attrs' => array( 'maxlength' => 254, 'spellcheck' => 'false' ) ) );
-	$fields .= $field( array( 'name' => 'mobile', 'type' => 'tel', 'autocomplete' => 'tel-national', 'attrs' => array( 'inputmode' => 'numeric', 'maxlength' => 15 ) ) );
+	$fields .= $field( array( 'name' => 'mobile', 'type' => 'tel', 'autocomplete' => 'tel', 'attrs' => array( 'inputmode' => 'numeric', 'maxlength' => 15 ) ) );
 	$fields .= $field( array( 'name' => 'pan', 'type' => 'text', 'hint' => __( 'Give your PAN if you need it printed on your receipt, for example ABCDE1234F.', 'tmc' ), 'attrs' => array( 'maxlength' => 10, 'spellcheck' => 'false', 'autocapitalize' => 'characters' ) ) );
 	$fields .= $field( array( 'name' => 'address', 'type' => 'textarea', 'autocomplete' => 'street-address', 'attrs' => array( 'maxlength' => 300 ) ) );
 	$fields .= $field( array( 'name' => 'consent', 'type' => 'checkbox', 'label' => __( 'I agree that these details are sent to the Tata Memorial Centre payment system to process my donation and issue a receipt.', 'tmc' ) ) );

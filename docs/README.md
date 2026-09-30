@@ -17,7 +17,7 @@ portable (PDF) sets handed over to TMC are generated from them (section 4).
 | **Version / Status** | 0.x = draft; 1.0 = approved by TMC IT for the milestone at which it is due. Each release updates the version of every document it changes (SOW §4.15) |
 | **[BIDDER TO FILL]** | Company particulars (names, experience, certificates, contacts) to be completed by the bidder with facts that can be evidenced. No such fact is asserted anywhere in these documents |
 | **[TMC TO FILL] / [TMC TO CONFIRM]** | Information or a decision that only TMC can provide (contacts, business hours, DR location and similar); related EOI queries are numbered Q-nn in the [queries letter](eoi/queries-letter.md) |
-| **Verify at integration** | Behaviour delivered by a parallel work stream (W1–W7) whose exact routes, settings or variable names are confirmed when that work is merged; the statement of *what* is delivered follows the RTM |
+| **Verify at integration** | No longer used: every such statement was confirmed against the integrated code (branch `feat/integration`) and replaced by the actual routes, settings and variable names |
 | **Sample / demonstration data** | Content seeded on development and UAT environments is labelled as sample data in the content itself and flagged `_tmc_sample = 1` for removal before Go-Live. It is not information about TMC |
 
 ## 2. Register

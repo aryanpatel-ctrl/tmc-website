@@ -87,9 +87,9 @@ Vendor personnel access TMC environments only from within India.
 | Item | Standard |
 |---|---|
 | Passwords | Minimum 12 characters; not reused; no passwords in e-mail or chat. Initial passwords are set by the user. |
-| MFA | TOTP authenticator for all Super Admin, Site Administrator and Reviewer/Publisher CMS accounts (W2, verify at integration), and for every infrastructure account. |
+| MFA | TOTP authenticator for all Super Admin, Site Administrator and Reviewer/Publisher CMS accounts (enforced by `tmc-core/security-mfa.php` with the Two Factor plugin), and for every infrastructure account. |
 | SSH | Key-based only; password authentication disabled; keys are per person. |
-| Sessions | Privileged CMS sessions expire after inactivity (W2, verify at integration). |
+| Sessions | CMS sessions end after 30 minutes of inactivity; privileged sessions last at most 12 hours per sign-in (`tmc-core/security-session.php`). |
 | Service credentials | Stored only in `.env` (mode 600) on the host or TMC's secret store; rotated per the [System and Security Administration Manual](../manuals/system-security-administration-manual.md#6-rotating-secrets). |
 
 ## 7. Access register

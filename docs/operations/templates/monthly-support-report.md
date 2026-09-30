@@ -14,7 +14,8 @@ submitted to TMC IT." Submitted by the 7th of the following month by the Support
 scripts/reports/defect-closure-report.sh --label incident --since 2027-06-01 --until 2027-06-30 --out reports/support-2027-06
 ```
 
-Availability figures come from the uptime monitoring (W7, verify at integration).
+Availability figures come from the uptime monitoring of `/wp-json/tmc/v1/health` and the monthly
+availability report (`scripts/sla/availability-report.sh`; see [monitoring](../monitoring.md)).
 
 ---
 

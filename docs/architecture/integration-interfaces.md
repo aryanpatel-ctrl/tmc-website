@@ -26,26 +26,28 @@ external services, with operators, and between internal components. It is update
 | ID | Interface | Direction | Protocol | Authentication | Status |
 |---|---|---|---|---|---|
 | IF-01 | Public web (six sites, EN + HI) | Browser → website | HTTPS | None (public) | In place |
-| IF-02 | CMS administration (`/wp-admin`, `/wp-login.php`) | Browser → website | HTTPS | Username + password + TOTP MFA (W2) | In place; MFA verify at integration |
+| IF-02 | CMS administration (`/wp-admin`, `/wp-login.php`) | Browser → website | HTTPS | Username + password + TOTP MFA (Two Factor 0.17.0, enforced for privileged roles) from allow-listed networks only | In place (`security-test.php`, `smoke.d/security.sh`) |
 | IF-03 | WordPress REST API (`/wp-json/`) used by the block editor | Browser → website | HTTPS + JSON | WordPress cookie + nonce | In place (core) |
 | IF-04 | Event calendar download (`/events/<slug>/?ics=1`) | Browser → website | HTTPS, `text/calendar` (RFC 5545) | None | In place |
 | IF-05 | XML sitemap (`/wp-sitemap.xml`) and HTML sitemap (`/sitemap/`) | Crawlers/browsers → website | HTTPS | None | In place (core + theme); robots per environment in W3 |
-| IF-06 | Application gateway: TMC application endpoints | Website (server) → TMC API | HTTPS | Per endpoint (API key / mutual TLS / token as TMC specifies) | W4, verify at integration |
-| IF-07 | Donation payment hand-off | Browser → TMC-approved payment gateway → return URL | HTTPS redirect / form POST | Gateway-specific signature verification | W4 (mock gateway in UAT), verify at integration |
-| IF-08 | Location maps | Website → browser | Static accessible map block with text address and directions link; no API key | None | W4, verify at integration |
+| IF-06 | Application gateway: TMC application endpoints | Website (server) → TMC API | HTTPS | Per endpoint (API key / mutual TLS / token as TMC specifies); keys only from the environment (`TMC_APP_<SERVICE>_KEY`) | In place: `/wp-json/tmc/v1/apps/<service>/<action>`, registry under *Network Admin → Settings → TMC applications* ([gateway spec](../integration/gateway.md)); tested against the DEMO mock backend |
+| IF-07 | Donation payment hand-off | Browser → TMC-approved payment gateway → return URL | HTTPS redirect / form POST | Gateway-specific signature verification | Hand-off built and tested against the DEMO mock gateway ([gateway spec](../integration/gateway.md)); the real gateway and its signature scheme are TMC inputs |
+| IF-08 | Location maps | Website → browser | Accessible map block (`tmc/location-map`): text address and directions link always; the OpenStreetMap embed loads only when the visitor asks (CSP allows only that frame origin); no API key | None | In place (`apps-test.php`) |
 | IF-09 | Social media | Website → browser | Plain links (per-site Customizer settings) and share links; no embedded third-party scripts | None | Links in place; share links W4 |
-| IF-10 | Site search with suggestions (content + documents) | Browser → website | HTTPS; suggestions via a JSON endpoint | None | W1, verify at integration |
-| IF-11 | Web analytics and search console | Website → TMC-approved analytics | Self-hosted / India-resident option preferred | Per tool | W3, verify at integration (EOI query Q-15) |
+| IF-10 | Site search with suggestions (content + documents) | Browser → website | HTTPS; suggestions via `GET /wp-json/tmc/v1/suggest` (rate-limited per IP) | None | In place (`search-test.php`, `smoke.d/search.sh`, E2E keyboard test) |
+| IF-11 | Web analytics and search console | Website → TMC-approved analytics | Self-hosted / India-resident option preferred | Per tool | Built: Matomo (cookieless) or GA4 (consent denied by default), off until configured under *Network Admin → Settings → Analytics & Search*; the choice of tool is an EOI query (Q-15) |
 | IF-12 | Outbound e-mail (workflow notifications) | Website → SMTP relay | SMTP with TLS | Relay credentials | **Not configured**: needs a TMC-provided relay (EOI query Q-23) |
 | IF-13 | Release delivery | GitHub → self-hosted runner → Docker host | HTTPS (runner long-poll) | Runner registration token | In place |
-| IF-14 | Backups | Docker host → backup storage in India | TLS | Storage credentials | W7, verify at integration |
+| IF-14 | Backups | Docker host → backup storage in India | TLS | SSH key (`TMC_OFFSITE_SSH_KEY`) and pinned host key | Built: `scripts/backup/offsite-copy.sh` (rsync over SSH, verified after copy), exercised by the CI DR drill; the India-resident target is a TMC input |
 | IF-15 | Logs | Docker host → central log store | TLS | Agent credentials | TMC infrastructure / W7 |
-| IF-16 | Content import (migration) | Operator → WP-CLI importer | CSV/inventory files | Server shell (MFA) | W3, verify at integration |
+| IF-16 | Content import (migration) | Operator → WP-CLI importer | CSV/inventory files | Server shell (MFA) | In place: `scripts/import/import-inventory.php` (WP-CLI `eval-file`), dry run, report CSV ([importer guide](../migration/importer.md)); tested by `import-test.php` |
 
 ## 3. Application gateway (IF-06)
 
-**Verify at integration:** module name, admin screen, route names and environment variable names are
-confirmed when W4 is merged. The intended design, which this document fixes as the requirement, is:
+Implemented by `src/mu-plugins/tmc-core/apps-gateway.php` (route `/wp-json/tmc/v1/apps/<service>/<action>`),
+the registry screen *Network Admin → Settings → TMC applications* (`apps-admin.php`) and one API key per
+service from the environment (`TMC_APP_<SERVICE>_KEY`). The full specification is
+[docs/integration/gateway.md](../integration/gateway.md). The design is:
 
 ```mermaid
 sequenceDiagram

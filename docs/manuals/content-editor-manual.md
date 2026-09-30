@@ -53,8 +53,10 @@ you can compare or restore (§12).
 
 1. *Pages → Add New Page*.
 2. Type the **title** (it becomes the page heading and, unless changed, the web address).
-3. Choose the **page template** for this kind of page in the editor sidebar (template picker with the
-   templates of Annexure B; W5, verify at integration).
+3. Choose the **page template** for this kind of page: when a new page opens, the editor offers the
+   templates (standard, section landing, contact, document listing, service, people, FAQ). Locked
+   sections accept text and links only; text starting with "[Replace:" must be replaced before the page
+   can be published. The templates will follow Annexure B once TMC provides it.
 4. Fill in the content:
    - type text directly; press **Enter** for a new paragraph;
    - click **+** (Add block) for headings, lists, tables, images, files, buttons, or an approved

@@ -28,8 +28,8 @@ function tmc_audit_key() {
 }
 
 function tmc_audit_install() {
-	// Not while WordPress or a site is still being installed (its tables do not exist yet).
-	if ( ( function_exists( 'tmc_site_installed' ) && ! tmc_site_installed() ) || (int) get_site_option( 'tmc_audit_db_version' ) === TMC_AUDIT_DB_VERSION ) {
+	// The audit table is created even during the network install, so the install itself is logged.
+	if ( (int) get_site_option( 'tmc_audit_db_version' ) === TMC_AUDIT_DB_VERSION ) {
 		return;
 	}
 	global $wpdb;

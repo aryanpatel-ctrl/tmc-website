@@ -42,14 +42,22 @@ WP_ADMIN_PASSWORD=$(rand 24)
 WP_ADMIN_EMAIL=admin@example.com
 
 TMC_AUDIT_KEY=$(rand 48)
+EOF
+if [ "$ENVIRONMENT" != prod ] && [ "$ENVIRONMENT" != dr ]; then
+  cat >> .env <<EOF
 
 # Application gateway — local, CI and UAT are demonstration environments that use the DEMO mock
 # backend (docs/integration/gateway.md). Real TMC services get TMC_APP_<SERVICE>_KEY lines instead.
 TMC_DEMO=1
 TMC_APPS_MOCK_KEY=$(rand 40)
 EOF
+fi
 if [ "$ENVIRONMENT" = prod ] || [ "$ENVIRONMENT" = dr ]; then
   cat >> .env <<EOF
+
+# Production: no demonstration data and no DEMO mock backend. Register TMC's real application
+# endpoints (Network Admin → Settings → TMC applications) and add one TMC_APP_<SERVICE>_KEY per service.
+TMC_DEMO=0
 
 # Production stack (compose.prod.yml): own project and container names, WordPress on the loopback
 # port below behind TMC's reverse proxy, no UAT proxy route. On the DR host, replace TMC_AUDIT_KEY

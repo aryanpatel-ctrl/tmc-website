@@ -39,7 +39,7 @@ flowchart LR
     users(["Citizens, patients, clinicians,<br/>students, donors"]) -->|HTTPS| edge["TMC perimeter:<br/>firewall / WAF, TLS"]
     editors(["TMC and unit editors"]) -->|"HTTPS + MFA,<br/>restricted networks"| edge
     edge --> proxy["Reverse proxy"]
-    subgraph web["Website zone (segregated)"]
+    subgraph web["Website zone"]
         proxy --> wp["WordPress Multisite<br/>6 websites · EN/HI"]
         wp --> db[("MariaDB")]
         wp --> cache[("Object cache")]

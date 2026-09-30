@@ -45,7 +45,7 @@ flowchart LR
     citizen["Citizens, patients, caregivers,<br/>clinicians, students, donors"]
     editors["TMC and unit content editors,<br/>reviewers, site administrators"]
     tmcit["TMC IT<br/>(Super Admin, operations)"]
-    subgraph eco["TMC website ecosystem (this project)"]
+    subgraph eco["TMC website ecosystem"]
         web["Six public websites<br/>tmc.gov.in + 5 unit subdomains"]
         cms["WordPress Multisite CMS<br/>(wp-admin)"]
     end
@@ -86,14 +86,14 @@ Adding a unit website is a documented procedure that needs no code change (see t
 
 ```mermaid
 flowchart TB
-    subgraph presentation["Presentation layer: theme 'tmc' (src/themes/tmc)"]
+    subgraph presentation["Presentation: theme tmc"]
         tokens["theme.json design tokens<br/>(colours, type, spacing)"]
         templates["Templates: page, single, archive-*,<br/>single-*, search, 404"]
         blocks["Dynamic blocks: tmc/network, sitemap,<br/>notice-board, latest-news, tenders, jobs, events"]
         patterns["Locked home sections<br/>(templateLock: contentOnly)"]
         a11y["Accessibility bar: text size,<br/>contrast, skip link, keyboard mega-menu"]
     end
-    subgraph core["Business layer: must-use plugin 'tmc-core' (src/mu-plugins/tmc-core)"]
+    subgraph core["Business rules: plugin tmc-core"]
         roles["roles.php<br/>editorial roles"]
         workflow["workflow.php<br/>review queue, notes, notifications"]
         audit["audit-log.php<br/>HMAC-chained audit log"]
@@ -101,7 +101,7 @@ flowchart TB
         expiry["expiry.php<br/>automatic closure / expiry"]
         more["Further modules from parallel work streams:<br/>search, security/MFA, SEO/redirects, gateway,<br/>templates, backup (verify at integration)"]
     end
-    subgraph platform["Platform: WordPress Multisite + Polylang"]
+    subgraph platform["WordPress Multisite + Polylang"]
         wpcore["WordPress core<br/>(posts, revisions, users, media, REST)"]
         pll["Polylang: EN + HI"]
     end
@@ -133,12 +133,12 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    subgraph host["Docker host (one per environment)"]
-        subgraph edge["network: tmc_edge (outbound internet)"]
+    subgraph host["Docker host"]
+        subgraph edge["tmc_edge: outbound"]
             wp["tmc-wp<br/>Apache 2 + PHP 8.3<br/>WordPress Multisite"]
             cli["wpcli (on demand,<br/>profile 'tools')"]
         end
-        subgraph internal["network: tmc_internal (internal: true, no internet, no host ports)"]
+        subgraph internal["tmc_internal: no internet"]
             db[("tmc-db<br/>MariaDB 11.4")]
             redis[("tmc-redis<br/>Redis 7")]
             cron["tmc-cron<br/>WP-CLI loop, every 60 s"]

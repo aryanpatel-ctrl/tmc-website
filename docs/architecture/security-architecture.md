@@ -40,31 +40,31 @@ The design principles that follow from this objective:
 ```mermaid
 flowchart TB
     internet(["Internet<br/>citizens, editors"])
-    subgraph perimeter["Z0 Perimeter (TMC infrastructure)"]
+    subgraph perimeter["Z0 Perimeter · TMC"]
         fw["Firewall / WAF / DDoS protection<br/>TLS certificates for *.tmc.gov.in"]
     end
     subgraph dmz["Z1 Web DMZ"]
         rp["Reverse proxy<br/>TLS termination, request limits,<br/>admin path restriction"]
     end
-    subgraph app["Z2 Web application zone (Docker network tmc_edge)"]
+    subgraph app["Z2 Web application"]
         wp["tmc-wp<br/>Apache + PHP 8.3 + WordPress"]
         gw["Application gateway module<br/>(allow-listed endpoints, W4)"]
     end
-    subgraph data["Z3 Web data zone (Docker network tmc_internal, internal: true)"]
+    subgraph data["Z3 Web data"]
         db[("MariaDB")]
         redis[("Redis")]
         cron["cron runner"]
     end
-    subgraph mgmt["Z4 Management zone"]
+    subgraph mgmt["Z4 Management"]
         vpn["Administrative access:<br/>VPN / bastion with MFA"]
         runner["CI/CD deploy runner"]
         backup[("Backup storage<br/>in India")]
         logs[("Central log store")]
     end
-    subgraph tmcapps["Z5 TMC application integration zone (TMC)"]
+    subgraph tmcapps["Z5 TMC applications"]
         api["TMC-approved API endpoints<br/>(appointments, results, forms,<br/>payment gateway hand-off)"]
     end
-    subgraph clinical["Z6 Clinical and patient-service zone (TMC)"]
+    subgraph clinical["Z6 Clinical systems"]
         emr["EMR, registration, PACS,<br/>patient data stores, file shares"]
     end
 

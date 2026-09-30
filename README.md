@@ -62,6 +62,7 @@ created by the idempotent seed scripts, so a fresh machine or CI ends up with th
 | `scripts/tests/`, `smoke-test.sh`, `lint.sh` | Tests used locally and in CI |
 | `docker-compose.yml` + `compose.local.yml` / `compose.server.yml` | Base stack + per-environment override (chosen by `COMPOSE_FILE` in `.env`) |
 | `wordpress/` | Image: WordPress + PHP 8.3 + phpredis, hardened Apache/PHP config |
+| `mock/tmc-apps/` | DEMO-only mock of the TMC application backends (isolated `tmc_apps` network) — see `docs/integration/gateway.md` |
 | `nginx/tmc-website.conf` | UAT route in nginx-proxy-manager |
 
 ## Features (tender mapping)
@@ -74,6 +75,7 @@ created by the idempotent seed scripts, so a fresh machine or CI ends up with th
 | §4.6 version history, audit trail | Revisions + HMAC-chained audit log with integrity check and CSV export |
 | §4.8 segregation | DB/cache on an internal network with no internet and no host ports |
 | §4.8 secured admin access, OWASP | TOTP two-factor mandatory for privileged roles, admin network allow-list, login lockout, no user enumeration, nonce-based CSP, security.txt; CI security gate (gitleaks, Trivy, OWASP ZAP) — see `docs/security/` |
+| §4.4, §4.12 TMC applications | Allow-listed server-side gateway (`/wp-json/tmc/v1/apps/…`) + appointment, results, online form and donation front ends; nothing stored ([spec](docs/integration/gateway.md)) |
 | §4.9 accessibility | Skip link, text size, high contrast, keyboard mega-menu, focus ring, pause for moving content |
 | §4.10 SEO | Clean URLs, hreflang, sitemap, per-page last-updated |
 | §4.13 multilingual | Polylang: English + Hindi, more languages without code changes |

@@ -5,6 +5,9 @@
 #   4. TMC theme on every site   5. per site: languages, home page, migrations, pages/menus/content
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Settings added after an environment was first created (make-env.sh writes them for new ones).
+grep -q '^TMC_APPS_MOCK_KEY=' .env || echo "TMC_APPS_MOCK_KEY=$(openssl rand -hex 20)" >> .env
+grep -q '^TMC_DEMO=' .env || { grep -qE '^TMC_ENV=(local|ci|server)$' .env && echo "TMC_DEMO=1" >> .env; } || true
 set -a; . ./.env; set +a
 
 POLYLANG_VERSION="3.8.10"

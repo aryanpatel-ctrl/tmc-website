@@ -11,6 +11,16 @@
 	color: inherit;
 }
 
+/* E2E search @360 px (R-4.3-4 site-wide search, GIGW: search on every page): below 768 px the
+   header search box was hidden and phones had no way to search except from the 404 page. It now
+   takes its own row under the site name, next to the Menu button. */
+@media (max-width: 767px) {
+	.header-row { flex-wrap: wrap; }
+	.header-tools { flex: 1 1 100%; min-width: 0; }
+	.header-tools .search-form { display: flex; flex: 1 1 0%; min-width: 0; }
+	.header-tools .search-input { flex: 1 1 0%; width: 0; min-width: 0; }
+}
+
 /* High-contrast view: keep the hint legible inside yellow-bordered buttons. */
 html[data-contrast="high"] .button .doc-meta {
 	color: #ff0 !important;

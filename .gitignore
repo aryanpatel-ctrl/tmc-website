@@ -16,3 +16,7 @@ reports/
 .vscode/
 node_modules/
 .claude/
+
+# generated documentation (scripts/docs/build-docs.sh) and reports (scripts/reports/)
+/dist/
+/reports/

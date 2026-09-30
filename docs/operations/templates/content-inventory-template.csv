@@ -1,0 +1,3 @@
+inventory_id,site,language,translation_of,content_type,template,parent_id,menu_order,title,slug,body_file,summary,documents,image,image_alt,category,expires_at,ref_no,closing_at,opening_at,portal_url,start_at,end_at,venue,registration_url,designation,departments,qualifications,specialisation,opd_days,old_url,owner,approved_on,status
+EXAMPLE-0001,tmh,en,EXAMPLE-0002,page,standard,,1,Example page title (replace),example-page,EXAMPLE-0001.docx,One-sentence summary,,,,,,,,,,,,,,,,,,,https://old-site.example/example.html,Unit content owner,,received
+EXAMPLE-0002,tmh,hi,EXAMPLE-0001,page,standard,,1,[Hindi title supplied by TMC],example-page-hi,EXAMPLE-0002.docx,,,,,,,,,,,,,,,,,,,,,Unit content owner,,received

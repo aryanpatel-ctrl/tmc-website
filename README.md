@@ -70,6 +70,24 @@ created by the idempotent seed scripts, so a fresh machine or CI ends up with th
 | `backup/`, `scripts/backup/`, `scripts/dr/` | 15-minute backups, off-host copy, restore, DR drill (`docs/operations/backup-and-dr.md`) |
 | `scripts/sla/`, `scripts/perf/`, `scripts/ops/` | monthly availability report, capacity test, update check |
 | `docs/operations/` | environments, backup/DR, monitoring, patching, capacity |
+| `docs/` | Requirements (RTM), architecture, operations, manuals, training, testing, governance, proposal, EOI pack |
+| `scripts/docs/`, `scripts/licenses.sh`, `scripts/reports/` | Documentation build (DOCX/PDF) and link check, licence inventory, defect closure report |
+
+## Documentation
+
+The [Documentation Register](docs/README.md) lists every document with its ID and RTM references.
+Markdown in `docs/` is the master copy; `./scripts/docs/build-docs.sh` produces the editable (DOCX) and
+portable (PDF) set in `dist/docs/`.
+
+| Area | Start here |
+|---|---|
+| Specification | [Requirements Traceability Matrix](docs/requirements/RTM.md) · [Engineering conventions](docs/engineering/CONVENTIONS.md) |
+| Architecture (M2) | [System](docs/architecture/system-architecture.md) · [Security](docs/architecture/security-architecture.md) · [Interfaces](docs/architecture/integration-interfaces.md) · [Data model](docs/architecture/data-model.md) · [Data residency](docs/architecture/data-residency-statement.md) · [Access control](docs/architecture/access-control-policy.md) · [Audit-log retention](docs/architecture/audit-log-retention-policy.md) |
+| Operations | [Installation and deployment](docs/operations/installation-deployment.md) · [Configuration](docs/operations/configuration-reference.md) · [Backup and restore](docs/operations/backup-restore.md) · [Incident and support (SLA)](docs/operations/incident-support-model.md) · [Patch management](docs/operations/patch-management.md) · [Warranty and AMC](docs/operations/warranty-amc-plan.md) · [Handover checklist](docs/operations/handover-checklist.md) |
+| Manuals | [CMS administrator](docs/manuals/cms-administrator-manual.md) · [System and security administration](docs/manuals/system-security-administration-manual.md) · [Content editor](docs/manuals/content-editor-manual.md) · [Quick reference cards](docs/manuals/quick-reference/README.md) |
+| Training and testing | [Training plan](docs/training/training-plan.md) · [Test plan](docs/testing/test-plan.md) |
+| Governance | [Execution plan M1–M6](docs/governance/execution-plan.md) · [RACI](docs/governance/raci-team-structure.md) · [Risk register](docs/governance/risk-register.md) · [Change requests](docs/governance/change-request-procedure.md) |
+| Bid | [Technical proposal (SOW §12.1)](docs/proposal/README.md) · [EOI response pack](docs/eoi/README.md) · [Third-party licences](docs/THIRD-PARTY-LICENSES.md) |
 
 ## Features (tender mapping)
 

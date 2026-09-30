@@ -1,0 +1,83 @@
+# Support incident or service request during warranty and AMC (docs/operations/incident-support-model.md).
+name: Support incident
+description: Report an incident or request a service after Go-Live (warranty and AMC support).
+title: "[Incident] "
+labels: ["incident"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Critical problem (a website down, defacement, suspected account compromise)? Telephone the Vendor Support Lead now, then log this ticket.**
+        Do not include passwords, personal data or patient information.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (SOW §6.4 resolution targets)
+      options:
+        - "P1 Critical — website/CMS unavailable, security breach, data loss (4 business hours)"
+        - "P2 High — major function unavailable, no workaround (1 business day)"
+        - "P3 Medium — impaired with workaround / one page or template (3 business days)"
+        - "P4 Low — cosmetic, question, service request"
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Incident (something is broken)
+        - Security incident
+        - Service request (account, access, configuration, how-to)
+    validations:
+      required: true
+  - type: dropdown
+    id: site
+    attributes:
+      label: Website
+      options:
+        - Tata Memorial Centre (tmc)
+        - Tata Memorial Hospital, Mumbai (tmh)
+        - HBCH & RC, Visakhapatnam (hbchrcv)
+        - MPMMCC & HBCH, Varanasi (mpmmcc)
+        - HBCH & RC, Muzaffarpur (hbchrcmzp)
+        - HBCH, New Chandigarh (hbchpunjab)
+        - All websites / CMS network
+    validations:
+      required: true
+  - type: input
+    id: observed_at
+    attributes:
+      label: First observed (DD/MM/YYYY hh:mm IST)
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Page address (URL) or CMS screen
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened and who is affected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce (if known)
+  - type: input
+    id: contact
+    attributes:
+      label: Reporter contact (name, phone, e-mail)
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or other evidence
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: This ticket contains no passwords, personal data or patient information.
+          required: true

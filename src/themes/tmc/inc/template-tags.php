@@ -159,9 +159,13 @@ function tmc_last_updated() {
 
 /* ---------------------------------------------------------------- breadcrumbs */
 
-function tmc_breadcrumbs() {
+/**
+ * The breadcrumb trail for the current request: list of [ label, url ] ('' url = current page).
+ * Shared by the visible breadcrumbs and the BreadcrumbList structured data, so both always match.
+ */
+function tmc_breadcrumb_trail() {
 	if ( is_front_page() ) {
-		return;
+		return array();
 	}
 	$crumbs = array( array( __( 'Home', 'tmc' ), tmc_home_url() ) );
 
@@ -186,6 +190,14 @@ function tmc_breadcrumbs() {
 		$crumbs[] = array( single_post_title( '', false ), '' );
 	}
 
+	return (array) apply_filters( 'tmc_breadcrumb_trail', $crumbs );
+}
+
+function tmc_breadcrumbs() {
+	$crumbs = tmc_breadcrumb_trail();
+	if ( ! $crumbs ) {
+		return;
+	}
 	echo '<nav class="breadcrumbs" aria-label="' . esc_attr__( 'You are here', 'tmc' ) . '"><ol>';
 	foreach ( $crumbs as list( $label, $url ) ) {
 		if ( $url ) {

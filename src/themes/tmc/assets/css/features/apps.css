@@ -1,6 +1,11 @@
 /* TMC application front ends: appointment, results, online forms, donation (inc/apps-blocks.php). */
 
 .tmc-app {
+	/* Semantic status colours (theme tokens when defined; fallbacks meet 4.5:1 on white and on their tints). */
+	--app-error: var(--c-error, #b3261e);
+	--app-error-bg: var(--c-error-bg, #fdf0ef);
+	--app-success: var(--c-success, #1e7b34);
+	--app-success-bg: var(--c-success-bg, #edf7ef);
 	margin: 2rem 0;
 	padding: 1.25rem;
 	border: 1px solid var(--c-line);
@@ -66,30 +71,30 @@
 .tmc-app-slots .tmc-app-choice:has(input:checked) { border-color: var(--c-primary); background: var(--c-tint); }
 
 /* Errors (GOV.UK pattern: red bar, message above the control) */
-.tmc-app-field.has-error { padding-left: 1rem; border-left: 4px solid #b3261e; }
-.tmc-app-field-error { margin: 0 0 0.4rem; color: #b3261e; font-weight: 700; }
+.tmc-app-field.has-error { padding-left: 1rem; border-left: 4px solid var(--app-error); }
+.tmc-app-field-error { margin: 0 0 0.4rem; color: var(--app-error); font-weight: 700; }
 .tmc-app-field.has-error input,
 .tmc-app-field.has-error select,
-.tmc-app-field.has-error textarea { border-color: #b3261e; }
+.tmc-app-field.has-error textarea { border-color: var(--app-error); }
 
 .tmc-app-errors {
 	margin: 0 0 1.5rem;
 	padding: 1rem 1.25rem;
-	border: 4px solid #b3261e;
+	border: 4px solid var(--app-error);
 	border-radius: var(--radius);
 }
 .tmc-app-errors:focus { outline: 3px solid var(--c-focus); outline-offset: 0; }
 .tmc-app-errors-title { font-size: 1.125rem; margin-bottom: 0.5rem; }
 .tmc-app-errors ul { margin: 0; padding-left: 1.2rem; }
-.tmc-app-errors a { color: #b3261e; font-weight: 700; }
+.tmc-app-errors a { color: var(--app-error); font-weight: 700; }
 
 /* Results / messages */
 .tmc-app-result:focus { outline: none; }
 .tmc-app-result:focus-visible { outline: 3px solid var(--c-focus); }
 .tmc-app-message { margin: 0 0 1.25rem; padding: 1rem 1.25rem; border-radius: var(--radius); border-left: 6px solid var(--c-secondary); background: var(--c-surface); }
 .tmc-app-message p:last-child { margin-bottom: 0; }
-.tmc-app-message.is-success { border-left-color: #1e7b34; background: #edf7ef; }
-.tmc-app-message.is-error { border-left-color: #b3261e; background: #fdf0ef; }
+.tmc-app-message.is-success { border-left-color: var(--app-success); background: var(--app-success-bg); }
+.tmc-app-message.is-error { border-left-color: var(--app-error); background: var(--app-error-bg); }
 .tmc-app-message.is-info { border-left-color: var(--c-primary); background: var(--c-tint); }
 .tmc-app-message-title { font-size: 1.2rem; margin-bottom: 0.5rem; }
 .tmc-app-message .details { margin: 0.5rem 0; }

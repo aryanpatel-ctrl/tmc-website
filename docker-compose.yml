@@ -86,7 +86,7 @@ x-wp-volumes: &wp-volumes
 
 services:
   db:
-    image: mariadb:11.4.13   # exact pin; updates arrive as Dependabot PRs (docs/operations/patching.md)
+    image: mariadb:11.8.9   # exact pin; updates arrive as Dependabot PRs (docs/operations/patching.md)
     container_name: tmc-db
     restart: unless-stopped
     command: >

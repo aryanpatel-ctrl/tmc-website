@@ -388,6 +388,11 @@ function tmc_syndication_write_copy( $origin, $member, array $payload, $hash, $c
 		} else {
 			$result = wp_insert_post( wp_slash( $postarr ), true );
 		}
+		// An original published before its scheduled date ("publish now") keeps that date;
+		// WordPress would schedule the copy instead, so publish it explicitly.
+		if ( ! is_wp_error( $result ) && $result && 'publish' === $payload['status'] && 'future' === get_post_status( $result ) ) {
+			wp_publish_post( $result );
+		}
 	} finally {
 		$_POST    = $form;
 		$_REQUEST = $request;

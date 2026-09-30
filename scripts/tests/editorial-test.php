@@ -292,6 +292,22 @@ try {
 	restore_current_blog();
 	$t( 'publishing it again restores the copy', 'publish' === get_post_status( $c_en ) );
 
+	WP_CLI::log( '— Network publishing: scheduling' );
+	switch_to_blog( $main );
+	$when      = wp_date( 'Y-m-d H:i:s', time() + 3 * DAY_IN_SECONDS );
+	$scheduled = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_title' => "W5 scheduled notice $tag", 'post_content' => 'Scheduled notice.' ) );
+	$origins[] = $scheduled;
+	pll_set_post_language( $scheduled, 'en' );
+	tmc_syndication_set_targets( $scheduled, array( $tmh ) );
+	wp_update_post( array( 'ID' => $scheduled, 'post_status' => 'future', 'post_date' => $when, 'edit_date' => true ) );
+	$sched_copy = tmc_syndication_copies( $scheduled )[ $tmh ] ?? 0;
+	restore_current_blog();
+	$t( 'a scheduled original gives a copy scheduled for the same time', $sched_copy && 'future' === get_post_status( $sched_copy ) && $when === get_post_field( 'post_date', $sched_copy ) );
+	switch_to_blog( $main );
+	wp_publish_post( $scheduled ); // what the scheduler, or "publish now", does
+	restore_current_blog();
+	$t( 'when the original goes live, so does the copy', 'publish' === get_post_status( $sched_copy ) );
+
 	WP_CLI::log( '— Network publishing: events' );
 	switch_to_blog( $main );
 	$event     = (int) wp_insert_post( array( 'post_type' => 'tmc_event', 'post_status' => 'draft', 'post_title' => "W5 network event $tag" ) );
@@ -313,7 +329,7 @@ try {
 	}
 	$origins = array();
 	restore_current_blog();
-	$t( 'deleting the originals deletes every copy', ! get_post( $c_en ) && ! get_post( $c_hi ) && ! get_post( $event_copy ) );
+	$t( 'deleting the originals deletes every copy', ! get_post( $c_en ) && ! get_post( $c_hi ) && ! get_post( $event_copy ) && ! get_post( $sched_copy ) );
 	$logged = array_unique( $audit_since( $first_audit, 'network\_%' ) );
 	$t( 'audit log records selection, create, update, unpublish, delete (' . implode( ', ', $logged ) . ')', ! array_diff( array( 'network_publish_targets_changed', 'network_copy_created', 'network_copy_updated', 'network_copy_unpublished', 'network_copy_deleted' ), $logged ) );
 	$t( 'audit chain intact', tmc_audit_verify()['ok'] );

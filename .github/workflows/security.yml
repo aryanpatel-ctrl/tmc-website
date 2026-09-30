@@ -1,0 +1,159 @@
+# Security gate (tender §4.8: every release is vulnerability-assessed before production; RTM R-4.8-5).
+#
+# Reusable workflow — pipeline.yml calls it before the deploy job:
+#
+#   security:
+#     needs: lint
+#     uses: ./.github/workflows/security.yml
+#     with:
+#       ref: ${{ inputs.ref || github.sha }}
+#
+# Jobs (in parallel):
+#   secrets     gitleaks over the full git history              fails on any finding
+#   image       Trivy over the built tmc-wordpress image        fails on a CRITICAL vulnerability with a fix
+#   dast        OWASP ZAP baseline against a fresh stack        fails on rules marked FAIL in security/zap-baseline.conf
+#
+# Reports are uploaded as artifacts (kept 30 days). Accepted findings and their justification live in
+# security/zap-baseline.conf, security/trivyignore and security/gitleaks.toml.
+# Scanner versions are pinned (tag + digest); bump them deliberately.
+name: Security gate
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit SHA, tag or branch to scan (defaults to the triggering commit)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  REF: ${{ inputs.ref || github.sha }}
+  GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+  TRIVY_IMAGE: aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
+  ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:2.17.0@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ env.REF }}
+          fetch-depth: 0 # full history: a secret removed later is still exposed in git
+      - name: Scan every commit
+        run: |
+          mkdir -p reports
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" "$GITLEAKS_IMAGE" \
+            git /repo \
+            --config /repo/security/gitleaks.toml \
+            --redact --verbose --no-banner \
+            --report-format sarif --report-path /repo/reports/gitleaks.sarif \
+            --exit-code 1
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: security-secrets-report
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  image:
+    name: Image scan (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ env.REF }}
+      - name: Build the WordPress image
+        run: |
+          ./scripts/make-env.sh ci
+          docker compose build wordpress
+      - name: Full vulnerability and configuration reports (not gating)
+        run: |
+          mkdir -p reports "$HOME/.cache/trivy"
+          trivy() { docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$HOME/.cache/trivy:/root/.cache/trivy" -v "$PWD:/work" -w /work "$TRIVY_IMAGE" "$@"; }
+          trivy image --scanners vuln --format json --output reports/trivy-image.json --exit-code 0 tmc-wordpress:latest
+          trivy image --scanners vuln --severity HIGH,CRITICAL --format table --output reports/trivy-image-high-critical.txt --exit-code 0 tmc-wordpress:latest
+          trivy config --format table --output reports/trivy-config.txt --exit-code 0 .
+      - name: Gate — no fixable CRITICAL vulnerabilities
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$HOME/.cache/trivy:/root/.cache/trivy" -v "$PWD:/work" -w /work "$TRIVY_IMAGE" \
+            image --scanners vuln --severity CRITICAL --ignore-unfixed \
+            --ignorefile security/trivyignore --exit-code 1 --format table \
+            tmc-wordpress:latest | tee reports/trivy-gate.txt
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: security-image-reports
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  dast:
+    name: DAST baseline (OWASP ZAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ env.REF }}
+      - name: Environment
+        run: ./scripts/make-env.sh ci
+      - name: Build and provision all six sites
+        run: ./scripts/setup.sh
+      - name: ZAP baseline scan (TMC umbrella site and one unit site)
+        run: |
+          mkdir -p reports/zap
+          chmod 777 reports/zap   # the ZAP container runs as its own user
+          cp security/zap-baseline.conf reports/zap/zap-baseline.conf
+          status=0
+          for host in tmc.localhost tmh.tmc.localhost; do
+            echo "==> $host"
+            rc=0
+            docker run --rm --network host --add-host "$host:127.0.0.1" \
+              -v "$PWD/reports/zap:/zap/wrk:rw" "$ZAP_IMAGE" \
+              zap-baseline.py -t "http://$host/" -c zap-baseline.conf -I -m 3 -T 20 \
+                -r "zap-$host.html" -J "zap-$host.json" -w "zap-$host.md" \
+                -z "-config spider.postform=false" || rc=$?
+            # -I: warnings do not fail; 1 = a FAIL rule matched, 3 = the scan itself failed
+            if [ "$rc" -ne 0 ]; then
+              echo "::error::ZAP baseline for $host exited with $rc (1 = FAIL rule matched, 3 = scan error)"
+              status=1
+            fi
+          done
+          exit "$status"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### OWASP ZAP baseline"
+            for f in reports/zap/zap-*.json; do
+              [ -f "$f" ] || continue
+              echo "#### $(basename "$f" .json)"
+              jq -r '[.site[]?.alerts[]?] | if length == 0 then "- no alerts" else .[] | "- \(.riskdesc) — \(.name // .alert) (rule \(.pluginid), \(.count // "?") instance(s))" end' "$f" || echo "- (could not read report)"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --tail=200 wordpress
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: security-dast-reports
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn

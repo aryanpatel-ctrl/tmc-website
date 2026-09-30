@@ -1,0 +1,14 @@
+# Trivy ignore file for the tmc-wordpress image scan (.github/workflows/security.yml).
+#
+# The gate fails on any CRITICAL vulnerability that has a fix available. The first remedy is always
+# to rebuild on the patched base image (wordpress:php8.3-apache) or upgrade the package. Only when a
+# fix cannot be applied yet may a CVE be listed here, one per line, with:
+#   - the CVE ID
+#   - why it does not affect this site (component not reachable, feature not used, …)
+#   - who accepted the risk and until when (re-review date, at most 90 days)
+#
+# Example (format only, not an accepted finding):
+#   # CVE-0000-00000  libexample: not used by PHP/Apache in this image. Accepted by <name>, review by <date>.
+#   CVE-0000-00000
+#
+# Currently no accepted findings.

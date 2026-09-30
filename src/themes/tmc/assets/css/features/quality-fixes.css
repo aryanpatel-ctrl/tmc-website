@@ -1,0 +1,27 @@
+/* ==========================================================================
+   Quality-gate fixes (W6): defects found by the automated accessibility, HTML
+   validity and performance gates (tests/, docs/testing/quality-gates.md).
+   Loaded after main.css. Each rule names the check that found the defect.
+   ========================================================================== */
+
+/* axe color-contrast (WCAG 1.4.3): file-type hint inside a button, e.g. "Add to calendar (ICS)"
+   on single events, was muted grey on the primary button colour (below 4.5:1). */
+.button .doc-meta,
+.wp-block-button__link .doc-meta {
+	color: inherit;
+}
+
+/* E2E search @360 px (R-4.3-4 site-wide search, GIGW: search on every page): below 768 px the
+   header search box was hidden and phones had no way to search except from the 404 page. It now
+   takes its own row under the site name, next to the Menu button. */
+@media (max-width: 767px) {
+	.header-row { flex-wrap: wrap; }
+	.header-tools { flex: 1 1 100%; min-width: 0; }
+	.header-tools .search-form { display: flex; flex: 1 1 0%; min-width: 0; }
+	.header-tools .search-input { flex: 1 1 0%; width: 0; min-width: 0; }
+}
+
+/* High-contrast view: keep the hint legible inside yellow-bordered buttons. */
+html[data-contrast="high"] .button .doc-meta {
+	color: #ff0 !important;
+}

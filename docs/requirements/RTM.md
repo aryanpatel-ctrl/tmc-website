@@ -153,7 +153,7 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 | R-4.8-3 | Admin access: **MFA**, **restricted network access**, role-based authorisation | BUILD | ✅ RBAC; TOTP MFA (Two Factor 0.17.0) enforced for Super Admin / Site Administrator / Reviewer-Publisher (`TMC_ENFORCE_MFA`); admin allow-list (`TMC_ADMIN_ALLOW_CIDRS`) | W2 | security-test + smoke `security.sh` (403 outside the allow-list) |
 | R-4.8-4 | Tamper-evident audit logs of all admin activity; retained; available to TMC | BUILD | ✅ HMAC chain, verify, CSV export; 🔲 retention policy doc | W8 | workflow-test |
 | R-4.8-5 | Secure development/deployment; **every release vulnerability-assessed before production** | OPS | 🟡 CI security gate built (`.github/workflows/security.yml`: gitleaks, Trivy, OWASP ZAP baseline); 🔲 wire into `pipeline.yml` before deploy (integrator) | W2 | pipeline gate + report artifacts |
-| R-4.8-6 | GIGW 3.0, WCAG 2.2 AA, W3C standards, protection against OWASP Top 10 | BUILD | 🟡 OWASP Top 10 mapping (`docs/security/owasp-top10.md`), nonce-based CSP and security headers ✅; 🔲 HTML validation (W6) | W2/W6 | security-test, smoke, ZAP report |
+| R-4.8-6 | GIGW 3.0, WCAG 2.2 AA, W3C standards, protection against OWASP Top 10 | BUILD | 🟡 OWASP Top 10 mapping (`docs/security/owasp-top10.md`), nonce-based CSP and security headers (W2); W3C HTML validity gate (Nu HTML Checker, 0 errors, every template × 6 sites) + axe gate (W6) | W2/W6 | security-test, smoke, ZAP report; quality.yml `html`/`a11y` reports |
 | R-4.8-7 | VAPT by CERT-In empanelled agency; STQC certification; Safe-to-Host before Go-Live (costs to vendor) | CERT | 🟡 pre-VAPT checklist (`docs/security/pre-vapt-checklist.md`), security.txt (contact ⛔ TMC to confirm); 🔲 external VAPT / STQC / Safe-to-Host | W2/W8 | pre-VAPT report |
 | R-4.8-8 | Security architecture document (segregation, network/data flows, access controls) at M2, re-validated before Go-Live | DOC | 🔲 | W8 | doc |
 | R-4.8-9 | Close all VAPT/STQC/TMC observations at no cost | PROC | 🔲 remediation procedure | W8 | doc |
@@ -162,9 +162,9 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 
 | ID | Requirement | Type | Status | Owner | Verification |
 |---|---|---|---|---|---|
-| R-4.9-1 | WCAG 2.2 AA and GIGW 3.0 (stricter prevails) | BUILD | 🟡 built in; 🔲 automated axe scan of every template | W6 | axe report (0 violations) |
-| R-4.9-2 | Responsive across mobile/tablet/desktop breakpoints | BUILD | 🟡; 🔲 e2e at 3 breakpoints | W6 | Playwright |
-| R-4.9-3 | Full functionality on current major desktop and mobile browsers | BUILD | 🔲 Chromium, Firefox, WebKit | W6 | Playwright |
+| R-4.9-1 | WCAG 2.2 AA and GIGW 3.0 (stricter prevails) | BUILD | ✅ automated axe scan (WCAG 2.0/2.1/2.2 A+AA) of every template on every site, 1280 + 360 px + high contrast; manual audit checklist in docs/testing/quality-gates.md | W6 | axe report (0 violations) |
+| R-4.9-2 | Responsive across mobile/tablet/desktop breakpoints | BUILD | ✅ E2E at 360/768/1280 px, no sideways scrolling on any template | W6 | Playwright |
+| R-4.9-3 | Full functionality on current major desktop and mobile browsers | BUILD | ✅ Chromium, Firefox, WebKit | W6 | Playwright |
 
 ## 4.10 SEO, performance, analytics — SOW p.9
 
@@ -175,7 +175,7 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 | R-4.10-3 | Structured data | BUILD | 🔲 JSON-LD: organisation, website search, breadcrumbs, events, job postings | W3 | test + validator |
 | R-4.10-4 | Sitemap and crawl directives | BUILD | 🟡 core XML sitemap; 🔲 robots per environment, sitemap in robots | W3 | smoke |
 | R-4.10-5 | Correct handling of redirects | BUILD | 🔲 redirect manager (301/410, CSV import, hit log) | W3 | test |
-| R-4.10-6 | Performance thresholds per template, desktop + mobile, verified by an industry-standard tool | BUILD | 🔲 Lighthouse budgets per template | W6 | Lighthouse report |
+| R-4.10-6 | Performance thresholds per template, desktop + mobile, verified by an industry-standard tool | BUILD | ✅ Lighthouse CI budgets per template, desktop + mobile (docs/testing/thresholds.md; targets to be confirmed by TMC) | W6 | Lighthouse report |
 | R-4.10-7 | TMC-approved web analytics + search console, dashboards accessible to TMC | BUILD | 🔲 analytics/search-console settings (self-hosted, India-resident option) | W3 | test |
 
 ## 4.11 Content migration — SOW p.9
@@ -184,8 +184,8 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 |---|---|---|---|---|---|
 | R-4.11-1 | Migrate TMC-approved content | BUILD | 🔲 CSV/inventory importer | W3 | import test |
 | R-4.11-2 | Format and map content to templates and content types | BUILD | 🔲 importer maps template + parent + type | W3 | import test |
-| R-4.11-3 | Complete, correctly rendered, correctly placed in IA | BUILD | 🔲 post-migration verification report | W6 | report |
-| R-4.11-4 | Redirects for superseded URLs; **zero broken links, no orphaned pages** by automated scan; clean report before Go-Live | BUILD | 🔲 redirect manager + crawler with orphan detection | W3/W6 | link report |
+| R-4.11-3 | Complete, correctly rendered, correctly placed in IA | BUILD | 🟡 published URL inventory + link scan (every page reachable and answering) in the acceptance report; 🔲 content-vs-inventory comparison once the W3 importer exists | W6 | report |
+| R-4.11-4 | Redirects for superseded URLs; **zero broken links, no orphaned pages** by automated scan; clean report before Go-Live | BUILD | 🟡 crawler with broken-link + orphan detection, CSV + HTML (W6 ✅); 🔲 redirect manager (W3) | W3/W6 | link report |
 | R-4.11-5 | Coordinate receipt of content and post-migration confirmation | PROC | 🔲 content inventory template + sign-off form | W8 | doc |
 
 ## 4.12 Integrations — SOW p.10
@@ -210,9 +210,9 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 | ID | Requirement | Type | Status | Owner | Verification |
 |---|---|---|---|---|---|
 | R-4.14-1 | Test plan for TMC approval | DOC | 🔲 | W8 | doc |
-| R-4.14-2 | Functional + integration tests of all templates, interfaces, CMS workflows | BUILD | 🟡 47 checks + smoke; 🔲 e2e for every template | W6 | CI |
-| R-4.14-3 | Cross-browser and cross-device | BUILD | 🔲 | W6 | CI |
-| R-4.14-4 | Performance and load testing against thresholds | BUILD | 🔲 | W6/W7 | reports |
+| R-4.14-2 | Functional + integration tests of all templates, interfaces, CMS workflows | BUILD | ✅ PHP suites + smoke + Playwright E2E of every template type | W6 | CI |
+| R-4.14-3 | Cross-browser and cross-device | BUILD | ✅ Chromium, Firefox, WebKit × phone/tablet/desktop | W6 | CI |
+| R-4.14-4 | Performance and load testing against thresholds | BUILD | 🟡 Lighthouse gate in CI; k6 load test (manual, UAT) with thresholds; 🔲 peak run on UAT + TMC-agreed targets | W6/W7 | reports |
 | R-4.14-5 | Security testing incl. VAPT | BUILD/CERT | 🔲 | W2 | reports |
 | R-4.14-6 | UAT support: defect logging, tracking, closure; defect closure report before each Go-Live | PROC | 🔲 issue templates + report script | W8 | doc |
 
@@ -227,7 +227,7 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 | R-4.15-5 | Backup and restoration procedures | DOC | 🔲 | W8/W7 |
 | R-4.15-6 | CMS administrator manuals | DOC | 🔲 | W8 |
 | R-4.15-7 | Content editor user manuals | DOC | 🔲 | W8 |
-| R-4.15-8 | All test and certification reports | DOC | 🔲 generated by CI | W6 |
+| R-4.15-8 | All test and certification reports | DOC | 🟡 test reports generated by CI (artifact quality-reports); certificates external | W6 |
 | R-4.15-9 | Updated at each release; handed over in **editable and portable formats** | DOC | 🔲 Markdown source + generated PDF/DOCX | W8 |
 
 ## 4.16 Training — SOW p.10
@@ -242,7 +242,7 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 
 | ID | Requirement | Type | Status | Owner | Verification |
 |---|---|---|---|---|---|
-| R-5-1 | Strict conformance (typography, spacing, colour, layout, behaviour); deviations only with prior written approval | BUILD/PROC | 🟡 tokens lock editor choices; 🔲 visual regression + deviation register | W6/W8 | visual diff |
+| R-5-1 | Strict conformance (typography, spacing, colour, layout, behaviour); deviations only with prior written approval | BUILD/PROC | 🟡 tokens lock editor choices; visual regression gate built (baselines to be approved after Annexure C); 🔲 deviation register | W6/W8 | visual diff |
 | R-5-2 | Independent review/validation at any stage; address observations | PROC | 🔲 | W8 | doc |
 
 ## 6. Warranty, maintenance, post-Go-Live — SOW p.11–12
@@ -265,7 +265,7 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 | R-7-1 | M1–M6 deliverables and payment stages (10/15/20/20/20/15%) | PROC | 🔲 execution plan mapped to this repo | W8 |
 | R-7-2 | M2: environments, security architecture, data residency statement | OPS/DOC | 🔲 | W7/W8 |
 | R-7-3 | M3: component library, templates editable, content types, roles, workflow, nav/header/footer — demo & sign-off | BUILD | 🟡 | W5 |
-| R-7.1-1 | Go-Live acceptance per website: design conformance; zero broken links/orphans; WCAG 2.2 AA; responsive + browsers; performance per template; VAPT closed + segregation evidence; Safe-to-Host/STQC; migration confirmed; docs | BUILD | 🔲 **automated Go-Live acceptance report** per site | W6 |
+| R-7.1-1 | Go-Live acceptance per website: design conformance; zero broken links/orphans; WCAG 2.2 AA; responsive + browsers; performance per template; VAPT closed + segregation evidence; Safe-to-Host/STQC; migration confirmed; docs | BUILD | ✅ **automated Go-Live acceptance report** per site (tests/report/acceptance.js; PASS/FAIL/MANUAL) | W6 |
 
 ## 8. Deliverables and handover — SOW p.13–14
 

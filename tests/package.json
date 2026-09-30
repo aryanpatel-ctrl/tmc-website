@@ -1,0 +1,31 @@
+{
+  "name": "tmc-quality-gates",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Quality gates for the TMC website ecosystem: E2E, visual regression, accessibility, Lighthouse, HTML validity, links and the Go-Live acceptance report.",
+  "license": "GPL-2.0-or-later",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "e2e": "QUALITY_SUITE=e2e playwright test",
+    "visual": "QUALITY_SUITE=visual playwright test",
+    "visual:update": "QUALITY_SUITE=visual QUALITY_UPDATE_BASELINES=1 playwright test",
+    "a11y": "QUALITY_SUITE=a11y playwright test",
+    "a11y:report": "node a11y/report.js",
+    "lighthouse": "node lighthouse/run.js",
+    "html": "node html/validate.js",
+    "links": "node links/crawl.js",
+    "load:report": "node load/report.js",
+    "report": "node report/acceptance.js",
+    "failures": "node bin/failures.js",
+    "check": "node bin/check-syntax.js"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@lhci/cli": "0.15.1",
+    "@playwright/test": "1.63.0",
+    "axe-core": "4.13.0",
+    "vnu-jar": "26.9.27"
+  }
+}

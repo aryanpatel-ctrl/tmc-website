@@ -1,0 +1,183 @@
+# Quality gates and Go-Live acceptance report (W6; tender §4.9, §4.10, §4.11, §4.14, §5, §7.1).
+#
+# Reusable workflow: pipeline.yml calls it after the integration test. Each gate gets its own
+# freshly built stack (scripts/make-env.sh ci → setup.sh → create-demo-users.sh), so the gates run
+# in parallel and one failing gate never hides another:
+#
+#   e2e         Playwright: Chromium, Firefox, WebKit × 360/768/1280 px
+#   visual      Playwright visual regression (Chromium, pinned container)
+#   a11y        axe-core WCAG 2.0/2.1/2.2 A + AA, every template on every site → zero violations
+#   html        Nu HTML Checker (W3C) on the same pages → zero errors
+#   lighthouse  Lighthouse CI, desktop + mobile, budgets in tests/lighthouse/budgets.json
+#   links       crawler over all six sites (EN + HI): broken links and orphaned pages
+#
+# Then "acceptance" combines all results into the SOW §7.1 Go-Live acceptance report per website
+# (artifact quality-reports) and the job summary. The load test is separate (load-test.yml,
+# manual, UAT only). Documentation: docs/testing/quality-gates.md.
+#
+# Manual run (Actions → Quality gates → Run workflow) with "update-baselines" regenerates the
+# visual regression baselines inside the pinned container and uploads them as the artifact
+# visual-baselines for review; they are never committed automatically.
+name: Quality gates
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit, branch or tag to test (default: the commit that triggered the caller)"
+        type: string
+        required: false
+        default: ""
+  workflow_dispatch:
+    inputs:
+      update-baselines:
+        description: Regenerate the visual regression baselines (artifact visual-baselines; review and commit by hand)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  REF: ${{ inputs.ref || github.sha }}
+  CI: "true"
+  TMC_ENV: ci
+
+jobs:
+  tooling:
+    name: Quality tooling check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ env.REF }}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24.21.0"
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - name: Install pinned tooling
+        run: npm ci --prefix tests --no-audit --no-fund
+      - name: Syntax, JSON and Playwright suites load
+        run: npm run --prefix tests check
+      - name: k6 script loads for every profile
+        run: |
+          for profile in smoke average peak stress; do
+            docker run --rm -v "$PWD/tests/load:/scripts:ro" grafana/k6:2.3.0 \
+              inspect -e TMC_BASE_DOMAIN=tmc.localhost -e LOAD_PROFILE="$profile" /scripts/tmc-load.k6.js > /dev/null
+            echo "k6 profile $profile: ok"
+          done
+      - name: Gate script
+        run: bash -n tests/ci/run-gate.sh
+
+  gate:
+    name: ${{ matrix.title }}
+    needs: tooling
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - gate: e2e
+            title: "E2E: Chromium, Firefox, WebKit × 3 widths"
+            browsers: chromium firefox webkit
+            java: "false"
+            timeout: 75
+          - gate: visual
+            title: Visual regression
+            browsers: ""
+            java: "false"
+            timeout: 40
+          - gate: a11y
+            title: "Accessibility: axe WCAG 2.2 AA"
+            browsers: chromium
+            java: "false"
+            timeout: 60
+          - gate: html
+            title: "HTML validity: Nu HTML Checker"
+            browsers: ""
+            java: "true"
+            timeout: 40
+          - gate: lighthouse
+            title: "Lighthouse: desktop + mobile budgets"
+            browsers: chromium
+            java: "false"
+            timeout: 75
+          - gate: links
+            title: Broken links and orphaned pages
+            browsers: ""
+            java: "false"
+            timeout: 40
+    env:
+      QUALITY_OUT: ${{ github.workspace }}/tests/results
+      QUALITY_WORKERS: "3"
+      QUALITY_UPDATE_BASELINES: ${{ inputs.update-baselines && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ env.REF }}
+      - name: Fresh stack and tooling
+        uses: ./.github/actions/tmc-stack
+        with:
+          browsers: ${{ matrix.browsers }}
+          java: ${{ matrix.java }}
+      - name: Run gate
+        run: ./tests/ci/run-gate.sh "${{ matrix.gate }}"
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: quality-${{ matrix.gate }}
+          path: tests/results/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: New visual baselines (review, then commit tests/visual/baselines/)
+        if: matrix.gate == 'visual' && inputs.update-baselines
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: visual-baselines
+          path: tests/visual/baselines/*-linux.png
+          retention-days: 30
+          if-no-files-found: error
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --tail=200 wordpress db
+
+  acceptance:
+    name: Go-Live acceptance report
+    needs: gate
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ env.REF }}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24.21.0"
+      - name: Collect gate results
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: quality-*
+          path: tests/results
+          merge-multiple: true
+      - name: Build the acceptance report (one per website)
+        env:
+          QUALITY_OUT: ${{ github.workspace }}/tests/results
+        run: |
+          node tests/report/acceptance.js > /dev/null
+          cat tests/results/acceptance/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload all reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: quality-reports
+          path: tests/results/
+          retention-days: 90
+      - name: Fail when a gate failed
+        if: needs.gate.result != 'success'
+        run: |
+          echo "::error::At least one quality gate failed (${{ needs.gate.result }}). See the job summary and the quality-reports artifact."
+          exit 1

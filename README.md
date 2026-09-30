@@ -60,6 +60,7 @@ created by the idempotent seed scripts, so a fresh machine or CI ends up with th
 | `scripts/seed-*.php`, `setup-languages.php` | Sites, languages, pages, menus, home sections |
 | `scripts/deploy.sh` | Server deploy (backup → sync → provision → proxy → smoke test) |
 | `scripts/tests/`, `smoke-test.sh`, `lint.sh` | Tests used locally and in CI |
+| `tests/` | Quality gates: E2E, visual, axe, Lighthouse, HTML validity, links, k6, Go-Live acceptance report ([docs/testing/quality-gates.md](docs/testing/quality-gates.md)) |
 | `docker-compose.yml` + `compose.local.yml` / `compose.server.yml` | Base stack + per-environment override (chosen by `COMPOSE_FILE` in `.env`) |
 | `wordpress/` | Image: WordPress + PHP 8.3 + phpredis, hardened Apache/PHP config |
 | `mock/tmc-apps/` | DEMO-only mock of the TMC application backends (isolated `tmc_apps` network) — see `docs/integration/gateway.md` |

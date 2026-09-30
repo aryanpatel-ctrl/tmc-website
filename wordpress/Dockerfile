@@ -12,7 +12,10 @@ RUN set -eux; \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
     rm -rf /var/lib/apt/lists/* /tmp/pear
 
-RUN a2enmod remoteip headers expires
+# Compression is configured in apache-tmc.conf (Brotli preferred, gzip fallback); Debian's default
+# deflate.conf would otherwise run gzip first for every client that accepts both.
+RUN a2enmod remoteip headers expires brotli \
+    && echo '# Compression: see /etc/apache2/conf-enabled/zz-tmc.conf' > /etc/apache2/mods-available/deflate.conf
 
 COPY php.ini /usr/local/etc/php/conf.d/zz-tmc.ini
 COPY apache-tmc.conf /etc/apache2/conf-enabled/zz-tmc.conf

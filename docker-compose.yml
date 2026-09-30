@@ -22,13 +22,14 @@ x-wp-env: &wp-env
   TMC_AUDIT_KEY: ${TMC_AUDIT_KEY}
   WORDPRESS_CONFIG_EXTRA: |
     /* ---- TMC project settings ---- */
-    define('WP_ENVIRONMENT_TYPE', 'staging');
+    define('WP_ENVIRONMENT_TYPE', '${TMC_WP_ENVIRONMENT:-staging}'); // production on the production stack (compose.prod.yml / .env)
     define('DISALLOW_FILE_EDIT', true);
     define('WP_MEMORY_LIMIT', '256M');
     define('WP_AUTO_UPDATE_CORE', 'minor');
     define('WP_REDIS_HOST', 'redis');
     define('WP_REDIS_PORT', 6379);
     define('WP_CACHE_KEY_SALT', 'tmc_');
+    define('WP_CACHE', true); // full-page cache for anonymous visitors: src/mu-plugins/tmc-page-cache (advanced-cache.php)
     define('DISABLE_WP_CRON', true); // scheduled jobs run from the "cron" container
     /* Behind reverse proxy (nginx-proxy-manager / Cloudflare) */
     if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($$_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) { $$_SERVER['HTTPS'] = 'on'; }

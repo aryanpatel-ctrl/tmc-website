@@ -3,6 +3,7 @@
 #
 #   1. containers   2. network + 5 unit sites   3. pinned plugins + language packs
 #   4. TMC theme on every site   5. per site: languages, home page, migrations, pages/menus/content
+#   6. object cache + page cache (scripts/setup-cache.sh)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 set -a; . ./.env; set +a
@@ -50,5 +51,8 @@ for site in "${SITES[@]}"; do
   wp_on "$site" eval-file /tmc-scripts/migrate.php          # run-once data migrations
   wp_file "$site" scripts/seed-site-structure.php | grep -vE "^  page /" || true
 done
+
+echo "==> caching (Redis object cache + page cache; purged after every provision)"
+./scripts/setup-cache.sh
 
 echo "==> setup complete for ${TMC_ENV:-?} (${TMC_BASE_DOMAIN})"

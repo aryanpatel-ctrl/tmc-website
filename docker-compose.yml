@@ -20,6 +20,13 @@ x-wp-env: &wp-env
   WORDPRESS_TABLE_PREFIX: tmc_
   # HMAC key for the tamper-evident audit log — kept out of the database on purpose
   TMC_AUDIT_KEY: ${TMC_AUDIT_KEY}
+  # Application gateway (docs/integration/gateway.md): one API key per TMC backend, from .env only.
+  # Demo environments fall back to the mock backend's key. TMC_DEMO=1 labels demo data and services.
+  TMC_DEMO: ${TMC_DEMO:-0}
+  TMC_APP_APPOINTMENTS_KEY: ${TMC_APP_APPOINTMENTS_KEY:-${TMC_APPS_MOCK_KEY:-}}
+  TMC_APP_RESULTS_KEY: ${TMC_APP_RESULTS_KEY:-${TMC_APPS_MOCK_KEY:-}}
+  TMC_APP_FORMS_KEY: ${TMC_APP_FORMS_KEY:-${TMC_APPS_MOCK_KEY:-}}
+  TMC_APP_PAYMENTS_KEY: ${TMC_APP_PAYMENTS_KEY:-${TMC_APPS_MOCK_KEY:-}}
   WORDPRESS_CONFIG_EXTRA: |
     /* ---- TMC project settings ---- */
     define('WP_ENVIRONMENT_TYPE', 'staging');
@@ -90,7 +97,7 @@ services:
     environment: *wp-env
     volumes: *wp-volumes
     # No host ports here; each environment's override decides how traffic reaches it.
-    networks: [tmc_internal, tmc_edge]
+    networks: [tmc_internal, tmc_edge, tmc_apps]
 
   wpcli:
     image: wordpress:cli-php8.3
@@ -107,7 +114,7 @@ services:
       - ./src/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
       - ./src/themes/tmc:/var/www/html/wp-content/themes/tmc:ro
       - ./scripts:/tmc-scripts:ro   # migrations and provisioning scripts (CLI only, never served)
-    networks: [tmc_internal, tmc_edge]
+    networks: [tmc_internal, tmc_edge, tmc_apps]   # tmc_apps: tests call the gateway from WP-CLI
     entrypoint: ["wp"]
     command: ["--info"]
 
@@ -136,6 +143,31 @@ services:
           sleep 60
         done
 
+  # DEMO ONLY: stand-in for TMC's application backends (appointments, results, online forms,
+  # payments) so the gateway and front ends can be shown and tested. Isolated "tmc_apps" network:
+  # no internet, no database, no host port; answers only requests carrying TMC_APPS_MOCK_KEY.
+  # In production this service is absent and the gateway points at TMC-approved endpoints.
+  tmc-apps-mock:
+    image: php:8.3.35-cli-alpine
+    container_name: tmc-apps-mock
+    restart: unless-stopped
+    user: "65534:65534"
+    read_only: true
+    tmpfs: [/tmp]
+    working_dir: /app
+    command: ["php", "-S", "0.0.0.0:8080", "/app/router.php"]
+    environment:
+      MOCK_API_KEY: ${TMC_APPS_MOCK_KEY:-}
+      PHP_CLI_SERVER_WORKERS: "4"
+    volumes:
+      - ./mock/tmc-apps:/app:ro
+    networks: [tmc_apps]
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/health') ? 0 : 1);"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 volumes:
   db_data:
   wp_html:
@@ -146,3 +178,6 @@ networks:
     internal: true
   # Outbound internet for WordPress / WP-CLI (updates, language packs)
   tmc_edge:
+  # Integration zone: WordPress ↔ TMC application backends only (R-4.8-1). No internet, no database.
+  tmc_apps:
+    internal: true

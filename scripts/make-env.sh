@@ -38,6 +38,11 @@ WP_ADMIN_PASSWORD=$(rand 24)
 WP_ADMIN_EMAIL=admin@example.com
 
 TMC_AUDIT_KEY=$(rand 48)
+
+# Application gateway — local, CI and UAT are demonstration environments that use the DEMO mock
+# backend (docs/integration/gateway.md). Real TMC services get TMC_APP_<SERVICE>_KEY lines instead.
+TMC_DEMO=1
+TMC_APPS_MOCK_KEY=$(rand 40)
 EOF
 chmod 600 .env
 echo ".env created for '$ENVIRONMENT' ($DOMAIN) — secrets not shown."

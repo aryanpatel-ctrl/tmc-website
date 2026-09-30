@@ -48,7 +48,9 @@ listed in section 6.
 
 | Component | Version / reference | Where defined | Licence | Upstream |
 |---|---|---|---|---|
+| GitHub Action actions/checkout | `actions/checkout@v5.0.0` (exact) | `.github/workflows/docs.yml` | MIT | https://github.com/actions/checkout |
 | GitHub Action actions/checkout | `actions/checkout@v5` (series tag) | `.github/workflows/pipeline.yml` | MIT | https://github.com/actions/checkout |
+| GitHub Action actions/upload-artifact | `actions/upload-artifact@v4.6.2` (exact) | `.github/workflows/docs.yml` | MIT | https://github.com/actions/upload-artifact |
 | Mermaid CLI (diagram rendering) | `minlag/mermaid-cli:11.4.2` (exact) | `scripts/docs/build-docs.sh` | MIT (mermaid-cli, mermaid); bundled Chromium under BSD-3-Clause and other free licences | https://github.com/mermaid-js/mermaid-cli |
 | PHP CLI (official image) | `php:8.3-cli` (series tag) | `scripts/lint.sh` | PHP-3.01 | https://hub.docker.com/_/php |
 | Pandoc (with TeX Live) | `pandoc/latex:3.11.0.0-debian` (exact) | `scripts/docs/build-docs.sh` | GPL-2.0-or-later (pandoc); TeX Live packages under free licences (LPPL-1.3c, GPL, OFL and others) | https://github.com/pandoc/dockerfiles |

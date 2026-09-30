@@ -89,6 +89,21 @@ unset( $_GET['doctor_name'] );
 $t( 'doctor listing searches the "doctor_name" field', "QG Doctor $tag" === $doctors->get( 's' ) );
 $t( 'doctor listing does not use the reserved "name" query variable', '' === (string) $doctors->get( 'name' ) );
 
+WP_CLI::log( '— WordPress default content removed (migration 060)' );
+$t( 'migration 060 recorded for this site', in_array( '060-remove-default-content', (array) get_option( 'tmc_migrations' ), true ) );
+$leftover = get_posts( array( 'post_type' => array( 'post', 'page' ), 'post_name__in' => array( 'hello-world', 'sample-page' ), 'post_status' => 'any', 'lang' => '', 'posts_per_page' => 10 ) );
+$leftover = array_filter( $leftover, fn( $p ) => false !== strpos( $p->post_content, 'This is your first post.' ) || false !== strpos( $p->post_content, 'This is an example page.' ) );
+$t( 'no "Hello world!" post or "Sample Page" left', ! $leftover );
+$privacy = get_page_by_path( 'privacy-policy' );
+$t( 'Privacy Policy page is published', $privacy && 'publish' === $privacy->post_status );
+$t( 'Privacy Policy page has the TMC text, not the WordPress template', $privacy && false === strpos( $privacy->post_content, 'privacy-policy-tutorial' ) && false !== strpos( $privacy->post_content, 'personal information' ) );
+$t( 'site privacy policy setting points to it', $privacy && (int) get_option( 'wp_page_for_privacy_policy' ) === (int) $privacy->ID );
+$policy_menu = wp_get_nav_menu_object( 'Footer policies (English)' );
+$policy_ids  = $policy_menu ? array_map( 'intval', wp_list_pluck( (array) wp_get_nav_menu_items( $policy_menu->term_id ), 'object_id' ) ) : array();
+$t( 'footer policy menu links to the published Privacy Policy', $privacy && in_array( (int) $privacy->ID, $policy_ids, true ) );
+$unpublished = array_filter( $policy_ids, fn( $id ) => 'publish' !== get_post_status( $id ) );
+$t( 'every footer policy link points to a published page', $policy_ids && ! $unpublished );
+
 WP_CLI::log( '— Cleanup' );
 foreach ( array_filter( $cleanup ) as $id ) {
 	wp_delete_post( $id, true );

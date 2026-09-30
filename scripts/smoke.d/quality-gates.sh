@@ -9,3 +9,9 @@ check "tmh.$TMC_BASE_DOMAIN" "/doctors/?doctor_name=Sample" 200 'filter-form' 'd
 
 # The quality-fixes stylesheet (contrast of hints in buttons, search box on phones) is loaded.
 check "$TMC_BASE_DOMAIN" "/events/sample-cme-session/" 200 'features/quality-fixes.css'
+
+# WordPress default content is gone and the footer Privacy Policy link works (migration 060).
+check "$TMC_BASE_DOMAIN" "/privacy-policy/" 200 'personal information'
+check "$TMC_BASE_DOMAIN" "/" 200 "/privacy-policy/\">Privacy Policy</a>"
+check "tmh.$TMC_BASE_DOMAIN" "/sample-page/" 404
+check "tmh.$TMC_BASE_DOMAIN" "/hello-world/" 404

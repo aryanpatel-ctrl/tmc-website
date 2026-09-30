@@ -1,0 +1,72 @@
+# Change Request (SOW §14; docs/governance/change-request-procedure.md).
+name: Change request
+description: Propose a change to the agreed scope, design, configuration or schedule. Nothing is implemented without TMC IT's written approval.
+title: "[CR] "
+labels: ["change-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        SOW §14: "This is a fixed-scope engagement. Any proposed change within the agreed scope shall follow a written Change Request process … No change shall be implemented without prior written approval of TMC IT."
+        The Vendor completes the impact assessment section after the request is logged.
+  - type: input
+    id: requester
+    attributes:
+      label: Requested by (name, designation, unit)
+    validations:
+      required: true
+  - type: dropdown
+    id: origin
+    attributes:
+      label: Origin
+      options:
+        - TMC (IT Department)
+        - TMC unit
+        - Vendor proposal
+        - Independent review / certifying body observation
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Functional change (feature, content type, field, template)
+        - Design deviation (typography, spacing, colour, layout, component behaviour — SOW §5)
+        - Integration / new endpoint
+        - Infrastructure / security architecture
+        - Schedule / milestone
+        - Documentation / training
+        - Minor enhancement (AMC)
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of the change
+      description: What should change, where (websites, templates, screens) and why.
+    validations:
+      required: true
+  - type: textarea
+    id: justification
+    attributes:
+      label: Business justification
+    validations:
+      required: true
+  - type: input
+    id: needed_by
+    attributes:
+      label: Needed by (DD/MM/YYYY)
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: SOW clause, RTM ID, Annexure/Figma reference, related tickets.
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Impact assessment (completed by the Vendor within 5 business days)
+        Scope · technical feasibility · implementation approach · effort (person-days) · impact on timeline and milestones · impact on security, accessibility, performance · documentation and training impact · cost implication (stated separately to TMC IT, never in this public ticket if confidential).
+        ### Decision (TMC IT)
+        Approved / Approved with conditions / Rejected / Deferred — with the written approval reference.

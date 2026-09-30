@@ -1,0 +1,31 @@
+/* Document library: filters and table (tmc/documents block, /documents/ page). */
+
+.doc-filter { grid-template-columns: 1fr; }
+@media (min-width: 768px) { .doc-filter { grid-template-columns: 2fr 1fr auto; } }
+
+.doc-table caption { text-align: left; }
+.doc-table .doc-link { font-weight: 600; }
+.doc-table .doc-link::before {
+	content: "";
+	display: inline-block;
+	width: 0.8em;
+	height: 1em;
+	margin-right: 0.4em;
+	vertical-align: -0.1em;
+	border: 2px solid currentColor;
+	border-radius: 2px 6px 2px 2px;
+}
+@media (min-width: 768px) {
+	.doc-table th:nth-child(1) { width: 55%; }
+	.doc-table td:nth-child(4) { white-space: nowrap; }
+}
+.doc-library .pagination { margin-top: 1.5rem; }
+.doc-library .nav-links { margin-top: 0; }
+
+/* High contrast (GIGW): borders and link colours come from main.css; keep the file icon visible. */
+html[data-contrast="high"] .doc-table .doc-link::before { border-color: #ff0 !important; }
+html[data-contrast="high"] .doc-library .page-numbers.current { background-color: #ff0 !important; color: #000 !important; }
+
+@media print {
+	.doc-filter, .doc-library .pagination { display: none !important; }
+}

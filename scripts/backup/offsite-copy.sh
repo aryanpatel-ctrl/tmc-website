@@ -27,7 +27,11 @@
 #                            too, so the target holds the same 48 h / 30 days / 12 months;
 #                            0: the target keeps everything and applies its own retention
 #
-#   scripts/backup/offsite-copy.sh [--target DEST] [--dry-run]
+#   scripts/backup/offsite-copy.sh [--target DEST] [--full-check] [--dry-run]
+#
+#   --full-check  compare every file of every snapshot by checksum (not size and time) and re-send
+#                 any that differ — repairs a damaged or altered copy. Slow; run it weekly, e.g.
+#                 30 2 * * 0  cd … && scripts/backup/offsite-copy.sh --full-check >> backups/offsite.log 2>&1
 #
 # Restore from the copy: scripts/dr/restore.sh --source-dir <copy> … or scripts/dr/drill.sh --source-dir <copy>
 # (the copy has the same layout: <copy>/snapshots/<YYYYMMDDTHHMMSSZ>/). See docs/operations/backup-and-dr.md.
@@ -35,15 +39,16 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 DEPLOY_DIR="$PWD"
 
-usage() { sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 log() { printf '%s offsite-copy: %s\n' "$(ts)" "$*"; }
 
-TARGET_ARG="" DRY_RUN=0
+TARGET_ARG="" DRY_RUN=0 FULL=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --target) TARGET_ARG="${2:?}"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --full-check) FULL=1; shift ;;
     -h|--help) usage 0 ;;
     *) echo "unknown option: $1" >&2; usage 2 ;;
   esac
@@ -58,7 +63,7 @@ TARGET="${TARGET_ARG:-${TMC_OFFSITE_TARGET:-}}"
 PRUNE="${TMC_OFFSITE_PRUNE:-1}"
 PORT="${TMC_OFFSITE_PORT:-22}"
 BWLIMIT="${TMC_OFFSITE_BWLIMIT:-}"
-IMAGE="tmc-backup:latest"
+IMAGE="${TMC_BACKUP_IMAGE:-tmc-backup:latest}"   # built by docker compose (service "backup")
 NAME_RE='^[0-9]{8}T[0-9]{6}Z$'
 
 mkdir -p backups && chmod 700 backups
@@ -67,7 +72,7 @@ PROM_FILE="backups/offsite.prom"
 STARTED="$(date -u +%s)"
 LATEST=""
 
-status_field() { sed -n "s/^$1=//p" "$STATUS_FILE" 2>/dev/null | head -n 1; }
+status_field() { if [ -f "$STATUS_FILE" ]; then sed -n "s/^$1=//p" "$STATUS_FILE" | head -n 1; fi; }
 
 # Result for monitoring and the audit trail. Never prints the target's user name or key path.
 finish() { # ok|failed message
@@ -136,7 +141,7 @@ if ! [[ "$LATEST" =~ $NAME_RE ]]; then LATEST=""; finish failed "no snapshot to 
 
 # Everything below runs in a throw-away container of the backup image (rsync + OpenSSH client):
 # the backup volume is mounted read-only; the key is copied to a private file inside the container.
-RUN=(docker run --rm --user 0 -v "$VOLUME:/backups:ro" -e "LATEST=$LATEST" -e "PRUNE=$PRUNE" -e "DRY_RUN=$DRY_RUN" -e "BWLIMIT=$BWLIMIT")
+RUN=(docker run --rm --user 0 -v "$VOLUME:/backups:ro" -e "LATEST=$LATEST" -e "PRUNE=$PRUNE" -e "DRY_RUN=$DRY_RUN" -e "FULL=$FULL" -e "BWLIMIT=$BWLIMIT")
 if [ "$KIND" = path ]; then
   mkdir -p "$TARGET"
   TARGET="$(cd "$TARGET" && pwd)"
@@ -150,7 +155,7 @@ else
         -e "DEST=$TARGET" -e "PORT=$PORT" -e "OWNER=")
 fi
 
-log "copying $VOLUME → $KIND target (newest snapshot $LATEST, prune=$PRUNE${BWLIMIT:+, bwlimit=${BWLIMIT} KiB/s}$([ "$DRY_RUN" -eq 1 ] && echo ', dry run'))"
+log "copying $VOLUME → $KIND target (newest snapshot $LATEST, prune=$PRUNE${BWLIMIT:+, bwlimit=${BWLIMIT} KiB/s}$([ "$FULL" -eq 1 ] && echo ', full check')$([ "$DRY_RUN" -eq 1 ] && echo ', dry run'))"
 rc=0
 out="$("${RUN[@]}" --entrypoint bash "$IMAGE" -c '
   set -euo pipefail
@@ -159,6 +164,7 @@ out="$("${RUN[@]}" --entrypoint bash "$IMAGE" -c '
   if [ -n "$OWNER" ]; then opts+=(--chown="$OWNER"); fi
   if [ "$PRUNE" = 1 ]; then opts+=(--delete-after); fi
   if [ -n "$BWLIMIT" ]; then opts+=(--bwlimit="$BWLIMIT"); fi
+  if [ "$FULL" = 1 ]; then opts+=(--checksum --itemize-changes); fi
   if [ "$DRY_RUN" = 1 ]; then opts+=(--dry-run --itemize-changes); fi
   if [ -f /run/tmc/key ]; then
     install -m 600 /run/tmc/key /tmp/key
@@ -180,7 +186,12 @@ out="$("${RUN[@]}" --entrypoint bash "$IMAGE" -c '
   fi
   diff="$(grep -E "^[<>c]" /tmp/verify.out | head -n 5 || true)"
   if [ -n "$diff" ]; then printf "%s\n" "$diff"; echo "RESULT verify-mismatch"; exit 1; fi
-  echo "RESULT copied ${files:-0} files (${sent:-0} bytes); newest snapshot verified by checksum"
+  if [ "$FULL" = 1 ]; then
+    fixed="$(grep -cE "^[<>]f[^+]" /tmp/rsync.out || true)"
+    echo "RESULT full check: every file compared by checksum, ${fixed:-0} damaged file(s) re-sent; newest snapshot verified by checksum"
+  else
+    echo "RESULT copied ${files:-0} files (${sent:-0} bytes); newest snapshot verified by checksum"
+  fi
 ' 2>&1)" || rc=$?
 printf '%s\n' "$out" | grep -v '^RESULT ' | sed 's/^/   /' || true
 message="$(printf '%s\n' "$out" | sed -n 's/^RESULT //p' | tail -n 1)"

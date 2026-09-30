@@ -121,7 +121,13 @@ record() {
 
 # ------------------------------------------------------------------------------ helpers
 
-snapshot_names() { ls -1 "$SNAPSHOTS" 2>/dev/null | grep -E "$NAME_RE" | sort || true; }
+snapshot_names() {
+  local d
+  for d in "$SNAPSHOTS"/*; do
+    d="${d##*/}"
+    if [[ "$d" =~ $NAME_RE ]]; then printf '%s\n' "$d"; fi
+  done | sort
+}
 latest_name() {
   local name
   name="$(snapshot_names | tail -n 1)"

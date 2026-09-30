@@ -1,6 +1,7 @@
 # Page cache (repeat view HIT, bypass rules) and static-file caching + compression.
 # Sourced by scripts/smoke-test.sh (uses its FAILED flag and ORIGIN, the address requests go to).
 # shellcheck shell=bash
+# shellcheck disable=SC2034 # FAILED is read by scripts/smoke-test.sh, which sources this file
 
 cache_origin="${ORIGIN:-${SMOKE_ORIGIN:-http://127.0.0.1}}"   # ORIGIN is set by smoke-test.sh
 

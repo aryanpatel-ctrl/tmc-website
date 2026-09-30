@@ -8,6 +8,10 @@ name: Capacity test
 on:
   workflow_call:
     inputs:
+      ref:
+        description: "Commit, tag or branch to test (default: the triggering commit)"
+        type: string
+        default: ""
       rate:
         type: number
         default: 100
@@ -39,6 +43,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Environment
         run: ./scripts/make-env.sh ci

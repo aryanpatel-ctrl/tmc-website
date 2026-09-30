@@ -30,8 +30,9 @@ echo "==> network + unit sites"
 ./scripts/install-network.sh
 
 echo "==> plugins (pinned)"
-if ! wp plugin is-installed polylang; then
-  wp plugin install polylang --version="$POLYLANG_VERSION"
+# Exact pins: (re)installed whenever the installed version differs from the pinned one.
+if [ "$(wp plugin get polylang --field=version 2>/dev/null)" != "$POLYLANG_VERSION" ]; then
+  wp plugin install polylang --version="$POLYLANG_VERSION" --force
 fi
 wp plugin is-active polylang --network || wp plugin activate polylang --network
 # Exact pin (reinstalled when the version differs); MFA policy in src/mu-plugins/tmc-core/security-mfa.php

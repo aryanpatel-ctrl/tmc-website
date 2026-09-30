@@ -354,6 +354,11 @@ $t( 'site has a city-level map position', '' !== tmc_map_sanitize_lat( get_theme
 $map = render_block( parse_blocks( '<!-- wp:tmc/location-map {"lat":"19.0760","lon":"72.8777","zoom":12} /-->' )[0] );
 $t( 'map block: directions link and consent button, no iframe before consent', false !== strpos( $map, 'openstreetmap.org/directions?to=19.076' ) && false !== strpos( $map, 'tmc-map-load' ) && false === stripos( $map, '<iframe' ) );
 $t( 'map block: embed URL prepared with marker', false !== strpos( $map, 'export/embed.html' ) && false !== strpos( $map, 'marker=19.076' ) );
+if ( function_exists( 'tmc_csp_directives' ) ) {
+	$csp_front = tmc_csp_directives( 'front', false );
+	$t( 'CSP allows exactly the OpenStreetMap embed as a frame source', array( "'self'", 'https://www.openstreetmap.org' ) === array_values( $csp_front['frame-src'] ) && ! in_array( 'https://www.openstreetmap.org', (array) ( $csp_front['script-src'] ?? array() ), true ) );
+	$t( 'CSP on admin screens is not widened by the map', ! isset( tmc_csp_directives( 'admin', false )['frame-src'] ) );
+}
 $news  = get_posts( array( 'post_type' => 'post', 'posts_per_page' => 1, 'lang' => '' ) );
 $share = $news ? tmc_share_links( $news[0]->ID ) : tmc_share_links( $donate_page );
 $t( 'share links are plain links (no third-party script)', false !== strpos( $share, 'facebook.com/sharer' ) && false !== strpos( $share, 'mailto:' ) && false === stripos( $share, '<script' ) );

@@ -49,9 +49,9 @@ updates:
     commit-message:
       prefix: "deps(compose)"
     ignore:
-      # A new MariaDB or Redis major version is a planned migration (backup, drill, UAT sign-off),
+      # A new MariaDB or Valkey (cache) major version is a planned migration (backup, drill, UAT sign-off),
       # never an automatic PR — see docs/operations/patching.md "Major upgrades".
       - dependency-name: mariadb
         update-types: ["version-update:semver-major"]
-      - dependency-name: redis
+      - dependency-name: valkey/valkey
         update-types: ["version-update:semver-major"]

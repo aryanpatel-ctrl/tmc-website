@@ -26,7 +26,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { SITES, TEMPLATES, url } = require('../lib/sites');
+const { SITES, TEMPLATES, templateOnSite, url } = require('../lib/sites');
 const { outDir, readJson, writeJson } = require('../lib/paths');
 const { esc, page, status, table } = require('../lib/html');
 const budgets = require('./budgets.json');
@@ -60,7 +60,7 @@ function pages() {
   for (const site of SITES) {
     const full = FULL_SITES.includes(site.id);
     for (const template of TEMPLATES) {
-      if (ONLY_TEMPLATES.length && !ONLY_TEMPLATES.includes(template.id)) {
+      if ((ONLY_TEMPLATES.length && !ONLY_TEMPLATES.includes(template.id)) || !templateOnSite(template, site)) {
         continue;
       }
       if (template.lighthouse && (full || template.id === 'home' || template.id === 'home-hi')) {

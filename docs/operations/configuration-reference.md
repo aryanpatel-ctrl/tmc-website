@@ -57,8 +57,8 @@ the actual names and defaults from the merged code.
 
 | Service | Key settings |
 |---|---|
-| `db` | `mariadb:11.4`; `--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max-allowed-packet=64M`; volume `db_data`; network `tmc_internal`; health check `healthcheck.sh --connect --innodb_initialized` every 10 s |
-| `redis` | `redis:7-alpine`; `--maxmemory 256mb --maxmemory-policy allkeys-lru --save ""` (no persistence); network `tmc_internal` |
+| `db` | `mariadb:11.4.13`; `--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max-allowed-packet=64M`; volume `db_data`; network `tmc_internal`; health check `healthcheck.sh --connect --innodb_initialized` every 10 s |
+| `redis` | `valkey/valkey:8.1.10-alpine` (Redis-compatible, BSD-3-Clause); `valkey-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""` (no persistence); network `tmc_internal` |
 | `wordpress` | Built from `./wordpress` as `tmc-wordpress:latest`; depends on healthy `db`; environment `*wp-env`; volumes `wp_html`, `src/mu-plugins` (ro), `src/themes/tmc` (ro); networks `tmc_internal`, `tmc_edge` |
 | `wpcli` | `wordpress:cli-php8.3`, user `33:33`, profile `tools` (not started by `up`); mounts `scripts/` read-only at `/tmc-scripts` |
 | `cron` | `wordpress:cli-php8.3`, user `33:33`; loop: for each site `wp cron event run --due-now`, then `sleep 60`; network `tmc_internal` only |
@@ -94,7 +94,7 @@ Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with int
 
 | File | Setting | Value |
 |---|---|---|
-| `Dockerfile` | Base image | `wordpress:php8.3-apache` |
+| `Dockerfile` | Base image | `wordpress:7.1.2-php8.3-apache` (exact pin) |
 | | Extensions / modules | `pecl install redis` (phpredis); Apache `remoteip`, `headers`, `expires` |
 | `php.ini` (`zz-tmc.ini`) | `expose_php` | `Off` |
 | | `memory_limit` | `256M` |

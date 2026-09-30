@@ -27,10 +27,10 @@ we notice it — hence the automated checks below.
 | Component | Pinned in | How updates are found |
 |---|---|---|
 | GitHub Actions | `.github/workflows/*.yml` (`@v5` …) | Dependabot PR (weekly, Monday 04:00 IST) |
-| WordPress + PHP 8.3 + Apache image | `wordpress/Dockerfile` (`FROM wordpress:php8.3-apache`) | Dependabot PR; `updates.yml` compares the WordPress release inside the image with wordpress.org. Minor WordPress releases (security) also apply automatically (`WP_AUTO_UPDATE_CORE=minor`) |
-| MariaDB | `docker-compose.yml` (`mariadb:11.4`, LTS) **and** `backup/Dockerfile` — keep both on the same release | Dependabot PRs (minor/patch); majors are planned (below) |
-| Redis | `docker-compose.yml` (`redis:7-alpine`) | Dependabot PR (minor/patch) |
-| WP-CLI image | `docker-compose.yml` (`wordpress:cli-php8.3`) | Dependabot PR |
+| WordPress + PHP 8.3 + Apache image | `wordpress/Dockerfile` (`FROM wordpress:7.1.2-php8.3-apache`) | Dependabot PR; `updates.yml` compares the WordPress release inside the image with wordpress.org. Minor WordPress releases (security) also apply automatically (`WP_AUTO_UPDATE_CORE=minor`) |
+| MariaDB | `docker-compose.yml` (`mariadb:11.4.13`, LTS series) **and** `backup/Dockerfile` — keep both on the same release | Dependabot PRs (minor/patch); majors are planned (below) |
+| Valkey (Redis-compatible cache) | `docker-compose.yml` (`valkey/valkey:8.1.10-alpine`) | Dependabot PR (minor/patch) |
+| WP-CLI image | `docker-compose.yml` (`wordpress:cli-2.12.0-php8.3`) | Dependabot PR |
 | Polylang | `scripts/setup.sh` (`POLYLANG_VERSION`) | `.github/workflows/updates.yml` weekly → tracking issue "Updates available for pinned WordPress components" |
 | Redis Object Cache | `scripts/setup-cache.sh` (`REDIS_CACHE_VERSION`) | same |
 | Any plugin added later | `NAME_VERSION="x.y.z"` in a provisioning script (the name is the wordpress.org slug in capitals, `-` as `_`) | picked up by `scripts/ops/check-updates.sh` automatically |

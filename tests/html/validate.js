@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const vnuJar = require('vnu-jar');
-const { SITES, TEMPLATES, url } = require('../lib/sites');
+const { SITES, TEMPLATES, templateOnSite, url } = require('../lib/sites');
 const { mapLimit, request } = require('../lib/http');
 const { outDir, writeJson } = require('../lib/paths');
 const { esc, page, status, table } = require('../lib/html');
@@ -47,6 +47,9 @@ async function main() {
   const targets = [];
   for (const site of sites) {
     for (const template of TEMPLATES) {
+      if (!templateOnSite(template, site)) {
+        continue;
+      }
       targets.push({ site: site.id, template: template.id, label: template.label, url: url(site, template.path), expected: template.status });
     }
   }

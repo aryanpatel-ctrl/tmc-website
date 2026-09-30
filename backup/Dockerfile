@@ -1,6 +1,6 @@
 # TMC backup service (tender §4.7: RPO 15 minutes) — see tmc-backup.sh.
 # Same MariaDB release as the database service, so mariadb-dump always matches the server.
-FROM mariadb:11.4
+FROM mariadb:11.4.13
 
 # rsync: incremental file snapshots (--link-dest); openssh-client: off-host copy (scripts/backup/offsite-copy.sh)
 RUN set -eux; \

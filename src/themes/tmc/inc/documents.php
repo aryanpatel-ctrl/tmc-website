@@ -177,3 +177,17 @@ function tmc_documents_editor_assets() {
 	}
 	wp_add_inline_script( 'tmc-documents-editor', 'window.tmcDocumentTypes = ' . wp_json_encode( $types ) . ';', 'before' );
 }
+
+/**
+ * Page templates (inc/page-templates.php): the Document listing template's "documents" slot keeps
+ * its editable heading and gets the document list block (latest documents from the media library;
+ * the editor can choose a document type in the block settings) instead of empty file blocks.
+ */
+add_filter( 'tmc_page_template_slot', 'tmc_documents_template_slot', 10, 3 );
+function tmc_documents_template_slot( $blocks, $slot, $fallback = array() ) {
+	if ( 'documents' !== $slot || ! function_exists( 'tmc_b_dynamic' ) ) {
+		return $blocks;
+	}
+	$headings = array_values( array_filter( (array) $fallback, fn( $block ) => 'core/heading' === ( $block['blockName'] ?? '' ) ) );
+	return array_merge( array_slice( $headings, 0, 1 ), array( tmc_b_dynamic( 'tmc/documents', array( 'count' => 10 ) ) ) );
+}

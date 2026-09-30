@@ -109,6 +109,7 @@ try {
 		$t( "$title: approved design-system blocks only" . ( $unapproved ? ' (' . implode( ', ', $unapproved ) . ')' : '' ), ! $unapproved );
 		$t( "$title: prompts block publishing until replaced", tmc_has_template_prompts( $content[ $slug ] ) );
 	}
+	$t( 'template slots filled by their modules: Contact has the location map, Document listing the document list', in_array( 'tmc/location-map', $names( parse_blocks( $content['contact'] ) ), true ) && in_array( 'tmc/documents', $names( parse_blocks( $content['documents'] ) ), true ) && ! in_array( 'core/file', $names( parse_blocks( $content['documents'] ) ), true ) );
 	$t( 'component patterns registered (person, question, card, callout)', $registry->is_registered( 'tmc/component-person' ) && $registry->is_registered( 'tmc/component-question' ) && $registry->is_registered( 'tmc/component-card' ) && $registry->is_registered( 'tmc/component-callout' ) );
 	$t( 'placeholder links (href="#") also count as unfinished', tmc_has_template_prompts( '<p><a href="#">Read more</a></p>' ) && ! tmc_has_template_prompts( '<p><a href="#top">Top</a></p>' ) );
 

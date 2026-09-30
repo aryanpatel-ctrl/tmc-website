@@ -33,6 +33,7 @@ const SITES = [
  *   lighthouse  scored by Lighthouse (desktop + mobile)
  *   visual      screenshot baseline (Chromium)
  *   status      expected HTTP status (default 200)
+ *   sites       site ids the template exists on (default: every site)
  */
 const TEMPLATES = [
   { id: 'home', label: 'Home', path: '/', lang: 'en', lighthouse: true, visual: true },
@@ -61,6 +62,18 @@ const TEMPLATES = [
   { id: 'doctor-single', label: 'Doctor profile', path: '/doctors/sample-profile-a/', lang: 'en', lighthouse: true, visual: true },
   { id: 'search', label: 'Search results', path: '/?s=cancer', lang: 'en', lighthouse: true, visual: true },
   { id: 'not-found', label: 'Page not found (404)', path: '/quality-gate-missing-page/', lang: 'en', status: 404, visual: true },
+  // Templates added by the feature workstreams (W1 search/documents, W4 applications, W5 editorial).
+  { id: 'search-type', label: 'Search results (filtered by type)', path: '/?s=sample&type=tmc_tender', lang: 'en' },
+  { id: 'documents', label: 'Document library', path: '/documents/', lang: 'en', lighthouse: true },
+  { id: 'app-appointment', label: 'Appointment request (application front end)', path: '/patient-care/appointments/', lang: 'en', lighthouse: true },
+  { id: 'app-results', label: 'Results lookup (application front end)', path: '/education/results/', lang: 'en' },
+  { id: 'app-form', label: 'Online form (feedback)', path: '/feedback/', lang: 'en' },
+  { id: 'app-donate', label: 'Donation (application front end)', path: '/donate/', lang: 'en' },
+  { id: 'contact-map', label: 'Contact page with location map', path: '/contact-us/', lang: 'en' },
+  { id: 'audience-referring', label: 'Audience entry point (referring doctors)', path: '/for-referring-doctors/', lang: 'en' },
+  { id: 'audience-students', label: 'Audience entry point (students and researchers)', path: '/students-and-researchers/', lang: 'en' },
+  // The living component library exists on the TMC umbrella site only.
+  { id: 'component-library', label: 'Component library', path: '/component-library/', lang: 'en', sites: ['tmc'] },
 ];
 
 function loadOverrides() {
@@ -119,11 +132,19 @@ function isInternalHost(hostname) {
   return name === BASE || name.endsWith(`.${BASE}`);
 }
 
+/** Whether a template exists on a site (templates without a `sites` list exist on every site). */
+function templateOnSite(template, site) {
+  return !Array.isArray(template.sites) || template.sites.includes(site.id);
+}
+
 /** Every (site, template) pair: the URL set for axe and the HTML validator. */
 function allPages() {
   const pages = [];
   for (const site of SITES) {
     for (const template of TEMPLATES) {
+      if (!templateOnSite(template, site)) {
+        continue;
+      }
       pages.push({ site, template, url: url(site, template.path) });
     }
   }
@@ -147,5 +168,6 @@ module.exports = {
   siteById,
   siteForUrl,
   slug,
+  templateOnSite,
   url,
 };

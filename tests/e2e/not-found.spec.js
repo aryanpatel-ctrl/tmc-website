@@ -10,7 +10,7 @@ test('missing page returns 404 with search and a way home', { tag: ['@e2e', '@40
   expect(response.status()).toBe(404);
   await expect(page).toHaveTitle(/Page not found/);
   await expect(page.locator('h1')).toHaveText('Page not found');
-  await expect(page.locator('.page-body').getByRole('searchbox', { name: 'Search this website' })).toBeVisible();
+  await expect(page.locator('.page-body').getByRole('combobox', { name: 'Search this website' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Go to home page' })).toHaveAttribute('href', `${baseURL}/`);
   await expect(page.getByRole('navigation', { name: 'You are here' }).locator('[aria-current="page"]')).toHaveText('Page not found');
   await expectNoHorizontalScroll(page);

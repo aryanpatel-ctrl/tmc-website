@@ -12,7 +12,7 @@ scripts").
 
 | Item | Value |
 |---|---|
-| Engine | MariaDB 11.4 (`mariadb:11.4`) |
+| Engine | MariaDB 11.4 (`mariadb:11.4.13`) |
 | Character set / collation | `utf8mb4` / `utf8mb4_unicode_ci` (Hindi and all Unicode text) |
 | Schema name | `DB_NAME` from `.env` (default `tmc_wp`) |
 | Table prefix | `tmc_` (`WORDPRESS_TABLE_PREFIX`) |

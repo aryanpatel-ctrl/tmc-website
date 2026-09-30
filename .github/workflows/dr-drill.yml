@@ -12,6 +12,12 @@ name: DR drill
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: "Commit, tag or branch to test (default: the triggering commit)"
+        type: string
+        required: false
+        default: ""
   workflow_dispatch:
   schedule:
     - cron: "30 21 1 * *"   # 03:00 IST on the 2nd of every month
@@ -26,6 +32,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Environment
         run: ./scripts/make-env.sh ci

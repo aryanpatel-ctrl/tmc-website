@@ -83,8 +83,9 @@ the environment.
 | WordPress core minor (security) releases applied automatically by the cron container | `WP_AUTO_UPDATE_CORE=minor`, cron service | — |
 | CI actions pinned to commit SHAs, scanner images to digests | `.github/workflows/security.yml` | — |
 
-Follow-up: the base image `wordpress:php8.3-apache` and the `wordpress:cli-php8.3` image are referenced by
-tag; pin them by digest and bump deliberately (W7 / integrator).
+Every image is pinned to an exact release (`wordpress:7.1.2-php8.3-apache`, `wordpress:cli-2.12.0-php8.3`,
+`mariadb:11.4.13`, `valkey/valkey:8.1.10-alpine`) and updated through Dependabot pull requests
+(`docs/operations/patching.md`). Digest pinning remains an optional further step.
 
 ## A07 Identification and Authentication Failures
 

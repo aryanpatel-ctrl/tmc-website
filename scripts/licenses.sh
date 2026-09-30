@@ -44,7 +44,9 @@ finding() { printf '%s\t%s\n' "$1" "$2" >> "$FINDINGS"; }
 
 # Exact version (e.g. 3.8.10, 11.4.3, v4.2.2, 3.11.0.0-debian) versus a moving series tag (7-alpine, 11.4, v5).
 pin_state() {
-  if [[ "$1" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo "exact"; else echo "series tag"; fi
+  if [[ "$1" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ || "$1" =~ ^[a-z]+-[0-9]+\.[0-9]+\.[0-9]+(-|$) ]]; then echo "exact";
+  elif [[ "$1" =~ ^[0-9a-f]{40}$ ]]; then echo "exact commit";
+  else echo "series tag"; fi
 }
 
 # licence_of NAME TAG → "component|licence|upstream|finding" (finding empty when none)
@@ -68,7 +70,13 @@ licence_of() {
     pandoc/latex|pandoc/core|pandoc/extra) echo "Pandoc (with TeX Live)|GPL-2.0-or-later (pandoc); TeX Live packages under free licences (LPPL-1.3c, GPL, OFL and others)|https://github.com/pandoc/dockerfiles|" ;;
     minlag/mermaid-cli) echo "Mermaid CLI (diagram rendering)|MIT (mermaid-cli, mermaid); bundled Chromium under BSD-3-Clause and other free licences|https://github.com/mermaid-js/mermaid-cli|" ;;
     koalaman/shellcheck) echo "ShellCheck|GPL-3.0-or-later|https://github.com/koalaman/shellcheck|" ;;
-    actions/checkout|actions/upload-artifact|actions/download-artifact|actions/cache|actions/setup-node|actions/setup-python|actions/github-script)
+    aquasec/trivy) echo "Trivy (container image vulnerability scanner)|Apache-2.0|https://github.com/aquasecurity/trivy|" ;;
+    ghcr.io/gitleaks/gitleaks) echo "Gitleaks (secret scanner)|MIT|https://github.com/gitleaks/gitleaks|" ;;
+    ghcr.io/zaproxy/zaproxy) echo "OWASP ZAP (dynamic application security testing)|Apache-2.0|https://github.com/zaproxy/zaproxy|" ;;
+    grafana/k6) echo "Grafana k6 (load testing)|AGPL-3.0-only (used as a test tool; not distributed or deployed)|https://github.com/grafana/k6|" ;;
+    node) echo "Node.js (official image)|MIT (Node.js); Alpine Linux packages under their own free licences|https://hub.docker.com/_/node|" ;;
+    mcr.microsoft.com/playwright) echo "Playwright with browsers (official image)|Apache-2.0 (Playwright); Chromium BSD-3-Clause, Firefox MPL-2.0, WebKit LGPL-2.1/BSD; Ubuntu packages under their own free licences|https://github.com/microsoft/playwright|" ;;
+    actions/checkout|actions/upload-artifact|actions/download-artifact|actions/cache|actions/setup-node|actions/setup-python|actions/setup-java|actions/github-script)
       echo "GitHub Action ${name}|MIT|https://github.com/${name}|" ;;
     *) echo "${name}|UNKNOWN|—|No licence recorded in scripts/licenses.sh for '${name}'. Add it to licence_of() after checking the upstream licence." ;;
   esac
@@ -80,6 +88,7 @@ add_image() { # REF WHERE CATEGORY
   name="${ref%%:*}"; tag="${ref#*:}"; [ "$tag" != "$ref" ] || tag="latest"
   name="${name#docker.io/}"; name="${name#library/}"
   [ "$name" != "tmc-wordpress" ] || return 0   # built from wordpress/Dockerfile (listed via its base image)
+  [ "$name" != "tmc-backup" ] || return 0      # built from backup/Dockerfile (listed via its base image)
   info="$(licence_of "$name" "$tag")"
   IFS='|' read -r component licence upstream note <<<"$info"
   row "$category" "$component" "\`${name}:${tag}\` ($(pin_state "$tag"))" "$where" "$licence" "$upstream"
@@ -95,8 +104,19 @@ for file in docker-compose.yml compose.*.yml; do
   sed -n 's/^[[:space:]]*image:[[:space:]]*["'"'"']\{0,1\}\([^"'"'"'[:space:]]*\).*/\1/p' "$file" | sort -u |
     while read -r ref; do add_image "$ref" "$file" "Runtime"; done
 done
-sed -n 's/^FROM[[:space:]]\{1,\}\([^[:space:]]*\).*/\1/p' wordpress/Dockerfile | sort -u |
-  while read -r ref; do add_image "$ref" "wordpress/Dockerfile" "Runtime"; done
+for dockerfile in wordpress/Dockerfile backup/Dockerfile; do
+  [ -f "$dockerfile" ] || continue
+  sed -n 's/^FROM[[:space:]]\{1,\}\([^[:space:]]*\).*/\1/p' "$dockerfile" | sort -u |
+    while read -r ref; do add_image "$ref" "$dockerfile" "Runtime"; done
+done
+if grep -q 'poppler-utils' wordpress/Dockerfile; then
+  version="$(sed -n "s/.*poppler-utils=\([0-9][0-9.]*\).*/\1/p" wordpress/Dockerfile | head -1)"
+  row "Runtime" "Poppler utilities (pdftotext, document text for site search)" "${version:-Debian package (not pinned)}" "wordpress/Dockerfile" "GPL-2.0-only OR GPL-3.0-only" "https://poppler.freedesktop.org/"
+fi
+if [ -f backup/Dockerfile ]; then
+  grep -q 'rsync' backup/Dockerfile && row "Runtime" "rsync (backup image, incremental file snapshots)" "Debian package of the base image" "backup/Dockerfile" "GPL-3.0-or-later" "https://rsync.samba.org/"
+  grep -q 'openssh-client' backup/Dockerfile && row "Runtime" "OpenSSH client (backup image, off-host copy)" "Debian package of the base image" "backup/Dockerfile" "BSD-2-Clause and other permissive licences (OpenSSH)" "https://www.openssh.com/"
+fi
 
 if grep -q 'pecl install redis' wordpress/Dockerfile; then
   version="$(sed -n 's/.*pecl install redis-\([0-9][0-9.]*\).*/\1/p' wordpress/Dockerfile | head -1)"
@@ -106,6 +126,10 @@ fi
 
 polylang="$(sed -n 's/^POLYLANG_VERSION="\([^"]*\)".*/\1/p' scripts/setup.sh)"
 [ -z "$polylang" ] || row "Runtime" "Polylang (WordPress plugin, multilingual)" "${polylang} (exact)" "scripts/setup.sh" "GPL-3.0-or-later" "https://wordpress.org/plugins/polylang/"
+two_factor="$(sed -n 's/^TWO_FACTOR_VERSION="\([^"]*\)".*/\1/p' scripts/setup.sh)"
+[ -z "$two_factor" ] || row "Runtime" "Two Factor (WordPress plugin, TOTP and backup codes)" "${two_factor} (exact)" "scripts/setup.sh" "GPL-2.0-or-later" "https://wordpress.org/plugins/two-factor/"
+redis_cache="$(sed -n 's/^REDIS_CACHE_VERSION="\([^"]*\)".*/\1/p' scripts/setup-cache.sh 2>/dev/null)"
+[ -z "$redis_cache" ] || row "Runtime" "Redis Object Cache (WordPress plugin, object-cache drop-in)" "${redis_cache} (exact)" "scripts/setup-cache.sh" "GPL-3.0-or-later" "https://wordpress.org/plugins/redis-cache/"
 row "Runtime" "WordPress translations hi_IN and en_GB (core and plugins)" "installed by provisioning" "scripts/setup.sh" "GPL-2.0-or-later (as the software translated)" "https://translate.wordpress.org/"
 
 # ---------------------------------------------------------------- bundled assets
@@ -138,18 +162,42 @@ for wf in .github/workflows/*.yml; do
         [ -z "$note" ] || finding "UNKNOWN" "$note" ;;
     esac
   done
-  sed -nE 's/^[[:space:]]*(image|container):[[:space:]]*["'"'"']?([^"'"'"'[:space:]]*).*/\2/p' "$wf" | sort -u |
-    while read -r ref; do [ -n "$ref" ] && add_image "$ref" "$wf" "Build and CI tool"; done
+  # image:/container: keys, *_IMAGE: variables and "docker run … image:tag" commands in steps.
+  {
+    sed -nE 's/^[[:space:]]*(image|container|[A-Z0-9_]*IMAGE):[[:space:]]*["'"'"']?([^"'"'"'[:space:]]*).*/\2/p' "$wf"
+    grep -E '^[^#]*docker run' "$wf" | tr ' ' '\n' | grep -E '^[a-z0-9][a-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]*(@sha256:[0-9a-f]+)?$' || true
+  } | sort -u | while read -r ref; do
+    [ -z "$ref" ] || add_image "$ref" "$wf" "Build and CI tool"
+  done
 done
 
 # Images started by scripts: "docker run … image:tag …" and IMAGE variables such as PANDOC_IMAGE="…".
-for script in scripts/*.sh scripts/*/*.sh; do
+for script in scripts/*.sh scripts/*/*.sh tests/ci/*.sh; do
   [ -f "$script" ] || continue
   {
     grep -E '^[^#]*docker run' "$script" | tr ' ' '\n' | grep -E '^[a-z0-9][a-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]*$' || true
     sed -n 's/^[[:space:]]*[A-Z_]*IMAGE="\{0,1\}\([a-z0-9][a-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]*\)"\{0,1\}.*/\1/p' "$script"
   } | sort -u | while read -r ref; do add_image "$ref" "$script" "Build and CI tool"; done
 done
+
+# Quality-gate tooling (tests/package.json, exact versions; installed with npm ci from the lock file).
+if [ -f tests/package.json ]; then
+  python3 - tests/package.json <<'PY' | while IFS='|' read -r pkg version; do
+import json, sys
+deps = json.load(open(sys.argv[1])).get("devDependencies", {})
+for name in sorted(deps):
+    print(name + "|" + deps[name])
+PY
+    case "$pkg" in
+      @playwright/test) lic="Apache-2.0"; up="https://github.com/microsoft/playwright" ;;
+      @axe-core/playwright|axe-core) lic="MPL-2.0"; up="https://github.com/dequelabs/axe-core-npm" ;;
+      @lhci/cli) lic="Apache-2.0"; up="https://github.com/GoogleChrome/lighthouse-ci" ;;
+      vnu-jar) lic="MIT"; up="https://github.com/validator/validator" ;;
+      *) lic="UNKNOWN"; up="—"; finding "UNKNOWN" "No licence recorded in scripts/licenses.sh for npm package '$pkg' (tests/package.json)." ;;
+    esac
+    row "Build and CI tool" "npm package $pkg (quality gates)" "$version ($(pin_state "$version"))" "tests/package.json" "$lic" "$up"
+  done
+fi
 
 # Host tools the scripts call (installed on the runner or workstation; not distributed).
 row "Host tool" "Docker Engine and Docker Compose v2" "host installation" "scripts/*.sh" "Apache-2.0" "https://github.com/docker"
@@ -249,6 +297,10 @@ EOF
 | OFL-1.1 | <https://openfontlicense.org/> (copy shipped in `src/themes/tmc/assets/fonts/OFL.txt`) |
 | PSF-2.0 | <https://docs.python.org/3/license.html> |
 | LPPL-1.3c | <https://www.latex-project.org/lppl/lppl-1-3c/> |
+| MPL-2.0 | <https://www.mozilla.org/MPL/2.0/> |
+| LGPL-2.1 | <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html> |
+| BSD-2-Clause | <https://opensource.org/license/bsd-2-clause> |
+| AGPL-3.0-only (test tool only) | <https://www.gnu.org/licenses/agpl-3.0.html> |
 EOF
 }
 

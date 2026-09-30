@@ -102,10 +102,11 @@ function tmc_template_slot( $slot, array $fallback ) {
 	/**
 	 * Filters the blocks placed in a page-template slot ("map", "application", "documents").
 	 *
-	 * @param array|null $blocks Block arrays (see tmc_block()), or null for the default.
-	 * @param string     $slot   Slot name.
+	 * @param array|null $blocks   Block arrays (see tmc_block()), or null for the default.
+	 * @param string     $slot     Slot name.
+	 * @param array      $fallback The default blocks (e.g. to keep their heading).
 	 */
-	$blocks = apply_filters( 'tmc_page_template_slot', null, $slot );
+	$blocks = apply_filters( 'tmc_page_template_slot', null, $slot, $fallback );
 	return is_array( $blocks ) && $blocks ? array_values( $blocks ) : $fallback;
 }
 

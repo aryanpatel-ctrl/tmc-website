@@ -139,3 +139,27 @@ add_action( 'wp_enqueue_scripts', 'tmc_map_script_strings', 20 );
 function tmc_map_script_strings() {
 	wp_localize_script( 'tmc-map', 'tmcMap', array( 'loaded' => __( 'Map loaded.', 'tmc' ) ) );
 }
+
+/**
+ * Content-Security-Policy (tmc-core/security-headers.php): allow exactly the OpenStreetMap embed
+ * origin as a frame source, so the map the visitor asks for can load. Nothing else is loosened.
+ */
+add_filter( 'tmc_csp_directives', 'tmc_map_csp_frame_src', 10, 2 );
+function tmc_map_csp_frame_src( $directives, $context ) {
+	if ( 'front' === $context ) {
+		$directives['frame-src'] = array_merge( (array) ( $directives['frame-src'] ?? array( "'self'" ) ), array( 'https://www.openstreetmap.org' ) );
+	}
+	return $directives;
+}
+
+/**
+ * Page templates (inc/page-templates.php): the Contact page template's "map" slot gets the location
+ * map block, which shows the site's address and map position from the Customizer.
+ */
+add_filter( 'tmc_page_template_slot', 'tmc_map_template_slot', 10, 2 );
+function tmc_map_template_slot( $blocks, $slot ) {
+	if ( 'map' === $slot && function_exists( 'tmc_b_dynamic' ) ) {
+		return array( tmc_b_dynamic( 'tmc/location-map' ) );
+	}
+	return $blocks;
+}

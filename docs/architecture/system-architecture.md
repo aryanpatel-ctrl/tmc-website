@@ -24,7 +24,7 @@ other statement is taken from the code in this repository.
 | Aspect | Decision | Where in the repository |
 |---|---|---|
 | CMS | WordPress Multisite (subdomain install): one CMS, one database, one codebase, six websites | `docker-compose.yml` (`WORDPRESS_CONFIG_EXTRA`), `scripts/install-network.sh` |
-| Runtime | PHP 8.3 on Apache (official `wordpress:php8.3-apache` image) with phpredis | `wordpress/Dockerfile` |
+| Runtime | PHP 8.3 on Apache (official `wordpress:7.1.2-php8.3-apache` image) with phpredis | `wordpress/Dockerfile` |
 | Database | MariaDB 11.4, `utf8mb4`, one schema for the network, table prefix `tmc_` | `docker-compose.yml` service `db` |
 | Object cache | Redis 7 (in-memory only, no persistence, 256 MB LRU) | `docker-compose.yml` service `redis` |
 | Scheduled jobs | A dedicated `cron` container runs due WP-Cron events on every site each minute; page-hit WP-Cron is disabled | `docker-compose.yml` service `cron`, `DISABLE_WP_CRON` |
@@ -154,9 +154,9 @@ flowchart LR
 
 | Service | Image | Networks | Host ports | Persistent data | Notes |
 |---|---|---|---|---|---|
-| `db` (`tmc-db`) | `mariadb:11.4` | `tmc_internal` | none | volume `db_data` | Health-checked; `max-allowed-packet=64M` |
-| `redis` (`tmc-redis`) | `redis:7-alpine` | `tmc_internal` | none | none (`--save ""`) | Cache only; losing it loses no data |
-| `wordpress` (`tmc-wp`) | `tmc-wordpress:latest` built from `wordpress/Dockerfile` (base `wordpress:php8.3-apache`) | `tmc_internal`, `tmc_edge` (+ `homelab` on UAT) | Dev/CI: `127.0.0.1:80`; UAT: none | volume `wp_html` (core + uploads); theme and mu-plugins bind-mounted **read-only** | Hardened Apache/PHP config (`wordpress/apache-tmc.conf`, `php.ini`) |
+| `db` (`tmc-db`) | `mariadb:11.4.13` | `tmc_internal` | none | volume `db_data` | Health-checked; `max-allowed-packet=64M` |
+| `redis` (`tmc-redis`) | `valkey/valkey:8.1.10-alpine` (Redis-compatible, BSD-3-Clause) | `tmc_internal` | none | none (`--save ""`) | Cache only; losing it loses no data |
+| `wordpress` (`tmc-wp`) | `tmc-wordpress:latest` built from `wordpress/Dockerfile` (base `wordpress:7.1.2-php8.3-apache`) | `tmc_internal`, `tmc_edge` (+ `homelab` on UAT) | Dev/CI: `127.0.0.1:80`; UAT: none | volume `wp_html` (core + uploads); theme and mu-plugins bind-mounted **read-only** | Hardened Apache/PHP config (`wordpress/apache-tmc.conf`, `php.ini`) |
 | `cron` (`tmc-cron`) | `wordpress:cli-php8.3` | `tmc_internal` only | none | shares `wp_html` | Runs `wp cron event run --due-now` for each site every 60 seconds |
 | `wpcli` | `wordpress:cli-php8.3` | `tmc_internal`, `tmc_edge` | none | shares `wp_html`; `scripts/` mounted read-only at `/tmc-scripts` | Not running; started only for provisioning, migrations and tests |
 

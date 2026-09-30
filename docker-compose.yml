@@ -71,7 +71,7 @@ x-wp-volumes: &wp-volumes
 
 services:
   db:
-    image: mariadb:11.4
+    image: mariadb:11.4.13   # exact pin; updates arrive as Dependabot PRs (docs/operations/patching.md)
     container_name: tmc-db
     restart: unless-stopped
     command: >
@@ -93,10 +93,11 @@ services:
       retries: 12
 
   redis:
-    image: redis:7-alpine
+    # Valkey (Linux Foundation, BSD-3-Clause): Redis-compatible; Redis 7.4+ is not OSI-licensed.
+    image: valkey/valkey:8.1.10-alpine
     container_name: tmc-redis
     restart: unless-stopped
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
+    command: valkey-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
     networks: [tmc_internal]
 
   wordpress:
@@ -113,7 +114,7 @@ services:
     networks: [tmc_internal, tmc_edge, tmc_apps]
 
   wpcli:
-    image: wordpress:cli-php8.3
+    image: wordpress:cli-2.12.0-php8.3
     user: "33:33"
     profiles: ["tools"]
     depends_on:
@@ -133,7 +134,7 @@ services:
 
   # Real cron: runs due scheduled jobs (automatic expiry, publishing) on every site each minute.
   cron:
-    image: wordpress:cli-php8.3
+    image: wordpress:cli-2.12.0-php8.3
     container_name: tmc-cron
     user: "33:33"
     restart: unless-stopped

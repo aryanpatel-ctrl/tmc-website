@@ -1,11 +1,21 @@
 # CI/CD for the TMC website ecosystem.
 #
-#   pull request  → lint + integration test (GitHub-hosted runners only; never touches the server)
-#   push to main  → lint + integration test → deploy to UAT (self-hosted runner on hetser)
+#   pull request  → every check below (GitHub-hosted runners only; never touches the server)
+#   push to main  → every check below → deploy to UAT (self-hosted runner on hetser)
 #   manual run    → redeploy or roll back: Actions → Pipeline → Run workflow → enter a commit/tag
 #
 # Every deployment is tested first, backed up, smoke-tested and recorded (tender §4.7: controlled,
-# auditable promotion between environments with rollback).
+# auditable promotion between environments with rollback). Production is promoted separately from
+# a v* tag on a commit that passed this pipeline on main (release.yml, with manual approval).
+#
+#   Lint ──┬── Integration test (all six sites, PHP suites, smoke test)
+#          ├── Security gate (security.yml: gitleaks, Trivy, OWASP ZAP)          ─┐
+#          ├── Quality gates (quality.yml: E2E, visual, axe, HTML, Lighthouse,    │  each on its own
+#          │                  links + Go-Live acceptance report)                  │  fresh stack, in
+#          ├── DR drill (dr-drill.yml: backup → off-host copy → restore)          │  parallel
+#          └── Capacity (capacity.yml: k6 against the page cache + search)       ─┘
+#   Operations checks, application gateway checks and documentation checks need no stack and run
+#   alongside Lint. Deploy waits for all of them.
 name: Pipeline
 
 on:
@@ -46,11 +56,30 @@ jobs:
           docker compose config --quiet
           docker compose -f docker-compose.yml -f compose.server.yml config --quiet
 
+  ops:
+    name: Operations
+    uses: ./.github/workflows/ops-checks.yml
+    with:
+      ref: ${{ inputs.ref || github.sha }}
+
+  gateway:
+    name: Application gateway
+    uses: ./.github/workflows/apps-gateway.yml
+    with:
+      ref: ${{ inputs.ref || github.sha }}
+
+  docs:
+    name: Documentation
+    uses: ./.github/workflows/docs.yml
+    with:
+      ref: ${{ inputs.ref || github.sha }}
+      build: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
   integration:
     name: Integration test
     needs: lint
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
         with:
@@ -65,13 +94,43 @@ jobs:
         run: ./scripts/run-tests.sh
       - name: HTTP smoke test
         run: ./scripts/smoke-test.sh
+      - name: Provisioning is idempotent (second run of setup.sh on the provisioned stack)
+        run: ./scripts/setup.sh > "$RUNNER_TEMP/setup-rerun.log" 2>&1 || { tail -n 80 "$RUNNER_TEMP/setup-rerun.log"; exit 1; }
       - name: Container logs
         if: failure()
-        run: docker compose logs --tail=200 wordpress db
+        run: docker compose logs --tail=200 wordpress db cron backup tmc-apps-mock
+
+  security:
+    name: Security gate
+    needs: lint
+    uses: ./.github/workflows/security.yml
+    with:
+      ref: ${{ inputs.ref || github.sha }}
+
+  quality:
+    name: Quality gates
+    needs: lint
+    uses: ./.github/workflows/quality.yml
+    with:
+      ref: ${{ inputs.ref || github.sha }}
+
+  dr-drill:
+    name: DR drill
+    needs: lint
+    uses: ./.github/workflows/dr-drill.yml
+    with:
+      ref: ${{ inputs.ref || github.sha }}
+
+  capacity:
+    name: Capacity
+    needs: lint
+    uses: ./.github/workflows/capacity.yml
+    with:
+      ref: ${{ inputs.ref || github.sha }}
 
   deploy:
     name: Deploy to UAT (hetser)
-    needs: [lint, integration]
+    needs: [lint, ops, gateway, docs, integration, security, quality, dr-drill, capacity]
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, tmc-server]
     timeout-minutes: 30
@@ -83,6 +142,8 @@ jobs:
         with:
           ref: ${{ env.REF }}
       - name: Deploy
+        env:
+          TMC_DEPLOY_TARGET: uat
         run: ./scripts/deploy.sh "$GITHUB_WORKSPACE" "$HOME/docker/tmc-website"
       - name: Summary
         if: always()
@@ -91,6 +152,7 @@ jobs:
             echo "### Deployment to UAT"
             echo "- Commit: \`$(git rev-parse --short HEAD)\` — $(git log -1 --pretty=%s)"
             echo "- Triggered by: ${GITHUB_ACTOR} (${GITHUB_EVENT_NAME})"
+            echo "- Gates passed: lint, integration, security, quality, DR drill, capacity, operations, gateway, documentation"
             echo "- Site: http://tmc.100-79-142-44.sslip.io (Tailscale only)"
             echo "- Result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"

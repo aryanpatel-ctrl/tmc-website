@@ -1,11 +1,12 @@
-FROM wordpress:php8.3-apache
+# Exact pin (WordPress 7.1.2, PHP 8.3); updates arrive as Dependabot PRs (docs/operations/patching.md).
+FROM wordpress:7.1.2-php8.3-apache
 
 # phpredis for the object cache
 RUN set -eux; \
     savedAptMark="$(apt-mark showmanual)"; \
     apt-get update; \
     apt-get install -y --no-install-recommends $PHPIZE_DEPS; \
-    pecl install redis; \
+    pecl install redis-6.3.0; \
     docker-php-ext-enable redis; \
     apt-mark auto '.*' > /dev/null; \
     apt-mark manual $savedAptMark > /dev/null; \

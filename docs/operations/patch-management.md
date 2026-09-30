@@ -33,12 +33,12 @@ procedure states how every component is kept current and how a patch reaches Pro
 |---|---|---|---|---|
 | C1 | WordPress core | Base image `wordpress:php8.3-apache` (`wordpress/Dockerfile`); the core files live in volume `wp_html` | WordPress.org releases and security announcements | [THIRD-PARTY-LICENSES](../THIRD-PARTY-LICENSES.md) |
 | C2 | PHP 8.3 and Apache httpd | Same base image | Docker Official Images rebuilds | as above |
-| C3 | phpredis extension | `pecl install redis` in `wordpress/Dockerfile` | PECL | as above |
+| C3 | phpredis extension | `pecl install redis-6.3.0` in `wordpress/Dockerfile` | PECL | as above |
 | C4 | Polylang plugin | `POLYLANG_VERSION` in `scripts/setup.sh` | WordPress.org plugin directory | as above |
 | C5 | Language packs (`hi_IN`, `en_GB`) | Installed by `scripts/setup.sh` | WordPress.org translations | as above |
-| C6 | MariaDB | `image: mariadb:11.4` in `docker-compose.yml` (11.4 is a long-term-support series) | Docker Official Images | as above |
-| C7 | Redis | `image: redis:7-alpine` in `docker-compose.yml` | Docker Official Images | as above (see §8, observation O-4) |
-| C8 | WP-CLI | `image: wordpress:cli-php8.3` (`wpcli`, `cron` services) | Docker Official Images | as above |
+| C6 | MariaDB | `image: mariadb:11.4.13` in `docker-compose.yml` and `FROM mariadb:11.4.13` in `backup/Dockerfile` (11.4 is a long-term-support series) | Docker Official Images | as above |
+| C7 | Valkey (Redis-compatible cache, BSD-3-Clause) | `image: valkey/valkey:8.1.10-alpine` in `docker-compose.yml` (service name `redis` kept) | Valkey project images | as above (observation O-4, resolved) |
+| C8 | WP-CLI | `image: wordpress:cli-2.12.0-php8.3` (`wpcli`, `cron` services) | Docker Official Images | as above |
 | C9 | Project code (`tmc-core`, theme `tmc`) | This repository | Project releases | Project (GPL-2.0-or-later) |
 | C10 | CI actions and tools | `.github/workflows/*.yml`, `scripts/lint.sh` | GitHub Marketplace, Docker Hub | as above |
 | C11 | Host operating system, Docker Engine | TMC infrastructure (Production/DR); project host (UAT) | Distribution security updates | — |
@@ -135,6 +135,6 @@ picture.
 | # | Observation | Consequence | Proposed action | Owner |
 |---|---|---|---|---|
 | O-1 | `WP_AUTO_UPDATE_CORE` is `minor`, but background updates run through WP-Cron, which runs in the `cron` container on the internal network without internet access; and the core files persist in `wp_html`. | Minor core updates do not install themselves. This is acceptable (controlled change is preferred) but core must be updated deliberately. | Provisioning pins and applies the core version (`wp core update --version=…`), making core updates a normal release. | W7 / W2 (verify at integration) |
-| O-2 | `setup.sh` installs Polylang `POLYLANG_VERSION` only when it is not installed. | Raising `POLYLANG_VERSION` does not upgrade existing environments. | Provisioning compares the installed version with the pinned one and runs `wp plugin install polylang --version=<pinned> --force` when they differ. | W7 (verify at integration) |
-| O-3 | Base images use series tags (`wordpress:php8.3-apache`, `mariadb:11.4`, `redis:7-alpine`, `wordpress:cli-php8.3`), and `setup.sh` builds without `--pull`. | Environments built at different times can run different patch levels. | Pin exact tags (or digests) and update them through this procedure; build with `--pull` in releases. | W7 (verify at integration) |
-| O-4 | `redis:7-alpine` currently resolves to Redis 7.4.x, which is licensed under RSALv2/SSPLv1 — not an OSI-approved licence. | Conflicts with the GPL/OSI-only principle and SOW §13 ("licensed on terms compatible with Government deployment"). | Replace with a BSD-3-Clause build: `valkey/valkey` (Linux Foundation fork, drop-in compatible) or pin `redis:7.2.x-alpine`; or Redis 8.x under its AGPLv3 option after TMC's legal review. | W7 (verify at integration) |
+| O-2 | *Resolved at integration:* `setup.sh` now compares the installed Polylang, Two Factor and Redis Object Cache versions with the pinned ones and reinstalls (`--force`) when they differ. | — | — | Integrator |
+| O-3 | *Resolved at integration:* every image is pinned to an exact release (`wordpress:7.1.2-php8.3-apache`, `mariadb:11.4.13`, `valkey/valkey:8.1.10-alpine`, `wordpress:cli-2.12.0-php8.3`, `php:8.3.35-cli-alpine`), and phpredis to 6.3.0. Dependabot proposes updates. Digest pinning remains optional. | — | — | Integrator |
+| O-4 | *Resolved at integration:* `redis:7-alpine` (Redis 7.4.x, RSALv2/SSPLv1, not OSI-approved) was replaced by `valkey/valkey:8.1.10-alpine` (BSD-3-Clause, protocol-compatible; the service keeps the name `redis`, so `WP_REDIS_HOST` is unchanged). | — | — | Integrator |

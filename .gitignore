@@ -8,15 +8,19 @@ backups/
 *.sql
 *.sql.gz
 # generated scan/test reports (CI uploads them as artifacts)
-reports/
+/reports/
 
 # OS / editor
 .DS_Store
 .idea/
 .vscode/
-node_modules/
+node_modules
 .claude/
 
-# generated documentation (scripts/docs/build-docs.sh) and reports (scripts/reports/)
+# generated documentation (scripts/docs/build-docs.sh)
 /dist/
-/reports/
+# generated quality-gate output (tests/ci/run-gate.sh; CI uploads it as artifacts)
+tests/results/
+tests/test-results/
+tests/playwright-report/
+tests/.lighthouseci/

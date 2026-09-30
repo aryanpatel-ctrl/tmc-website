@@ -146,7 +146,7 @@ if [ -z "$DUMP" ] && [ "$SKIP_FILES" -eq 0 ]; then
 fi
 
 step provision "flush caches, scripts/setup.sh"
-dc exec -T redis redis-cli FLUSHALL >/dev/null   # object and page caches describe the old data
+dc exec -T redis valkey-cli FLUSHALL >/dev/null   # object and page caches describe the old data
 if [ "$SKIP_SETUP" -eq 0 ]; then
   (cd "$TARGET" && unset COMPOSE_FILE COMPOSE_PROJECT_NAME COMPOSE_PROFILES && ./scripts/setup.sh)
 else

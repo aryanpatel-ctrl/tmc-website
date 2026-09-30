@@ -88,6 +88,9 @@ unset sec_host
 
 check "$TMC_BASE_DOMAIN" "/security.txt" 301
 sec_headers "$TMC_BASE_DOMAIN" "/wp-login.php" "^content-security-policy:.*object-src 'none'" "^x-frame-options: sameorigin"
+sec_xfo="$(sec_fetch "$TMC_BASE_DOMAIN" "/wp-login.php" | grep -ciE '^x-frame-options:' || true)"
+sec_result "$TMC_BASE_DOMAIN/wp-login.php (X-Frame-Options once)" "$([ "$sec_xfo" = 1 ] || echo "$sec_xfo X-Frame-Options headers")" "1 header"
+unset sec_xfo
 sec_absent "$TMC_BASE_DOMAIN" "/wp-json/oembed/1.0/embed?url=http%3A%2F%2F$TMC_BASE_DOMAIN%2Fsitemap%2F" 200 "author_name" "author_url"
 sec_absent "$TMC_BASE_DOMAIN" "/wp-sitemap-users-1.xml" 404 "${WP_ADMIN_USER:-tmcadmin}"
 

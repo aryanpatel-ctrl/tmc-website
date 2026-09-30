@@ -177,6 +177,11 @@ add_action(
 	}
 );
 
+// Apache already sends X-Frame-Options on every response; WordPress would add a second copy on the
+// login and admin screens (duplicate headers are reported by scanners). CSP frame-ancestors backs it up.
+add_action( 'init', fn() => remove_action( 'login_init', 'send_frame_options_header', 10 ) );
+add_action( 'admin_init', fn() => remove_action( 'admin_init', 'send_frame_options_header', 10 ), 0 );
+
 // Pingbacks go through XML-RPC, which Apache blocks; do not advertise it.
 add_filter(
 	'wp_headers',

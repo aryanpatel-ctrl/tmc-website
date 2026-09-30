@@ -7,7 +7,7 @@ global $wp_query;
 get_header();
 // phpcs:disable WordPress.Security.NonceVerification.Recommended -- public filter form
 $tmc_department = absint( $_GET['department'] ?? 0 );
-$tmc_name       = sanitize_text_field( wp_unslash( $_GET['name'] ?? '' ) );
+$tmc_name       = sanitize_text_field( wp_unslash( $_GET['doctor_name'] ?? '' ) );
 // phpcs:enable
 $tmc_departments = get_posts( array( 'post_type' => 'tmc_department', 'posts_per_page' => 100, 'orderby' => 'title', 'order' => 'ASC', 'suppress_filters' => false ) );
 
@@ -17,7 +17,7 @@ get_template_part( 'template-parts/page-header', null, array( 'title' => esc_htm
 	<form class="filter-form" method="get" action="<?php echo esc_url( get_post_type_archive_link( 'tmc_doctor' ) ); ?>">
 		<p>
 			<label for="doctor-name"><?php esc_html_e( 'Name', 'tmc' ); ?></label>
-			<input type="search" id="doctor-name" name="name" value="<?php echo esc_attr( $tmc_name ); ?>" autocomplete="off">
+			<input type="search" id="doctor-name" name="doctor_name" value="<?php echo esc_attr( $tmc_name ); ?>" autocomplete="off">
 		</p>
 		<p>
 			<label for="doctor-department"><?php esc_html_e( 'Department', 'tmc' ); ?></label>

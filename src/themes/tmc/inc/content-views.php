@@ -137,7 +137,7 @@ function tmc_archive_queries( WP_Query $query ) {
 	if ( $query->is_post_type_archive( 'tmc_doctor' ) ) {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- public filter form
 		$department = absint( $_GET['department'] ?? 0 );
-		$name       = sanitize_text_field( wp_unslash( $_GET['name'] ?? '' ) );
+		$name       = sanitize_text_field( wp_unslash( $_GET['doctor_name'] ?? '' ) );
 		// phpcs:enable
 		$query->set( 'posts_per_page', 24 );
 		$query->set( 'orderby', array( 'menu_order' => 'ASC', 'title' => 'ASC' ) );

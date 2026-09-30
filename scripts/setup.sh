@@ -8,6 +8,7 @@ cd "$(dirname "$0")/.."
 set -a; . ./.env; set +a
 
 POLYLANG_VERSION="3.8.10"
+TWO_FACTOR_VERSION="0.17.0"   # wordpress.org/plugins/two-factor (GPL-2.0-or-later): TOTP + backup codes
 SITES=("" "tmh." "hbchrcv." "mpmmcc." "hbchrcmzp." "hbchpunjab.")
 
 wp()      { docker compose run --rm -T wpcli --url="$TMC_BASE_DOMAIN" "$@" </dev/null; }
@@ -29,6 +30,11 @@ if ! wp plugin is-installed polylang; then
   wp plugin install polylang --version="$POLYLANG_VERSION"
 fi
 wp plugin is-active polylang --network || wp plugin activate polylang --network
+# Exact pin (reinstalled when the version differs); MFA policy in src/mu-plugins/tmc-core/security-mfa.php
+if [ "$(wp plugin get two-factor --field=version 2>/dev/null)" != "$TWO_FACTOR_VERSION" ]; then
+  wp plugin install two-factor --version="$TWO_FACTOR_VERSION" --force
+fi
+wp plugin is-active two-factor --network || wp plugin activate two-factor --network
 
 echo "==> language packs"
 wp language core install hi_IN en_GB >/dev/null 2>&1 || true

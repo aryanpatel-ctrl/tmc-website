@@ -7,6 +7,8 @@ backups/
 .release-history
 *.sql
 *.sql.gz
+# generated scan/test reports (CI uploads them as artifacts)
+reports/
 
 # OS / editor
 .DS_Store

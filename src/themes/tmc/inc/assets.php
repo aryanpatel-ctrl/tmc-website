@@ -52,9 +52,11 @@ function tmc_preload_fonts() {
 }
 
 // Apply saved text-size / contrast preferences before first paint (no flash). Per-viewer only.
+// Printed through wp_print_inline_script_tag() so it carries the Content-Security-Policy nonce
+// (src/mu-plugins/tmc-core/security-headers.php); no inline script bypasses the policy.
 add_action( 'wp_head', 'tmc_prefs_boot', 0 );
 function tmc_prefs_boot() {
-	echo "<script>(function(){try{var d=document.documentElement,s=localStorage.getItem('tmc-font-scale'),c=localStorage.getItem('tmc-contrast');if(s)d.style.fontSize=s+'%';if(c)d.setAttribute('data-contrast',c);}catch(e){}d.classList.add('js');})();</script>\n";
+	wp_print_inline_script_tag( "(function(){try{var d=document.documentElement,s=localStorage.getItem('tmc-font-scale'),c=localStorage.getItem('tmc-contrast');if(s)d.style.fontSize=s+'%';if(c)d.setAttribute('data-contrast',c);}catch(e){}d.classList.add('js');})();", array( 'id' => 'tmc-prefs-boot' ) );
 }
 
 // Front-end clean-up.

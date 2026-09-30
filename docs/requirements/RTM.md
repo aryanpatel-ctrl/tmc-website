@@ -128,7 +128,7 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 | R-4.6-5 | Scheduled publishing and **automatic expiry** (announcements, EOIs, events) | BUILD | ✅ | — | content-test (27 checks) |
 | R-4.6-6 | **Central management of media and document libraries** | BUILD | 🔲 document library (types, listing, filters) + network-wide media overview | W1 | test + smoke |
 | R-4.6-7 | Multilingual content management (4.13) | BUILD | ✅ | — | — |
-| R-4.6-8 | Secured administrative access (4.8) | BUILD | 🔲 | W2 | security tests |
+| R-4.6-8 | Secured administrative access (4.8) | BUILD | ✅ admin network allow-list, TOTP MFA enforced for privileged roles, lockout, idle timeout, password policy | W2 | security-test (sections 1, 3–7) + smoke `security.sh` |
 
 ## 4.7 System architecture, hosting and deployment — SOW p.8
 
@@ -150,11 +150,11 @@ Covered by the rows below: website development (4.3), CMS (4.5–4.6), frontend 
 |---|---|---|---|---|---|
 | R-4.8-1 | Website/CMS in a network zone segregated from clinical systems; no direct connectivity; only allow-listed integration endpoints | OPS/BUILD | 🟡 DB/cache on internal network; 🔲 gateway + documented zones | W4/W8 | segregation test + doc |
 | R-4.8-2 | Separate infrastructure accounts, databases, credentials | OPS | ✅ own DB, users, secrets | — | — |
-| R-4.8-3 | Admin access: **MFA**, **restricted network access**, role-based authorisation | BUILD | 🟡 RBAC; 🔲 TOTP MFA enforced for privileged roles, admin network allow-list | W2 | security test |
+| R-4.8-3 | Admin access: **MFA**, **restricted network access**, role-based authorisation | BUILD | ✅ RBAC; TOTP MFA (Two Factor 0.17.0) enforced for Super Admin / Site Administrator / Reviewer-Publisher (`TMC_ENFORCE_MFA`); admin allow-list (`TMC_ADMIN_ALLOW_CIDRS`) | W2 | security-test + smoke `security.sh` (403 outside the allow-list) |
 | R-4.8-4 | Tamper-evident audit logs of all admin activity; retained; available to TMC | BUILD | ✅ HMAC chain, verify, CSV export; 🔲 retention policy doc | W8 | workflow-test |
-| R-4.8-5 | Secure development/deployment; **every release vulnerability-assessed before production** | OPS | 🔲 CI security gate (DAST baseline, image scan, secret scan) | W2 | pipeline gate |
-| R-4.8-6 | GIGW 3.0, WCAG 2.2 AA, W3C standards, protection against OWASP Top 10 | BUILD | 🟡; 🔲 HTML validation, OWASP mapping, CSP | W2/W6 | reports |
-| R-4.8-7 | VAPT by CERT-In empanelled agency; STQC certification; Safe-to-Host before Go-Live (costs to vendor) | CERT | 🔲 readiness pack + internal pre-assessment | W2/W8 | pre-VAPT report |
+| R-4.8-5 | Secure development/deployment; **every release vulnerability-assessed before production** | OPS | 🟡 CI security gate built (`.github/workflows/security.yml`: gitleaks, Trivy, OWASP ZAP baseline); 🔲 wire into `pipeline.yml` before deploy (integrator) | W2 | pipeline gate + report artifacts |
+| R-4.8-6 | GIGW 3.0, WCAG 2.2 AA, W3C standards, protection against OWASP Top 10 | BUILD | 🟡 OWASP Top 10 mapping (`docs/security/owasp-top10.md`), nonce-based CSP and security headers ✅; 🔲 HTML validation (W6) | W2/W6 | security-test, smoke, ZAP report |
+| R-4.8-7 | VAPT by CERT-In empanelled agency; STQC certification; Safe-to-Host before Go-Live (costs to vendor) | CERT | 🟡 pre-VAPT checklist (`docs/security/pre-vapt-checklist.md`), security.txt (contact ⛔ TMC to confirm); 🔲 external VAPT / STQC / Safe-to-Host | W2/W8 | pre-VAPT report |
 | R-4.8-8 | Security architecture document (segregation, network/data flows, access controls) at M2, re-validated before Go-Live | DOC | 🔲 | W8 | doc |
 | R-4.8-9 | Close all VAPT/STQC/TMC observations at no cost | PROC | 🔲 remediation procedure | W8 | doc |
 

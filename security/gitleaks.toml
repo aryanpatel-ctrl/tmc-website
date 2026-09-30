@@ -1,0 +1,17 @@
+# Secret scan configuration (gitleaks, used by .github/workflows/security.yml).
+# The full default rule set applies. Exceptions are exact strings that are known not to be secrets;
+# each one needs a reason. Never allow-list a whole file or directory.
+title = "TMC website secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberately weak example passwords used by the password-policy tests in scripts/tests/security-test.php (never real credentials)"
+regexes = [
+  '''^Summer2026$''',
+  '''^weakpass1$''',
+  '''^Password@2026!$''',
+  '''^Vq8#mRt2!pLz6w$''',
+  '''^Kq7!aaaaZt9#mw$''',
+]

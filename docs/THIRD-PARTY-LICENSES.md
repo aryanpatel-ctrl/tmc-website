@@ -49,7 +49,9 @@ listed in section 6.
 | Component | Version / reference | Where defined | Licence | Upstream |
 |---|---|---|---|---|
 | GitHub Action actions/checkout | `actions/checkout@v5` (series tag) | `.github/workflows/pipeline.yml` | MIT | https://github.com/actions/checkout |
+| Mermaid CLI (diagram rendering) | `minlag/mermaid-cli:11.4.2` (exact) | `scripts/docs/build-docs.sh` | MIT (mermaid-cli, mermaid); bundled Chromium under BSD-3-Clause and other free licences | https://github.com/mermaid-js/mermaid-cli |
 | PHP CLI (official image) | `php:8.3-cli` (series tag) | `scripts/lint.sh` | PHP-3.01 | https://hub.docker.com/_/php |
+| Pandoc (with TeX Live) | `pandoc/latex:3.11.0.0-debian` (exact) | `scripts/docs/build-docs.sh` | GPL-2.0-or-later (pandoc); TeX Live packages under free licences (LPPL-1.3c, GPL, OFL and others) | https://github.com/pandoc/dockerfiles |
 
 Tools installed on the CI runner or workstation and called by the scripts:
 
@@ -68,12 +70,11 @@ Tools installed on the CI runner or workstation and called by the scripts:
 | # | Type | Finding |
 |---|---|---|
 | F-01 | ACTION | The tag '7-alpine' resolves to Redis 7.4 or later, which is not under an OSI-approved licence. Replace with valkey/valkey (BSD-3-Clause, drop-in compatible) or pin redis:7.2.x (BSD-3-Clause); or use Redis 8.x under AGPL-3.0 after TMC's legal review. |
-| F-02 | ACTION | src/themes/tmc/assets/fonts/OFL.txt carries only the Noto Sans (latin-greek-cyrillic) copyright line; add the copyright notice of Noto Sans Devanagari (github.com/notofonts/devanagari), as the SIL OFL 1.1 requires the notice to accompany each font. |
-| F-03 | PIN | `mariadb:11.4` (docker-compose.yml) is a series tag; pin an exact version (or digest) so every environment runs the tested build (Patch Management, observation O-3). |
-| F-04 | PIN | `redis:7-alpine` (docker-compose.yml) is a series tag; pin an exact version (or digest) so every environment runs the tested build (Patch Management, observation O-3). |
-| F-05 | PIN | `wordpress:cli-php8.3` (docker-compose.yml) is a series tag; pin an exact version (or digest) so every environment runs the tested build (Patch Management, observation O-3). |
-| F-06 | PIN | `wordpress:php8.3-apache` (wordpress/Dockerfile) is a series tag; pin an exact version (or digest) so every environment runs the tested build (Patch Management, observation O-3). |
-| F-07 | PIN | phpredis is installed with `pecl install redis` without a version; pin it (`pecl install redis-x.y.z`). |
+| F-02 | PIN | `mariadb:11.4` (docker-compose.yml) is a series tag; pin an exact version (or digest) so every environment runs the tested build (Patch Management, observation O-3). |
+| F-03 | PIN | `redis:7-alpine` (docker-compose.yml) is a series tag; pin an exact version (or digest) so every environment runs the tested build (Patch Management, observation O-3). |
+| F-04 | PIN | `wordpress:cli-php8.3` (docker-compose.yml) is a series tag; pin an exact version (or digest) so every environment runs the tested build (Patch Management, observation O-3). |
+| F-05 | PIN | `wordpress:php8.3-apache` (wordpress/Dockerfile) is a series tag; pin an exact version (or digest) so every environment runs the tested build (Patch Management, observation O-3). |
+| F-06 | PIN | phpredis is installed with `pecl install redis` without a version; pin it (`pecl install redis-x.y.z`). |
 
 Types: **ACTION** licence or notice issue to resolve; **PIN** version not pinned exactly;
 **UNKNOWN** licence not recorded (fails the check).

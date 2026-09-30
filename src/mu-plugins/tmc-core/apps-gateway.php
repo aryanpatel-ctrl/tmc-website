@@ -39,7 +39,7 @@ function tmc_is_demo() {
  * amount, integer, url. Path placeholders {field} are filled from validated input.
  */
 function tmc_apps_catalogue() {
-	$department = array( 'type' => 'code', 'label' => __( 'Department', 'tmc' ), 'required' => true );
+	$department = array( 'type' => 'code', 'label' => __( 'Department', 'tmc' ), 'required' => true, 'choice' => true );
 	$date       = array( 'type' => 'date', 'label' => __( 'Preferred date', 'tmc' ), 'required' => true, 'min_days' => 1, 'max_days' => 90 );
 	$order      = array( 'type' => 'token', 'label' => __( 'Order reference', 'tmc' ), 'required' => true );
 
@@ -66,7 +66,7 @@ function tmc_apps_catalogue() {
 					'fields'  => array(
 						'department'      => $department,
 						'date'            => $date,
-						'slot'            => array( 'type' => 'code', 'label' => __( 'Appointment time', 'tmc' ), 'required' => true ),
+						'slot'            => array( 'type' => 'code', 'label' => __( 'Appointment time', 'tmc' ), 'required' => true, 'choice' => true ),
 						'patient_type'    => array(
 							'type'     => 'enum',
 							'label'    => __( 'Patient type', 'tmc' ),
@@ -398,7 +398,7 @@ function tmc_apps_validate( array $rules, array $input ) {
 }
 
 function tmc_apps_required_message( array $rule ) {
-	switch ( $rule['type'] ) {
+	switch ( empty( $rule['choice'] ) ? $rule['type'] : 'enum' ) {
 		case 'consent':
 			return __( 'Tick the box to confirm that you agree.', 'tmc' );
 		case 'enum':

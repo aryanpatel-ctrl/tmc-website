@@ -14,9 +14,10 @@
 const path = require('path');
 const { defineConfig, devices } = require('@playwright/test');
 const { SITES, origin } = require('./lib/sites');
+const { outDir } = require('./lib/paths');
 
 const SUITE = process.env.QUALITY_SUITE || 'e2e';
-const OUT = path.resolve(process.env.QUALITY_OUT || path.join(__dirname, 'results'), SUITE);
+const OUT = outDir(SUITE);
 const CI = !!process.env.CI;
 
 const BROWSERS = {

@@ -1,0 +1,17 @@
+/* ==========================================================================
+   Quality-gate fixes (W6): defects found by the automated accessibility, HTML
+   validity and performance gates (tests/, docs/testing/quality-gates.md).
+   Loaded after main.css. Each rule names the check that found the defect.
+   ========================================================================== */
+
+/* axe color-contrast (WCAG 1.4.3): file-type hint inside a button, e.g. "Add to calendar (ICS)"
+   on single events, was muted grey on the primary button colour (below 4.5:1). */
+.button .doc-meta,
+.wp-block-button__link .doc-meta {
+	color: inherit;
+}
+
+/* High-contrast view: keep the hint legible inside yellow-bordered buttons. */
+html[data-contrast="high"] .button .doc-meta {
+	color: #ff0 !important;
+}

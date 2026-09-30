@@ -116,9 +116,12 @@ pll_set_post_language( $page, 'en' );
 $cleanup[] = $page;
 $url       = get_permalink( $page );
 for ( $attempt = 0; $attempt < 3; $attempt++ ) { // retry only if a background purge interleaved (see $warm)
+	if ( $attempt ) {
+		tmc_page_cache_purge_blog(); // every attempt starts uncached, so it must go MISS → HIT again
+	}
 	$r1 = $http( $url );
 	$r2 = $http( $url );
-	if ( 'HIT' === $state( $r2 ) ) {
+	if ( 'MISS' === $state( $r1 ) && 'HIT' === $state( $r2 ) ) {
 		break;
 	}
 }

@@ -1,0 +1,75 @@
+# Load test of the UAT websites (tender §4.7 peak load, §4.14 performance and load testing).
+#
+# Manual only (Actions → Load test (UAT) → Run workflow), from main only, never in pull-request
+# CI. It runs on the UAT server's self-hosted runner because UAT is reachable only over Tailscale;
+# the load generator therefore shares the machine with the websites, which makes the results
+# conservative (docs/testing/quality-gates.md#load-test). It waits for any running deployment
+# (same concurrency group as the deploy job) and never runs against production.
+#
+# Output: artifact quality-load (load/summary.json, report.html, k6-summary.json). Put
+# load/summary.json into the quality-reports bundle to complete the Go-Live acceptance report.
+name: Load test (UAT)
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Load profile (tests/load/tmc-load.k6.js): smoke = 2 visitors 1 min; average = 50 visitors 13 min; peak = 200 visitors 15 min; stress = up to 600"
+        type: choice
+        options: [smoke, average, peak, stress]
+        default: smoke
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-uat
+  cancel-in-progress: false
+
+jobs:
+  load:
+    name: k6 against UAT (${{ inputs.profile }})
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, tmc-server]
+    timeout-minutes: 40
+    env:
+      TMC_BASE_DOMAIN: tmc.100-79-142-44.sslip.io
+      K6_IMAGE: grafana/k6:2.3.0
+      NODE_IMAGE: node:24.21.0-alpine
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: UAT answers before the test
+        run: |
+          code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 "http://$TMC_BASE_DOMAIN/")"
+          echo "http://$TMC_BASE_DOMAIN/ → $code"
+          [ "$code" = "200" ] || { echo "::error::UAT is not answering 200; not starting a load test"; exit 1; }
+      - name: k6 (${{ inputs.profile }})
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          mkdir -p tests/results/load
+          set +e
+          docker run --rm --network host --user "$(id -u):$(id -g)" \
+            -v "$PWD/tests:/work" -w /work \
+            "$K6_IMAGE" run --quiet \
+            -e TMC_BASE_DOMAIN="$TMC_BASE_DOMAIN" -e LOAD_PROFILE="$PROFILE" \
+            -e LOAD_SUMMARY=results/load/k6-summary.json \
+            load/tmc-load.k6.js
+          echo "K6_EXIT=$?" >> "$GITHUB_ENV"
+      - name: Report
+        if: always()
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e QUALITY_OUT=/work/results -e LOAD_EXIT_CODE="${K6_EXIT:-}" \
+            -v "$PWD/tests:/work" -w /work "$NODE_IMAGE" node load/report.js
+          docker run --rm --user "$(id -u):$(id -g)" -e QUALITY_OUT=/work/results \
+            -v "$PWD/tests:/work" -w /work "$NODE_IMAGE" node bin/step-summary.js load >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: quality-load
+          path: tests/results/
+          retention-days: 90
+      - name: Verdict
+        run: |
+          [ "${K6_EXIT:-1}" = "0" ] || { echo "::error::k6 thresholds crossed or k6 failed (exit ${K6_EXIT:-?}); see the job summary"; exit 1; }

@@ -1,0 +1,124 @@
+/* TMC application front ends: appointment, results, online forms, donation (inc/apps-blocks.php). */
+
+.tmc-app {
+	/* Semantic status colours (theme tokens when defined; fallbacks meet 4.5:1 on white and on their tints). */
+	--app-error: var(--c-error, #b3261e);
+	--app-error-bg: var(--c-error-bg, #fdf0ef);
+	--app-success: var(--c-success, #1e7b34);
+	--app-success-bg: var(--c-success-bg, #edf7ef);
+	margin: 2rem 0;
+	padding: 1.25rem;
+	border: 1px solid var(--c-line);
+	border-top: 4px solid var(--c-primary);
+	border-radius: var(--radius);
+	background: var(--c-white);
+	max-width: 46rem;
+}
+@media (min-width: 768px) { .tmc-app { padding: 1.75rem 2rem; } }
+
+.tmc-app-title { font-size: 1.5rem; color: var(--c-primary-dark); margin-bottom: 0.75rem; }
+.tmc-app-subtitle { font-size: 1.125rem; color: var(--c-primary-dark); margin: 1.75rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--c-line); }
+.tmc-app-form > .tmc-app-subtitle:first-of-type { border-top: 0; padding-top: 0; margin-top: 0.5rem; }
+.tmc-app-intro { color: var(--c-muted); }
+
+.tmc-app-demo {
+	padding: 0.75rem 1rem;
+	border-left: 4px solid var(--c-accent);
+	background: var(--c-surface);
+	border-radius: 0 var(--radius) var(--radius) 0;
+	font-size: 0.95rem;
+}
+.tmc-app-privacy { margin: 1.25rem 0 0; font-size: 0.875rem; color: var(--c-muted); }
+
+/* Fields */
+.tmc-app-field { margin: 0 0 1.25rem; }
+.tmc-app-field > label,
+.tmc-app-fieldset > legend { display: block; font-weight: 700; margin-bottom: 0.3rem; }
+.tmc-app-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.tmc-app-fieldset:focus { outline: none; }
+.tmc-app-fieldset:focus-visible { outline: 3px solid var(--c-focus); outline-offset: 4px; }
+.tmc-app-optional { font-weight: 400; color: var(--c-muted); }
+.tmc-app-hint { margin: 0 0 0.4rem; color: var(--c-muted); font-size: 0.925rem; }
+
+.tmc-app-field input[type="text"],
+.tmc-app-field input[type="email"],
+.tmc-app-field input[type="tel"],
+.tmc-app-field input[type="url"],
+.tmc-app-field input[type="date"],
+.tmc-app-field input[type="number"],
+.tmc-app-field select,
+.tmc-app-field textarea {
+	display: block;
+	width: 100%;
+	max-width: 30rem;
+	min-height: 44px;
+	padding: 0.5rem 0.75rem;
+	border: 2px solid var(--c-muted);
+	border-radius: var(--radius);
+	background: var(--c-white);
+	color: var(--c-ink);
+	font: inherit;
+}
+.tmc-app-field textarea { max-width: 100%; }
+.tmc-app-field input[type="date"] { max-width: 14rem; }
+
+.tmc-app-choices { display: grid; gap: 0.5rem; }
+.tmc-app-slots { grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); }
+.tmc-app-choice { display: flex; align-items: flex-start; gap: 0.6rem; min-height: 44px; }
+.tmc-app-choice input { flex: none; width: 1.5rem; height: 1.5rem; margin: 0.15rem 0 0; accent-color: var(--c-primary); }
+.tmc-app-choice label { padding-top: 0.05rem; }
+.tmc-app-slots .tmc-app-choice { align-items: center; padding: 0.35rem 0.6rem; border: 1px solid var(--c-line); border-radius: var(--radius); }
+.tmc-app-slots .tmc-app-choice:has(input:checked) { border-color: var(--c-primary); background: var(--c-tint); }
+
+/* Errors (GOV.UK pattern: red bar, message above the control) */
+.tmc-app-field.has-error { padding-left: 1rem; border-left: 4px solid var(--app-error); }
+.tmc-app-field-error { margin: 0 0 0.4rem; color: var(--app-error); font-weight: 700; }
+.tmc-app-field.has-error input,
+.tmc-app-field.has-error select,
+.tmc-app-field.has-error textarea { border-color: var(--app-error); }
+
+.tmc-app-errors {
+	margin: 0 0 1.5rem;
+	padding: 1rem 1.25rem;
+	border: 4px solid var(--app-error);
+	border-radius: var(--radius);
+}
+.tmc-app-errors:focus { outline: 3px solid var(--c-focus); outline-offset: 0; }
+.tmc-app-errors-title { font-size: 1.125rem; margin-bottom: 0.5rem; }
+.tmc-app-errors ul { margin: 0; padding-left: 1.2rem; }
+.tmc-app-errors a { color: var(--app-error); font-weight: 700; }
+
+/* Results / messages */
+.tmc-app-result:focus { outline: none; }
+.tmc-app-result:focus-visible { outline: 3px solid var(--c-focus); }
+.tmc-app-message { margin: 0 0 1.25rem; padding: 1rem 1.25rem; border-radius: var(--radius); border-left: 6px solid var(--c-secondary); background: var(--c-surface); }
+.tmc-app-message p:last-child { margin-bottom: 0; }
+.tmc-app-message.is-success { border-left-color: var(--app-success); background: var(--app-success-bg); }
+.tmc-app-message.is-error { border-left-color: var(--app-error); background: var(--app-error-bg); }
+.tmc-app-message.is-info { border-left-color: var(--c-primary); background: var(--c-tint); }
+.tmc-app-message-title { font-size: 1.2rem; margin-bottom: 0.5rem; }
+.tmc-app-message .details { margin: 0.5rem 0; }
+
+.tmc-app-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0.5rem 0 1.25rem; }
+.tmc-app-form button[disabled] { opacity: 0.6; cursor: progress; }
+
+.tmc-app.is-unavailable { border-top-color: var(--c-muted); }
+
+/* High contrast (accessibility bar) */
+html[data-contrast="high"] .tmc-app,
+html[data-contrast="high"] .tmc-app-message,
+html[data-contrast="high"] .tmc-app-demo,
+html[data-contrast="high"] .tmc-app-slots .tmc-app-choice { border-color: #fff !important; background: #000 !important; }
+html[data-contrast="high"] .tmc-app-field input,
+html[data-contrast="high"] .tmc-app-field select,
+html[data-contrast="high"] .tmc-app-field textarea { border-color: #fff !important; background: #000 !important; color: #fff !important; }
+html[data-contrast="high"] .tmc-app-errors,
+html[data-contrast="high"] .tmc-app-field.has-error { border-color: #ff0 !important; }
+html[data-contrast="high"] .tmc-app-field-error,
+html[data-contrast="high"] .tmc-app-errors a { color: #ff0 !important; }
+html[data-contrast="high"] .tmc-app-slots .tmc-app-choice:has(input:checked) { outline: 3px solid #ff0; }
+
+@media print {
+	.tmc-app-form, .tmc-app-privacy { display: none; }
+	.tmc-app { border: 0; padding: 0; }
+}

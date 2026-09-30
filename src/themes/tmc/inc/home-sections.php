@@ -148,6 +148,24 @@ function tmc_section_updates( $notices_title, $news_title ) {
 	);
 }
 
+/** Tenders, careers and events side by side. */
+function tmc_section_opportunities( $tenders_title, $jobs_title, $events_title ) {
+	return tmc_b_section(
+		array(
+			tmc_b_columns(
+				array(
+					array( null, array( tmc_b_heading( $tenders_title, 'tmc-section-title' ), tmc_b_dynamic( 'tmc/tenders', array( 'count' => 4 ) ) ) ),
+					array( null, array( tmc_b_heading( $jobs_title, 'tmc-section-title' ), tmc_b_dynamic( 'tmc/jobs', array( 'count' => 4 ) ) ) ),
+					array( null, array( tmc_b_heading( $events_title, 'tmc-section-title' ), tmc_b_dynamic( 'tmc/events', array( 'count' => 4 ) ) ) ),
+				),
+				'tmc-three'
+			),
+		),
+		'tmc-section tmc-opportunities',
+		array( 'backgroundColor' => 'surface' )
+	);
+}
+
 /** @param array $stats [ [ value, label ], ... ] */
 function tmc_section_stats( $title, array $stats ) {
 	$columns = array();

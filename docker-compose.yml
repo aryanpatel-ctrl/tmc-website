@@ -20,15 +20,49 @@ x-wp-env: &wp-env
   WORDPRESS_TABLE_PREFIX: tmc_
   # HMAC key for the tamper-evident audit log — kept out of the database on purpose
   TMC_AUDIT_KEY: ${TMC_AUDIT_KEY}
+  # Security settings (docs/security/owasp-top10.md). Unset = the secure default.
+  TMC_ENV: ${TMC_ENV:-local}
+  TMC_ENFORCE_MFA: ${TMC_ENFORCE_MFA:-1}
+  TMC_MFA_GRACE_HOURS: ${TMC_MFA_GRACE_HOURS:-0}
+  TMC_ADMIN_ALLOW_CIDRS: ${TMC_ADMIN_ALLOW_CIDRS:-}
+  TMC_ADMIN_IDLE_MINUTES: ${TMC_ADMIN_IDLE_MINUTES:-30}
+  TMC_APP_PASSWORD_ROLES: ${TMC_APP_PASSWORD_ROLES:-}
+  TMC_SECURITY_CONTACT: ${TMC_SECURITY_CONTACT:-}
+  TMC_HSTS_INCLUDE_SUBDOMAINS: ${TMC_HSTS_INCLUDE_SUBDOMAINS:-0}
+  # Optional overrides; empty = the built-in default (docs/operations/configuration-reference.md).
+  TMC_ADMIN_SESSION_HOURS: ${TMC_ADMIN_SESSION_HOURS:-}
+  TMC_PASSWORD_MIN_LENGTH: ${TMC_PASSWORD_MIN_LENGTH:-}
+  TMC_LOGIN_MAX_ATTEMPTS: ${TMC_LOGIN_MAX_ATTEMPTS:-}
+  TMC_LOGIN_MAX_ATTEMPTS_IP: ${TMC_LOGIN_MAX_ATTEMPTS_IP:-}
+  TMC_LOGIN_WINDOW: ${TMC_LOGIN_WINDOW:-}
+  TMC_LOGIN_LOCKOUT_BASE: ${TMC_LOGIN_LOCKOUT_BASE:-}
+  TMC_LOGIN_LOCKOUT_MAX: ${TMC_LOGIN_LOCKOUT_MAX:-}
+  TMC_HSTS_MAX_AGE: ${TMC_HSTS_MAX_AGE:-}
+  TMC_SECURITY_TXT_EXPIRES: ${TMC_SECURITY_TXT_EXPIRES:-}
+  TMC_DISALLOW_FILE_MODS: ${TMC_DISALLOW_FILE_MODS:-}
+  TMC_SUGGEST_RATE_LIMIT: ${TMC_SUGGEST_RATE_LIMIT:-}
+  TMC_MATOMO_URL: ${TMC_MATOMO_URL:-}
+  # Application gateway (docs/integration/gateway.md): one API key per TMC backend, from .env only.
+  # Demo environments fall back to the mock backend's key. TMC_DEMO=1 labels demo data and services.
+  TMC_DEMO: ${TMC_DEMO:-0}
+  TMC_APP_APPOINTMENTS_KEY: ${TMC_APP_APPOINTMENTS_KEY:-${TMC_APPS_MOCK_KEY:-}}
+  TMC_APP_RESULTS_KEY: ${TMC_APP_RESULTS_KEY:-${TMC_APPS_MOCK_KEY:-}}
+  TMC_APP_FORMS_KEY: ${TMC_APP_FORMS_KEY:-${TMC_APPS_MOCK_KEY:-}}
+  TMC_APP_PAYMENTS_KEY: ${TMC_APP_PAYMENTS_KEY:-${TMC_APPS_MOCK_KEY:-}}
   WORDPRESS_CONFIG_EXTRA: |
     /* ---- TMC project settings ---- */
-    define('WP_ENVIRONMENT_TYPE', 'staging');
+    define('WP_ENVIRONMENT_TYPE', '${TMC_WP_ENVIRONMENT:-staging}'); // production on the production stack (compose.prod.yml / .env)
     define('DISALLOW_FILE_EDIT', true);
+    /* Server: no plugin/theme/core installs or updates from the admin screens; releases arrive only
+       through the CI/CD pipeline. WP-CLI (pipeline, cron auto-updates) is not affected. */
+    if (getenv('TMC_ENV') === 'server' && PHP_SAPI !== 'cli') { define('DISALLOW_FILE_MODS', true); }
     define('WP_MEMORY_LIMIT', '256M');
     define('WP_AUTO_UPDATE_CORE', 'minor');
     define('WP_REDIS_HOST', 'redis');
     define('WP_REDIS_PORT', 6379);
     define('WP_CACHE_KEY_SALT', 'tmc_');
+    define('WP_CACHE', true); // full-page cache for anonymous visitors: src/mu-plugins/tmc-page-cache (advanced-cache.php)
+    define('DISABLE_WP_CRON', true); // scheduled jobs run from the "cron" container
     /* Behind reverse proxy (nginx-proxy-manager / Cloudflare) */
     if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($$_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) { $$_SERVER['HTTPS'] = 'on'; }
     /* Multisite: one CMS, six websites on subdomains.
@@ -50,7 +84,7 @@ x-wp-volumes: &wp-volumes
 
 services:
   db:
-    image: mariadb:11.4
+    image: mariadb:11.4.13   # exact pin; updates arrive as Dependabot PRs (docs/operations/patching.md)
     container_name: tmc-db
     restart: unless-stopped
     command: >
@@ -72,10 +106,11 @@ services:
       retries: 12
 
   redis:
-    image: redis:7-alpine
+    # Valkey (Linux Foundation, BSD-3-Clause): Redis-compatible; Redis 7.4+ is not OSI-licensed.
+    image: valkey/valkey:8.1.10-alpine
     container_name: tmc-redis
     restart: unless-stopped
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
+    command: valkey-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
     networks: [tmc_internal]
 
   wordpress:
@@ -89,10 +124,10 @@ services:
     environment: *wp-env
     volumes: *wp-volumes
     # No host ports here; each environment's override decides how traffic reaches it.
-    networks: [tmc_internal, tmc_edge]
+    networks: [tmc_internal, tmc_edge, tmc_apps]
 
   wpcli:
-    image: wordpress:cli-php8.3
+    image: wordpress:cli-2.12.0-php8.3
     user: "33:33"
     profiles: ["tools"]
     depends_on:
@@ -101,14 +136,106 @@ services:
       <<: *wp-env
       HOME: /tmp
       WP_CLI_CACHE_DIR: /tmp/wp-cli-cache
-    volumes: *wp-volumes
-    networks: [tmc_internal, tmc_edge]
+    volumes:
+      - wp_html:/var/www/html
+      - ./src/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - ./src/themes/tmc:/var/www/html/wp-content/themes/tmc:ro
+      - ./scripts:/tmc-scripts:ro   # migrations and provisioning scripts (CLI only, never served)
+    networks: [tmc_internal, tmc_edge, tmc_apps]   # tmc_apps: tests call the gateway from WP-CLI
     entrypoint: ["wp"]
     command: ["--info"]
+
+  # Real cron: runs due scheduled jobs (automatic expiry, publishing) on every site each minute.
+  cron:
+    image: wordpress:cli-2.12.0-php8.3
+    container_name: tmc-cron
+    user: "33:33"
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+      wordpress: { condition: service_started }
+    environment:
+      <<: *wp-env
+      HOME: /tmp
+      TMC_BASE_DOMAIN: ${TMC_BASE_DOMAIN}
+    volumes: *wp-volumes
+    networks: [tmc_internal]   # no internet: it only needs the database
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        while true; do
+          for url in $$(wp site list --field=url --url=$${TMC_BASE_DOMAIN} 2>/dev/null); do
+            wp cron event run --due-now --url="$$url" --quiet 2>/dev/null
+          done
+          sleep 60
+        done
+
+  # DEMO ONLY: stand-in for TMC's application backends (appointments, results, online forms,
+  # payments) so the gateway and front ends can be shown and tested. Isolated "tmc_apps" network:
+  # no internet, no database, no host port; answers only requests carrying TMC_APPS_MOCK_KEY.
+  # In production this service is absent and the gateway points at TMC-approved endpoints.
+  tmc-apps-mock:
+    image: php:8.3.35-cli-alpine
+    container_name: tmc-apps-mock
+    restart: unless-stopped
+    user: "65534:65534"
+    read_only: true
+    tmpfs: [/tmp]
+    working_dir: /app
+    command: ["php", "-S", "0.0.0.0:8080", "/app/router.php"]
+    environment:
+      MOCK_API_KEY: ${TMC_APPS_MOCK_KEY:-}
+      PHP_CLI_SERVER_WORKERS: "4"
+    volumes:
+      - ./mock/tmc-apps:/app:ro
+    networks: [tmc_apps]
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/health') ? 0 : 1);"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Scheduled backups (tender §4.7, RPO 15 min): consistent DB dump + incremental files + config,
+  # checksummed, with retention, into the backup_data volume. See backup/tmc-backup.sh and
+  # docs/operations/backup-and-dr.md. Internal network only; no secrets are written to backups.
+  backup:
+    build: ./backup
+    image: tmc-backup:latest
+    container_name: tmc-backup
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      TMC_TABLE_PREFIX: tmc_
+      TMC_ENV: ${TMC_ENV:-}
+      TMC_BASE_DOMAIN: ${TMC_BASE_DOMAIN}
+      TMC_WP_ENVIRONMENT: ${TMC_WP_ENVIRONMENT:-staging}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-tmc-website}
+      TMC_BACKUP_INTERVAL_MINUTES: ${TMC_BACKUP_INTERVAL_MINUTES:-15}
+      TMC_BACKUP_KEEP_RECENT_HOURS: ${TMC_BACKUP_KEEP_RECENT_HOURS:-48}
+      TMC_BACKUP_KEEP_DAILY_DAYS: ${TMC_BACKUP_KEEP_DAILY_DAYS:-30}
+      TMC_BACKUP_KEEP_MONTHLY_MONTHS: ${TMC_BACKUP_KEEP_MONTHLY_MONTHS:-12}
+      TZ: UTC
+    volumes:
+      - wp_html:/source:ro
+      - backup_data:/backups
+      - ./:/project:ro   # release record + compose/proxy files only (allow-list); .env is never read
+    networks: [tmc_internal]
+    healthcheck:
+      test: ["CMD", "tmc-backup", "health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
 
 volumes:
   db_data:
   wp_html:
+  backup_data:
 
 networks:
   # DB + cache: no internet, not reachable from any other container on the host
@@ -116,3 +243,6 @@ networks:
     internal: true
   # Outbound internet for WordPress / WP-CLI (updates, language packs)
   tmc_edge:
+  # Integration zone: WordPress ↔ TMC application backends only (R-4.8-1). No internet, no database.
+  tmc_apps:
+    internal: true

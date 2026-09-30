@@ -1,0 +1,82 @@
+# Operations checks that need no running stack (W7: backup, DR, environments, monitoring, patching).
+# Reusable: the integrator calls it from pipeline.yml next to the lint job
+#   ops:
+#     uses: ./.github/workflows/ops-checks.yml
+#
+#   - shellcheck of the operations scripts (scripts/lint.sh covers scripts/*.sh only)
+#   - shell test suites: backup retention plan, monthly availability report (scripts/tests/shell/)
+#   - every compose combination resolves: local/CI, UAT, production, DR drill
+#   - the backup image builds and its CLI answers; the k6 capacity script parses
+#   - YAML of Dependabot and the workflows
+name: Operations checks
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit, tag or branch to test (default: the triggering commit)"
+        type: string
+        required: false
+        default: ""
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ops:
+    name: Backup, DR, environments, monitoring
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: shellcheck (operations scripts)
+        run: |
+          shellcheck --version | head -n 2
+          shellcheck -S warning backup/*.sh scripts/backup/*.sh scripts/dr/*.sh scripts/sla/*.sh scripts/ops/*.sh \
+            scripts/perf/*.sh scripts/setup-cache.sh scripts/deploy.sh scripts/make-env.sh scripts/tests/shell/*.sh
+          shellcheck -S warning -s bash scripts/smoke.d/cache.sh scripts/smoke.d/health.sh
+
+      - name: Shell test suites
+        run: |
+          for t in scripts/tests/shell/*.sh; do echo "==> $t"; bash "$t"; done
+
+      - name: Compose files resolve for every environment
+        run: |
+          ./scripts/make-env.sh ci
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f compose.server.yml config --quiet
+          docker compose -f docker-compose.yml -f compose.prod.yml config --quiet
+          docker compose -f docker-compose.yml -f compose.dr.yml config --quiet
+          # Production publishes WordPress on the loopback interface only; the DR drill publishes nothing.
+          docker compose -f docker-compose.yml -f compose.prod.yml config | grep -q 'host_ip: 127.0.0.1'
+          if docker compose -f docker-compose.yml -f compose.dr.yml config | grep -q 'published:'; then
+            echo "::error::compose.dr.yml must not publish ports"; exit 1
+          fi
+          rm -f .env
+
+      - name: Backup image builds; CLI and retention plan work inside it
+        run: |
+          docker build -q -t tmc-backup:ci backup
+          docker run --rm tmc-backup:ci help | head -n 5
+          docker run --rm --entrypoint sh tmc-backup:ci -c \
+            'printf "20260101T000000Z\n20260930T114500Z\n" | awk -v now=1790769600 -f /usr/local/lib/tmc-backup/retention.awk'
+          for tool in mariadb-dump rsync ssh flock sha256sum; do
+            docker run --rm --entrypoint sh tmc-backup:ci -c "command -v $tool" >/dev/null || { echo "::error::$tool missing in the backup image"; exit 1; }
+          done
+
+      - name: Capacity script parses (k6 inspect)
+        run: docker run --rm -v "$PWD/scripts/perf:/scripts:ro" grafana/k6:1.8.1 inspect /scripts/capacity.js >/dev/null
+
+      - name: YAML (Dependabot, workflows)
+        run: |
+          python3 -c 'import yaml' 2>/dev/null || pip install --user pyyaml==6.0.2
+          python3 - <<'PY'
+          import glob, yaml
+          for path in [".github/dependabot.yml"] + sorted(glob.glob(".github/workflows/*.yml")):
+              yaml.safe_load(open(path))
+              print("ok", path)
+          PY

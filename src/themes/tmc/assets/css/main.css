@@ -548,6 +548,100 @@ html:not(.js) .notice-toggle { display: none; }
 .sitemap-tree ul li { font-weight: 400; }
 .sitemap-tree ul li::before { content: "– "; color: var(--c-muted); }
 
+/* ---------- 9b. Content types: tenders, careers, events, departments, doctors ---------- */
+.view-tabs ul { display: flex; flex-wrap: wrap; gap: 0.25rem; list-style: none; margin: 0 0 1.5rem; padding: 0; border-bottom: 2px solid var(--c-line); }
+.view-tabs a {
+	display: inline-block; min-height: 44px; padding: 0.6rem 1.1rem; margin-bottom: -2px;
+	border: 2px solid transparent; border-radius: var(--radius) var(--radius) 0 0;
+	font-weight: 600; text-decoration: none;
+}
+.view-tabs a:hover { background: var(--c-surface); }
+.view-tabs a[aria-current] { border-color: var(--c-line); border-bottom-color: var(--c-white); background: var(--c-white); color: var(--c-primary-dark); }
+
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.data-table caption { text-align: left; font-weight: 700; color: var(--c-primary-dark); padding: 0 0 0.75rem; }
+.data-table th, .data-table td { border: 1px solid var(--c-line); padding: 0.65rem 0.75rem; text-align: left; vertical-align: top; }
+.data-table thead th { background: var(--c-primary); color: var(--c-white); font-size: 0.875rem; }
+.data-table tbody th { font-weight: 600; }
+.data-table tbody tr:nth-child(even) { background: var(--c-surface); }
+.data-table .doc-list { margin: 0; padding-left: 1rem; }
+@media (max-width: 767px) {
+	.data-table thead { position: absolute; left: -9999px; }
+	.data-table, .data-table tbody, .data-table tr, .data-table td, .data-table tbody th { display: block; width: 100%; }
+	.data-table tr { border: 1px solid var(--c-line); border-radius: var(--radius); margin-bottom: 1rem; background: var(--c-white) !important; }
+	.data-table td, .data-table tbody th { border: 0; border-bottom: 1px solid var(--c-line); }
+	.data-table td::before, .data-table tbody th::before { content: attr(data-label); display: block; font-size: 0.8125rem; font-weight: 700; color: var(--c-muted); }
+}
+
+.badge { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; white-space: nowrap; }
+.badge-open, .badge-upcoming, .badge-ongoing { background: #e3f4ea; color: #0a5c2e; }
+.badge-closed, .badge-past { background: #eceef2; color: #3d4654; }
+
+.details { margin: 0 0 1.5rem; border: 1px solid var(--c-line); border-radius: var(--radius); overflow: hidden; }
+.details > div { display: grid; grid-template-columns: 1fr; gap: 0.15rem 1rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--c-line); }
+.details > div:last-child { border-bottom: 0; }
+.details > div:nth-child(odd) { background: var(--c-surface); }
+.details dt { font-weight: 700; color: var(--c-primary-dark); }
+.details dd { margin: 0; }
+@media (min-width: 640px) { .details > div { grid-template-columns: 16rem 1fr; } }
+
+.doc-list { padding-left: 1.2rem; }
+.doc-list li { margin-bottom: 0.4rem; }
+.doc-meta { color: var(--c-muted); font-size: 0.875rem; white-space: nowrap; }
+.section-heading { font-size: 1.35rem; color: var(--c-primary-dark); margin-top: 2rem; }
+.back-link { margin-top: 2rem; font-weight: 600; }
+.back-link a::before { content: "← "; }
+.empty-state { padding: 1.5rem; border: 1px dashed var(--c-line); border-radius: var(--radius); background: var(--c-surface); }
+.event-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; }
+.button.is-outline { background: transparent; color: var(--c-primary); }
+.button.is-outline:hover { background: var(--c-tint); color: var(--c-primary-dark); }
+
+/* Events */
+.event-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.event-card { flex-direction: row; gap: 1.25rem; align-items: flex-start; }
+.event-date { flex: none; width: 4.5rem; margin: 0; text-align: center; border-radius: var(--radius); background: var(--c-primary); color: var(--c-white); padding: 0.5rem 0.25rem; line-height: 1.2; }
+.event-day { display: block; font-size: 1.6rem; font-weight: 800; }
+.event-month { font-size: 0.8125rem; }
+
+.calendar-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 1rem; }
+.calendar-title { margin: 0; font-size: 1.35rem; color: var(--c-primary-dark); }
+.cal-grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.cal-grid th { background: var(--c-primary); color: var(--c-white); padding: 0.5rem; font-size: 0.875rem; }
+.cal-grid abbr { text-decoration: none; }
+.cal-grid td { border: 1px solid var(--c-line); height: 6.5rem; vertical-align: top; padding: 0.35rem 0.45rem; font-size: 0.85rem; }
+.cal-grid td.cal-empty { background: var(--c-surface); }
+.cal-grid .cal-date { display: inline-block; min-width: 1.6rem; font-weight: 700; color: var(--c-muted); }
+.cal-grid .is-today .cal-date { background: var(--c-accent); color: var(--c-white); border-radius: 999px; text-align: center; }
+.cal-grid .has-events { background: var(--c-tint); }
+.cal-grid ul { list-style: none; margin: 0.25rem 0 0; padding: 0; }
+.cal-grid li { margin-bottom: 0.25rem; line-height: 1.3; }
+.cal-agenda { display: none; }
+.event-list { padding-left: 1.2rem; }
+@media (max-width: 767px) {
+	.cal-grid { display: none; }
+	.cal-agenda { display: block; }
+}
+
+/* Find a doctor */
+.filter-form { display: grid; gap: 0.75rem 1rem; align-items: end; padding: 1.25rem; margin-bottom: 1.5rem; border: 1px solid var(--c-line); border-radius: var(--radius); background: var(--c-surface); }
+.filter-form p { margin: 0; }
+.filter-form label { display: block; font-weight: 600; margin-bottom: 0.3rem; }
+.filter-form input, .filter-form select { width: 100%; min-height: 44px; padding: 0.5rem 0.75rem; border: 2px solid var(--c-muted); border-radius: var(--radius); font: inherit; background: var(--c-white); color: var(--c-ink); }
+.filter-actions { display: flex; align-items: center; gap: 1rem; }
+@media (min-width: 768px) { .filter-form { grid-template-columns: 2fr 2fr auto; } }
+.doctor-card { flex-direction: row; gap: 1rem; align-items: flex-start; }
+.doctor-photo { flex: none; width: 4.5rem; height: 4.5rem; border-radius: 50%; object-fit: cover; }
+.doctor-photo.is-large { width: 8rem; height: 8rem; font-size: 2.25rem; margin-bottom: 1.25rem; }
+.doctor-initials { display: inline-flex; align-items: center; justify-content: center; background: var(--c-tint); color: var(--c-primary-dark); font-weight: 800; font-size: 1.35rem; }
+
+/* Home: tenders / careers / events */
+.tmc-three { gap: 2rem; }
+.dated-list { list-style: none; margin: 0; padding: 0; }
+.dated-list li { padding: 0.75rem 0; border-bottom: 1px dashed var(--c-line); }
+.dated-list a { font-weight: 600; }
+.dated-meta { display: block; font-size: 0.8125rem; color: var(--c-muted); margin-top: 0.2rem; }
+
 /* ---------- 10. Footer ---------- */
 .site-footer { background: var(--c-footer); color: #dbe4ef; font-size: 0.95rem; margin-top: 0; }
 .site-footer a { color: var(--c-white); }
@@ -606,6 +700,8 @@ html[data-contrast="high"] .wp-block-button__link { border: 2px solid #ff0 !impo
 html[data-contrast="high"] .tool-group button[aria-pressed="true"] { background-color: #ff0 !important; color: #000 !important; }
 html[data-contrast="high"] .tmc-tile::before { background-image: var(--tmc-icon) !important; background-color: #fff !important; }
 html[data-contrast="high"] .tmc-section-title::after { background-color: #ff0 !important; }
+html[data-contrast="high"] .badge,
+html[data-contrast="high"] .cal-grid .is-today .cal-date { background-color: #ff0 !important; color: #000 !important; }
 html[data-contrast="high"] .nav-toggle-bars,
 html[data-contrast="high"] .nav-toggle-bars::before,
 html[data-contrast="high"] .nav-toggle-bars::after { background-color: #ff0 !important; }

@@ -1,0 +1,22 @@
+{
+  "$comment": "Lighthouse budgets per form factor (R-4.10-6). Category scores are 0..1 and are the gate; metric limits are reported as warnings. Change only with a written justification in docs/testing/thresholds.md.",
+  "categories": {
+    "desktop": { "performance": 0.9, "accessibility": 1, "best-practices": 0.95, "seo": 0.9 },
+    "mobile": { "performance": 0.75, "accessibility": 1, "best-practices": 0.95, "seo": 0.9 }
+  },
+  "metrics": {
+    "desktop": {
+      "largest-contentful-paint": 2500,
+      "cumulative-layout-shift": 0.1,
+      "total-blocking-time": 200,
+      "first-contentful-paint": 1800
+    },
+    "mobile": {
+      "largest-contentful-paint": 4000,
+      "cumulative-layout-shift": 0.1,
+      "total-blocking-time": 600,
+      "first-contentful-paint": 3000
+    }
+  },
+  "skipAuditsOutsideProduction": ["is-crawlable"]
+}

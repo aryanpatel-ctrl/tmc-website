@@ -1,0 +1,57 @@
+# Automated update pull requests (tender §6, R-6-3: upgrades of core, plugins, frameworks and the
+# database; security patches within 30 days, critical ones on priority). Process and SLA:
+# docs/operations/patching.md.
+#
+# Covered here: GitHub Actions, the Dockerfiles (WordPress/PHP image, backup image) and the images in
+# docker-compose.yml (MariaDB, Redis, WP-CLI). WordPress plugins pinned in scripts/*.sh are not
+# something Dependabot can read: .github/workflows/updates.yml checks them against wordpress.org.
+#
+# Security updates (Dependabot alerts → PRs outside this schedule) are switched on in the repository
+# settings: Settings → Code security → Dependabot alerts + Dependabot security updates.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(actions)"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories:
+      - /wordpress
+      - /backup
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(docker)"
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(compose)"
+    ignore:
+      # A new MariaDB or Valkey (cache) major version is a planned migration (backup, drill, UAT sign-off),
+      # never an automatic PR — see docs/operations/patching.md "Major upgrades".
+      - dependency-name: mariadb
+        update-types: ["version-update:semver-major"]
+      - dependency-name: valkey/valkey
+        update-types: ["version-update:semver-major"]

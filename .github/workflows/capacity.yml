@@ -1,0 +1,79 @@
+# Capacity test in CI — tender §4.7 (R-4.7-9 peak load) and §4.14 (R-4.14-4 performance and load
+# testing): provision all six sites, then run scripts/perf/capacity-test.sh (k6, open-model arrival
+# rate: anonymous page views through the page cache + uncached searches) against thresholds.
+# Report in the job summary and as an artifact. Reusable (`uses: ./.github/workflows/capacity.yml`)
+# and runnable by hand with other rates.
+name: Capacity test
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit, tag or branch to test (default: the triggering commit)"
+        type: string
+        default: ""
+      rate:
+        type: number
+        default: 100
+      search_rate:
+        type: number
+        default: 5
+      duration:
+        type: string
+        default: 2m
+  workflow_dispatch:
+    inputs:
+      rate:
+        description: "Anonymous page views per second"
+        default: "100"
+      search_rate:
+        description: "Uncached searches per second"
+        default: "5"
+      duration:
+        description: "Duration (e.g. 2m, 10m)"
+        default: 2m
+
+permissions:
+  contents: read
+
+jobs:
+  capacity:
+    name: Capacity (page cache + dynamic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Environment
+        run: ./scripts/make-env.sh ci
+
+      - name: Build and provision all six sites
+        run: ./scripts/setup.sh
+
+      - name: Capacity test
+        env:
+          RATE: ${{ inputs.rate }}
+          SEARCH_RATE: ${{ inputs.search_rate }}
+          DURATION: ${{ inputs.duration }}
+        run: |
+          ./scripts/perf/capacity-test.sh --rate "${RATE:-100}" --search-rate "${SEARCH_RATE:-5}" \
+            --duration "${DURATION:-2m}" --out "$RUNNER_TEMP/capacity"
+
+      - name: Report in the job summary
+        if: always()
+        run: cat "$RUNNER_TEMP/capacity/capacity-report.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No capacity report was written." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capacity-report
+          path: ${{ runner.temp }}/capacity/
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --tail=150 wordpress db redis

@@ -6,6 +6,9 @@
  *   tmc/sitemap       page tree of the current site and language (GIGW sitemap)
  *   tmc/notice-board  "What's new" list from a category, with pause/play for the scroll (GIGW)
  *   tmc/latest-news   latest posts from a category as cards
+ *   tmc/tenders       open tenders / EOIs (closing date not passed)
+ *   tmc/jobs          current job openings
+ *   tmc/events        upcoming events
  *
  * The editor side is registered by assets/js/blocks-editor.js.
  */
@@ -26,6 +29,15 @@ function tmc_register_blocks() {
 			),
 		)
 	);
+	foreach ( array( 'tenders', 'jobs', 'events' ) as $tmc_list ) {
+		register_block_type(
+			"tmc/$tmc_list",
+			array(
+				'render_callback' => "tmc_render_{$tmc_list}_block",
+				'attributes'      => array( 'count' => array( 'type' => 'number', 'default' => 4 ) ),
+			)
+		);
+	}
 	register_block_type(
 		'tmc/latest-news',
 		array(
@@ -66,6 +78,60 @@ function tmc_render_sitemap() {
 	return '<ul class="sitemap-tree">' . wp_list_pages( $args ) . '</ul>';
 }
 
+/** Compact dated list used by the tenders / jobs / events blocks. */
+function tmc_dated_list( array $posts, $date_field, $date_label, $archive_link, $empty ) {
+	if ( ! $posts ) {
+		return '<p class="notice-empty">' . esc_html( $empty ) . '</p>';
+	}
+	$html = '<ul class="dated-list">';
+	foreach ( $posts as $post ) {
+		$ref   = get_post_meta( $post->ID, '_tmc_ref_no', true );
+		$html .= sprintf(
+			'<li><a href="%s">%s</a><span class="dated-meta">%s%s %s</span></li>',
+			esc_url( get_permalink( $post ) ),
+			esc_html( get_the_title( $post ) ),
+			$ref ? esc_html( $ref ) . ' · ' : '',
+			esc_html( $date_label ),
+			tmc_time_tag( get_post_meta( $post->ID, '_' . $date_field, true ) )
+		);
+	}
+	return $html . sprintf( '</ul><p class="view-all"><a href="%s">%s</a></p>', esc_url( $archive_link ), esc_html__( 'View all', 'tmc' ) );
+}
+
+function tmc_open_items( $type, $count ) {
+	return get_posts(
+		array(
+			'post_type'        => $type,
+			'posts_per_page'   => max( 1, min( 10, (int) $count ) ),
+			'suppress_filters' => false,
+			'meta_query'       => array( tmc_current_clause( 'tmc_closing_at' ) ),
+		)
+	);
+}
+
+function tmc_render_tenders_block( $attributes ) {
+	return tmc_dated_list( tmc_open_items( 'tmc_tender', $attributes['count'] ), 'tmc_closing_at', __( 'Last date:', 'tmc' ), get_post_type_archive_link( 'tmc_tender' ), __( 'There are no open tenders at present.', 'tmc' ) );
+}
+
+function tmc_render_jobs_block( $attributes ) {
+	return tmc_dated_list( tmc_open_items( 'tmc_job', $attributes['count'] ), 'tmc_closing_at', __( 'Last date:', 'tmc' ), get_post_type_archive_link( 'tmc_job' ), __( 'There are no current openings.', 'tmc' ) );
+}
+
+function tmc_render_events_block( $attributes ) {
+	$posts = get_posts(
+		array(
+			'post_type'        => 'tmc_event',
+			'posts_per_page'   => max( 1, min( 10, (int) $attributes['count'] ) ),
+			'suppress_filters' => false,
+			'meta_key'         => '_tmc_start_at',
+			'orderby'          => 'meta_value',
+			'order'            => 'ASC',
+			'meta_query'       => array( array( 'key' => '_tmc_start_at', 'value' => wp_date( 'Y-m-d 00:00:00' ), 'compare' => '>=', 'type' => 'DATETIME' ) ),
+		)
+	);
+	return tmc_dated_list( $posts, 'tmc_start_at', '', get_post_type_archive_link( 'tmc_event' ), __( 'There are no upcoming events at present.', 'tmc' ) );
+}
+
 function tmc_category_posts( $category_slug, $count ) {
 	$category = get_category_by_slug( $category_slug );
 	if ( function_exists( 'pll_get_term' ) && $category ) {
@@ -77,6 +143,7 @@ function tmc_category_posts( $category_slug, $count ) {
 			'posts_per_page'   => max( 1, min( 20, (int) $count ) ),
 			'cat'              => $category ? $category->term_id : 0,
 			'no_found_rows'    => true,
+			'meta_query'       => array( tmc_current_clause( 'tmc_expires_at' ) ), // automatic expiry
 			'suppress_filters' => false, // lets Polylang limit results to the current language
 		)
 	);

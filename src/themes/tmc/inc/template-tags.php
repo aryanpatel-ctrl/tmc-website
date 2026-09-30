@@ -72,11 +72,14 @@ function tmc_network_sites() {
 	foreach ( get_sites( array( 'number' => 50, 'archived' => 0, 'deleted' => 0, 'spam' => 0, 'orderby' => 'id' ) ) as $site ) {
 		$id      = (int) $site->blog_id;
 		$city    = get_blog_option( $id, 'hi' === $lang ? 'tmc_city_hi' : 'tmc_city' );
+		// The raw "home" option: get_home_url() of the current site already carries /hi/ on Hindi
+		// pages (Polylang filters it), which made the link /hi/hi/ (found by the W6 link crawler).
+		$home    = (string) get_blog_option( $id, 'home' );
 		$sites[] = array(
 			'id'      => $id,
 			'name'    => tmc_site_name( $id, $lang ),
 			'city'    => (string) $city,
-			'url'     => get_home_url( $id, '/' ) . ( 'hi' === $lang ? 'hi/' : '' ),
+			'url'     => set_url_scheme( trailingslashit( $home ), is_ssl() ? 'https' : wp_parse_url( $home, PHP_URL_SCHEME ) ) . ( 'hi' === $lang ? 'hi/' : '' ),
 			'current' => get_current_blog_id() === $id,
 		);
 	}
@@ -116,25 +119,7 @@ function tmc_contact_details() {
 	echo '</address>';
 }
 
-function tmc_social_links() {
-	$networks = array(
-		'tmc_facebook'  => 'Facebook',
-		'tmc_x'         => 'X',
-		'tmc_youtube'   => 'YouTube',
-		'tmc_instagram' => 'Instagram',
-		'tmc_linkedin'  => 'LinkedIn',
-	);
-	$links    = array();
-	foreach ( $networks as $mod => $label ) {
-		$url = get_theme_mod( $mod );
-		if ( $url ) {
-			$links[] = '<li>' . tmc_external_link( $url, $label, 'social social-' . sanitize_html_class( strtolower( $label ) ) ) . '</li>';
-		}
-	}
-	if ( $links ) {
-		printf( '<h2 class="footer-heading">%s</h2><ul class="social-links">%s</ul>', esc_html__( 'Follow us', 'tmc' ), implode( '', $links ) ); // phpcs:ignore WordPress.Security.EscapeOutput
-	}
-}
+// tmc_social_links() (footer "Follow us") lives in inc/social.php with the share links.
 
 /* ---------------------------------------------------------------- dates */
 
@@ -159,9 +144,13 @@ function tmc_last_updated() {
 
 /* ---------------------------------------------------------------- breadcrumbs */
 
-function tmc_breadcrumbs() {
+/**
+ * The breadcrumb trail for the current request: list of [ label, url ] ('' url = current page).
+ * Shared by the visible breadcrumbs and the BreadcrumbList structured data, so both always match.
+ */
+function tmc_breadcrumb_trail() {
 	if ( is_front_page() ) {
-		return;
+		return array();
 	}
 	$crumbs = array( array( __( 'Home', 'tmc' ), tmc_home_url() ) );
 
@@ -186,6 +175,14 @@ function tmc_breadcrumbs() {
 		$crumbs[] = array( single_post_title( '', false ), '' );
 	}
 
+	return (array) apply_filters( 'tmc_breadcrumb_trail', $crumbs );
+}
+
+function tmc_breadcrumbs() {
+	$crumbs = tmc_breadcrumb_trail();
+	if ( ! $crumbs ) {
+		return;
+	}
 	echo '<nav class="breadcrumbs" aria-label="' . esc_attr__( 'You are here', 'tmc' ) . '"><ol>';
 	foreach ( $crumbs as list( $label, $url ) ) {
 		if ( $url ) {

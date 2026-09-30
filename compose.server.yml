@@ -2,7 +2,7 @@
 # "homelab" network using the route in nginx/tmc-website.conf.
 services:
   wordpress:
-    networks: [tmc_internal, tmc_edge, homelab]
+    networks: [tmc_internal, tmc_edge, tmc_apps, homelab]
 
 networks:
   homelab:

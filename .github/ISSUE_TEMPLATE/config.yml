@@ -1,0 +1,3 @@
+# Every ticket must use one of the forms, so defects, change requests and incidents carry the fields
+# the reports need (Test Plan §10, Incident and Support Model §3).
+blank_issues_enabled: false

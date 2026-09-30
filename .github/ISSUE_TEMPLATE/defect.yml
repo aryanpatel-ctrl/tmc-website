@@ -1,0 +1,133 @@
+# Defect found in testing or UAT (Test Plan §7 and §10).
+name: Defect
+description: Report something that does not work as specified (testing and UAT).
+title: "[Defect] "
+labels: ["defect"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for deviations found in testing or User Acceptance Testing.
+        **Do not include passwords, personal data or patient information.** Attach screenshots instead of copying data.
+  - type: dropdown
+    id: site
+    attributes:
+      label: Website
+      options:
+        - Tata Memorial Centre (tmc)
+        - Tata Memorial Hospital, Mumbai (tmh)
+        - HBCH & RC, Visakhapatnam (hbchrcv)
+        - MPMMCC & HBCH, Varanasi (mpmmcc)
+        - HBCH & RC, Muzaffarpur (hbchrcmzp)
+        - HBCH, New Chandigarh (hbchpunjab)
+        - All websites / CMS network
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - UAT
+        - Production
+        - DR
+        - Development / CI
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language version
+      options:
+        - English
+        - Hindi
+        - Both
+        - Not applicable (CMS administration)
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Page address (URL) or CMS screen
+      placeholder: "https://tmh.tmc.gov.in/tenders/ or Dashboard → Tenders & EOIs → Add"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Page template / layout / design conformance
+        - Navigation, header, footer, breadcrumbs, sitemap
+        - Content type (tenders, events, careers, departments, doctors, news, notices)
+        - Search
+        - CMS workflow (drafts, review, publishing, scheduling, expiry)
+        - Users, roles, permissions
+        - Translation / Hindi
+        - Accessibility (WCAG 2.2 AA / GIGW)
+        - Performance
+        - Security
+        - Application front end / integration
+        - Content migration / redirects / links
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in as a Content Editor on …
+        2. Open …
+        3. Click …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What should happen (quote the requirement, UAT script step or design reference if known).
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser, version and device
+      placeholder: "Firefox 131 on Windows 11 desktop; Chrome on Android phone; NVDA 2024.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Proposed severity (confirmed at triage)
+      description: "S1 Critical: unavailable/unsafe, security, data loss, accessibility blocker. S2 High: major function fails, no workaround. S3 Medium: workaround exists or one template/browser. S4 Low: cosmetic."
+      options:
+        - S1 Critical
+        - S2 High
+        - S3 Medium
+        - S4 Low
+    validations:
+      required: true
+  - type: input
+    id: reference
+    attributes:
+      label: UAT script / requirement reference
+      placeholder: "UAT-TMH-EDITOR-07 or R-4.6-5"
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or other evidence
+      description: Drag files here. Remove any personal data first.
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: This report contains no passwords, personal data or patient information.
+          required: true

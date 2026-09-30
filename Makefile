@@ -24,8 +24,8 @@ logs: ## Follow WordPress logs
 lint: ## Static checks (PHP, JSON, JS, shell)
 	./scripts/lint.sh
 
-test: ## Workflow / permissions / audit-log tests
-	docker compose run --rm -T wpcli --url=tmh.tmc.localhost eval-file - < scripts/tests/workflow-test.php
+test: ## All PHP test suites (scripts/tests/*-test.php)
+	./scripts/run-tests.sh
 
 smoke: ## HTTP smoke test of all sites
 	./scripts/smoke-test.sh

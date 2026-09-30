@@ -1,0 +1,90 @@
+/* Site search: results page, facets, highlighted words, suggestion combobox (search.js). */
+
+/* ---------- Results page ---------- */
+.search-page { max-width: 60rem; }
+.search-filter { grid-template-columns: 1fr; }
+@media (min-width: 768px) { .search-filter { grid-template-columns: 3fr 2fr auto; } }
+
+.search-facets ul { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; margin: 0 0 1rem; padding: 0; }
+.search-facets a {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	min-height: 44px;
+	padding: 0.35rem 0.9rem;
+	border: 1px solid var(--c-line);
+	border-radius: 999px;
+	background: var(--c-white);
+	text-decoration: none;
+}
+.search-facets a:hover { background: var(--c-tint); }
+.search-facets a[aria-current] { background: var(--c-primary); border-color: var(--c-primary); color: var(--c-white); font-weight: 600; }
+.facet-count { font-variant-numeric: tabular-nums; }
+
+.search-results .card-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.4rem; }
+.result-type { font-weight: 700; color: var(--c-secondary); text-transform: uppercase; letter-spacing: 0.02em; }
+.result-sep { color: var(--c-line); }
+.search-results .card-title { font-size: 1.15rem; }
+.search-results mark,
+.suggest-list mark { background: #fff1b8; color: inherit; padding: 0 0.1em; border-radius: 2px; }
+.search-help ul { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+
+/* ---------- Suggestion combobox ---------- */
+.suggest-host { position: relative; }
+.suggest-list {
+	position: absolute;
+	z-index: 60;
+	top: 100%;
+	left: 0;
+	right: 0;
+	min-width: 16rem;
+	max-height: 22rem;
+	overflow-y: auto;
+	margin: 0.25rem 0 0;
+	padding: 0.25rem 0;
+	list-style: none;
+	background: var(--c-white);
+	border: 2px solid var(--c-primary);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow-lg);
+	text-align: left;
+}
+.suggest-list[hidden] { display: none; }
+.suggest-option {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.75rem;
+	min-height: 44px;
+	padding: 0.4rem 0.75rem;
+	cursor: pointer;
+	color: var(--c-ink);
+	line-height: 1.35;
+}
+.suggest-option:hover { background: var(--c-surface); }
+.suggest-option[aria-selected="true"] {
+	background: var(--c-tint);
+	box-shadow: inset 4px 0 0 var(--c-primary);
+	outline: 2px solid var(--c-focus);
+	outline-offset: -2px;
+}
+.suggest-title { flex: 1; }
+.suggest-type { flex: none; font-size: 0.8125rem; color: var(--c-muted); }
+
+/* ---------- High contrast (GIGW) ---------- */
+html[data-contrast="high"] .search-results mark,
+html[data-contrast="high"] .suggest-list mark { background-color: #ff0 !important; color: #000 !important; }
+html[data-contrast="high"] .search-facets a[aria-current] { background-color: #ff0 !important; color: #000 !important; }
+html[data-contrast="high"] .search-facets a[aria-current] * { color: #000 !important; }
+html[data-contrast="high"] .suggest-list { border: 2px solid #ff0 !important; }
+html[data-contrast="high"] .suggest-option[aria-selected="true"] { background-color: #ff0 !important; outline-color: #fff !important; }
+html[data-contrast="high"] .suggest-option[aria-selected="true"] * { color: #000 !important; }
+
+@media (forced-colors: active) {
+	.suggest-option[aria-selected="true"] { outline: 2px solid Highlight; forced-color-adjust: none; background: Highlight; color: HighlightText; }
+	.search-results mark { forced-color-adjust: none; background: Mark; color: MarkText; }
+}
+
+@media print {
+	.search-filter, .search-facets, .suggest-list { display: none !important; }
+}

@@ -20,6 +20,16 @@ function tmc_enqueue_assets() {
 		tmc_asset_version( 'assets/js/main.js' ),
 		array( 'strategy' => 'defer', 'in_footer' => true )
 	);
+	// Feature bundles (one file per feature keeps parallel work conflict-free).
+	foreach ( glob( get_template_directory() . '/assets/css/features/*.css' ) as $tmc_css ) {
+		$tmc_rel = 'assets/css/features/' . basename( $tmc_css );
+		wp_enqueue_style( 'tmc-' . basename( $tmc_css, '.css' ), get_template_directory_uri() . '/' . $tmc_rel, array( 'tmc-main' ), tmc_asset_version( $tmc_rel ) );
+	}
+	foreach ( glob( get_template_directory() . '/assets/js/features/*.js' ) as $tmc_js ) {
+		$tmc_rel = 'assets/js/features/' . basename( $tmc_js );
+		wp_enqueue_script( 'tmc-' . basename( $tmc_js, '.js' ), get_template_directory_uri() . '/' . $tmc_rel, array( 'tmc-main' ), tmc_asset_version( $tmc_rel ), array( 'strategy' => 'defer', 'in_footer' => true ) );
+	}
+
 	wp_localize_script(
 		'tmc-main',
 		'tmcI18n',
@@ -42,9 +52,11 @@ function tmc_preload_fonts() {
 }
 
 // Apply saved text-size / contrast preferences before first paint (no flash). Per-viewer only.
+// Printed through wp_print_inline_script_tag() so it carries the Content-Security-Policy nonce
+// (src/mu-plugins/tmc-core/security-headers.php); no inline script bypasses the policy.
 add_action( 'wp_head', 'tmc_prefs_boot', 0 );
 function tmc_prefs_boot() {
-	echo "<script>(function(){try{var d=document.documentElement,s=localStorage.getItem('tmc-font-scale'),c=localStorage.getItem('tmc-contrast');if(s)d.style.fontSize=s+'%';if(c)d.setAttribute('data-contrast',c);}catch(e){}d.classList.add('js');})();</script>\n";
+	wp_print_inline_script_tag( "(function(){try{var d=document.documentElement,s=localStorage.getItem('tmc-font-scale'),c=localStorage.getItem('tmc-contrast');if(s)d.style.fontSize=s+'%';if(c)d.setAttribute('data-contrast',c);}catch(e){}d.classList.add('js');})();", array( 'id' => 'tmc-prefs-boot' ) );
 }
 
 // Front-end clean-up.

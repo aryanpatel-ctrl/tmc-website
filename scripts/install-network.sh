@@ -49,7 +49,8 @@ foreach ( get_sites( array( "number" => 100 ) ) as $site ) {
 	update_option( "timezone_string", "Asia/Kolkata" );
 	update_option( "date_format", "d/m/Y" );
 	update_option( "time_format", "h:i A" );
-	update_option( "blog_public", 0 ); // UAT/demo: keep out of search engines
+	// Search engines: production only (WP_ENVIRONMENT_TYPE from TMC_WP_ENVIRONMENT); UAT, CI and local stay out.
+	update_option( "blog_public", "production" === wp_get_environment_type() ? 1 : 0 );
 	if ( "/%postname%/" !== get_option( "permalink_structure" ) ) {
 		update_option( "permalink_structure", "/%postname%/" );
 		delete_option( "rewrite_rules" ); // regenerated on the next request

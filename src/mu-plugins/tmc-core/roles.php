@@ -25,7 +25,8 @@ const TMC_ROLE_LABELS = array(
 
 add_action( 'init', 'tmc_roles_sync', 1 );
 function tmc_roles_sync() {
-	if ( (int) get_option( 'tmc_roles_version' ) === TMC_ROLES_VERSION ) {
+	// Not while WordPress or a site is still being installed (its tables do not exist yet).
+	if ( ( function_exists( 'tmc_site_installed' ) && ! tmc_site_installed() ) || (int) get_option( 'tmc_roles_version' ) === TMC_ROLES_VERSION ) {
 		return;
 	}
 

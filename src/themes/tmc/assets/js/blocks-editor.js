@@ -71,6 +71,43 @@
 		save: () => null,
 	} );
 
+	const countBlock = ( name, title, icon, description ) =>
+		registerBlockType( name, {
+			apiVersion: 3,
+			title,
+			icon,
+			description,
+			category: 'widgets',
+			attributes: { count: { type: 'number', default: 4 } },
+			edit( props ) {
+				return el(
+					Fragment,
+					null,
+					el(
+						InspectorControls,
+						null,
+						el(
+							PanelBody,
+							{ title: 'Settings' },
+							el( RangeControl, {
+								label: 'Number of items',
+								min: 1,
+								max: 10,
+								value: props.attributes.count,
+								onChange: ( count ) => props.setAttributes( { count } ),
+							} )
+						)
+					),
+					preview( name )( props )
+				);
+			},
+			save: () => null,
+		} );
+
+	countBlock( 'tmc/tenders', 'Open Tenders', 'media-document', 'Tenders and EOIs whose last date has not passed.' );
+	countBlock( 'tmc/jobs', 'Current Openings', 'id-alt', 'Job openings whose last date has not passed.' );
+	countBlock( 'tmc/events', 'Upcoming Events', 'calendar-alt', 'Events from today onwards.' );
+
 	listBlock( 'tmc/notice-board', 'Notice Board', 'megaphone', "What's new list with pause/play.", { category: 'notices', count: 6 } );
 	listBlock( 'tmc/latest-news', 'Latest News', 'excerpt-view', 'Latest posts from a category as cards.', { category: 'news', count: 3 } );
 } )( window.wp );

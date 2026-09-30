@@ -12,7 +12,7 @@ echo serialize_blocks( // phpcs:ignore WordPress.Security.EscapeOutput
 			array(
 				array( 'calendar', 'Appointments', home_url( '/patient-care/appointments/' ) ),
 				array( 'guide', 'Patient guide', home_url( '/patient-care/patient-guide/' ) ),
-				array( 'department', 'Departments', home_url( '/patient-care/departments/' ) ),
+				array( 'department', 'Departments', home_url( '/departments/' ) ),
 				array( 'research', 'Research', home_url( '/research/' ) ),
 				array( 'education', 'Education', home_url( '/education/' ) ),
 				array( 'careers', 'Careers', home_url( '/careers/' ) ),

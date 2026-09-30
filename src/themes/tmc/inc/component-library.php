@@ -389,10 +389,18 @@ function tmc_cl_notice_board() {
 	return tmc_render_notice_board( array( 'category' => 'notices', 'count' => 4 ) );
 }
 
+/**
+ * A specimen with its own page-level headings, in a closed disclosure: the headings of the example
+ * stay out of this page's outline (and out of screen-reader heading navigation) until it is opened.
+ */
+function tmc_cl_collapsed( $html, $summary ) {
+	return sprintf( '<details class="cl-preview"><summary>%s</summary><div class="cl-preview-body">%s</div></details>', esc_html( $summary ), $html );
+}
+
 function tmc_cl_calendar() {
 	ob_start();
 	get_template_part( 'template-parts/event-calendar' );
-	return (string) ob_get_clean();
+	return tmc_cl_collapsed( (string) ob_get_clean(), __( 'Show the example: this month', 'tmc' ) );
 }
 
 function tmc_cl_person() {
@@ -434,7 +442,7 @@ function tmc_cl_home_sections() {
 		tmc_section_stats( __( 'Key facts', 'tmc' ), array( array( '0,000', __( 'sample statistic', 'tmc' ) ), array( '00', __( 'sample statistic', 'tmc' ) ), array( '0000', __( 'sample statistic', 'tmc' ) ) ) ),
 		tmc_section_about( __( 'About section', 'tmc' ), __( 'A short paragraph about the institution with a link to read more.', 'tmc' ), array( __( 'Read more', 'tmc' ), '#home-sections' ) ),
 	);
-	return '<div class="cl-home home-sections">' . tmc_cl_blocks( $blocks ) . '</div>';
+	return tmc_cl_collapsed( '<div class="cl-home home-sections">' . tmc_cl_blocks( $blocks ) . '</div>', __( 'Show the example sections', 'tmc' ) );
 }
 
 /**

@@ -18,6 +18,7 @@ When an editor creates a page, the block editor offers seven templates ("starter
 | FAQ page | `tmc/page-faq` | Introduction · Questions · Contact |
 
 - **Locked sections** (`templateLock: contentOnly`) keep their layout; only text and links can change.
+  The server refuses any save by a non-administrator that changes their structure (see below).
 - **Flexible areas** accept approved blocks and the TMC component patterns (Person, Question and
   answer, Card, Callout). Every section is named in the List View and cannot be removed or moved.
 - Text to replace starts with `[Replace:`. A page that still contains a prompt, or a link to `#`,
@@ -55,8 +56,17 @@ Slots: `map`, `application`, `documents`. Every `tmc/*` block is approved automa
 
 - Colours, font sizes and spacing come only from `theme.json` (custom values are switched off).
 - Patterns: TMC patterns only; core, wordpress.org and Openverse sources are off; no block installs.
-- Enforced on save as well: a REST request with a block outside the approved list is refused
-  (`tmc_block_not_allowed`), whatever the client.
+- Enforced on the server for every save by a signed-in user — REST API (block editor) and the other
+  web paths (classic form, Quick Edit, bulk edit) — whatever the client:
+  - a block outside the approved list is refused (`tmc_block_not_allowed`). Blocks already in the
+    page (placed by an administrator or imported by the migration toolkit) do not stop editors
+    from changing the text around them; adding more of them is refused;
+  - a locked section cannot be removed, moved, unlocked or restructured (`tmc_template_locked`).
+    This covers WordPress's "Edit pattern" mode and crafted requests. List items, buttons and the
+    text inside a disclosure remain editable, as the editor allows;
+  - the publish gate (`tmc_template_incomplete`) described above.
+- WP-CLI (operators, seeding, migrations), cron and the network-publishing sync are not user edits
+  and are not checked. Autosaves are checked when the editor saves.
 
 ## Network publishing (R-4.6-2)
 
@@ -110,7 +120,8 @@ new installs (both call `tmc_ensure_editorial_ia()`).
 
 - `scripts/tests/editorial-test.php` — templates (registered, offered via REST, locked, approved
   blocks, created by a Content Editor, publish gate), governance (editor vs administrator, REST
-  refusal, patterns), network publishing (permissions, panel, copies and translations, read-only,
+  and classic-form refusal, existing blocks tolerated, locked sections: text edits allowed, removal,
+  moving, unlocking and restructuring refused, home sections, patterns), network publishing (permissions, panel, copies and translations, read-only,
   update, repeated save, deselection, unpublish, events, deletion, audit, Polylang cache), audience
   menus, component library (noindex, sitemap exclusion, coverage, contrast maths).
 - `scripts/smoke.d/editorial.sh` — component library renders and is noindex; audience pages and

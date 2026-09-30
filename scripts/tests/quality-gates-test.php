@@ -104,6 +104,15 @@ $t( 'footer policy menu links to the published Privacy Policy', $privacy && in_a
 $unpublished = array_filter( $policy_ids, fn( $id ) => 'publish' !== get_post_status( $id ) );
 $t( 'every footer policy link points to a published page', $policy_ids && ! $unpublished );
 
+WP_CLI::log( '— Home page link text (migration 061) and network links' );
+$t( 'migration 061 recorded for this site', in_array( '061-descriptive-link-text', (array) get_option( 'tmc_migrations' ), true ) );
+$home_content = (string) get_post_field( 'post_content', (int) get_option( 'page_on_front' ) );
+$t( 'About section button says "More about us"', false !== strpos( $home_content, '>More about us</a>' ) && false === strpos( $home_content, '>Read more</a>' ) );
+$network = tmc_network_sites();
+$t( 'TMC network lists every site of the network', count( $network ) === count( get_sites( array( 'archived' => 0, 'deleted' => 0, 'spam' => 0 ) ) ) );
+$bad_links = array_filter( $network, fn( $s ) => trailingslashit( set_url_scheme( get_blog_option( $s['id'], 'home' ), wp_parse_url( $s['url'], PHP_URL_SCHEME ) ) ) !== preg_replace( '#hi/$#', '', $s['url'] ) || false !== strpos( $s['url'], '/hi/hi/' ) );
+$t( 'network links point to each site\'s own home page', $network && ! $bad_links );
+
 WP_CLI::log( '— Cleanup' );
 foreach ( array_filter( $cleanup ) as $id ) {
 	wp_delete_post( $id, true );

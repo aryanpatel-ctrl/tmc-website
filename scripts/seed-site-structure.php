@@ -483,5 +483,12 @@ foreach ( array( 'en' => $home_en, 'hi' => $home_hi ) as $lang => $home_id ) {
 	$log( "home ($lang): sections built" );
 }
 
+/* ================================================================ application front ends + map (W4) */
+// Appointment / results / online form / donate / location map blocks on their pages, map position.
+// Each page is handled once (see inc/apps-pages.php); existing sites get this from migration 040.
+foreach ( tmc_w4_seed_site() as $line ) {
+	$log( $line );
+}
+
 flush_rewrite_rules( false );
 WP_CLI::success( "$host seeded" );

@@ -1,0 +1,116 @@
+# Release to PRODUCTION — tender §4.7: separate environments; controlled, auditable promotion with rollback.
+#
+#   Dev (local) → CI (every push) → UAT (merge to main, pipeline.yml) → Production (this workflow)
+#
+#   push a tag vX.Y.Z on a commit that UAT is running
+#     1. promotion gate   the tag is on main and that exact commit passed the Pipeline on main
+#                         (= tested in CI and deployed to UAT)
+#     2. verify           lint + the full integration test again on a clean runner
+#     3. deploy           waits for a required reviewer (GitHub environment "production"), then runs
+#                         scripts/deploy.sh with TMC_DEPLOY_TARGET=production on the production runner
+#   Roll back: Actions → Release to production → Run workflow → an older tag (same gate + approval).
+#
+# One-time setup (repository settings, not code): environment "production" with required reviewers
+# and deployment tags restricted to v*; a self-hosted runner on the production host labelled
+# tmc-prod; optional repository variable TMC_PROD_DIR (default ~/docker/tmc-website-prod).
+# See docs/operations/environments.md. Nothing here runs until a v* tag is pushed.
+name: Release to production
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to deploy (an older tag rolls back)"
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  gate:
+    name: Promotion gate (tag on main, passed CI and UAT)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Check tag, branch and pipeline result
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::tag '$TAG' is not vMAJOR.MINOR.PATCH"; exit 1; }
+          git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "::error::tag $TAG does not exist"; exit 1; }
+          sha="$(git rev-list -n 1 "refs/tags/$TAG")"
+          git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$TAG ($sha) is not on main — only code merged to main can be released"; exit 1; }
+          runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?head_sha=$sha&branch=main&status=success&per_page=1" --jq '.total_count')"
+          [ "${runs:-0}" -ge 1 ] || { echo "::error::commit $sha has no successful Pipeline run on main (tested + deployed to UAT). Tag the commit UAT is running."; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "### Release $TAG → production" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit \`${sha:0:7}\` — $(git log -1 --pretty=%s "$sha")" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Passed Pipeline on main (CI + UAT deploy): yes" >> "$GITHUB_STEP_SUMMARY"
+
+  verify:
+    name: Verify release (lint + integration)
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+      - name: Static checks
+        run: ./scripts/lint.sh
+      - name: Environment
+        run: ./scripts/make-env.sh ci
+      - name: Build and provision all six sites
+        run: ./scripts/setup.sh
+      - name: Demo accounts
+        run: ./scripts/create-demo-users.sh
+      - name: Test suites
+        run: ./scripts/run-tests.sh
+      - name: HTTP smoke test
+        run: ./scripts/smoke-test.sh
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --tail=200 wordpress db backup
+
+  deploy:
+    name: Deploy to production (after approval)
+    needs: [gate, verify]
+    runs-on: [self-hosted, tmc-prod]
+    timeout-minutes: 45
+    environment: production   # required reviewers approve here (manual approval)
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+      - name: Deploy
+        env:
+          TMC_DEPLOY_TARGET: production
+          TMC_RELEASE_TAG: ${{ env.TAG }}
+          TMC_PROD_DIR: ${{ vars.TMC_PROD_DIR }}
+        run: ./scripts/deploy.sh "$GITHUB_WORKSPACE" "${TMC_PROD_DIR:-$HOME/docker/tmc-website-prod}"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Production deployment"
+            echo "- Release: \`$TAG\` (\`$(git rev-parse --short HEAD)\`) — $(git log -1 --pretty=%s)"
+            echo "- Approved via environment \"production\"; triggered by ${GITHUB_ACTOR} (${GITHUB_EVENT_NAME})"
+            echo "- Result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"

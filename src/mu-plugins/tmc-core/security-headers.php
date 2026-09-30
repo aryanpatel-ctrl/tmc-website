@@ -162,7 +162,9 @@ function tmc_send_security_headers( $context ) {
 	}
 }
 
-add_action( 'send_headers', fn() => tmc_send_security_headers( 'front' ) ); // public pages, feeds, sitemaps
+// Public pages, feeds, sitemaps. The Customizer preview (signed-in administrators only) runs core
+// scripts that need the admin baseline policy.
+add_action( 'send_headers', fn() => tmc_send_security_headers( is_customize_preview() ? 'admin' : 'front' ) );
 add_action( 'login_init', fn() => tmc_send_security_headers( 'login' ) );
 add_action( 'admin_init', fn() => tmc_send_security_headers( 'admin' ) );
 add_action(

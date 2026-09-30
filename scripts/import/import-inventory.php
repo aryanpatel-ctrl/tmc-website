@@ -41,6 +41,9 @@ if ( is_wp_error( $tmc_rows ) ) {
 	WP_CLI::error( $tmc_rows->get_error_message() );
 }
 
+foreach ( $tmc_importer->warnings() as $tmc_warning ) {
+	WP_CLI::warning( $tmc_warning );
+}
 if ( ! empty( $tmc_options['report'] ) ) {
 	if ( $tmc_importer->write_report( $tmc_options['report'] ) ) {
 		WP_CLI::log( 'Report written to ' . $tmc_options['report'] );

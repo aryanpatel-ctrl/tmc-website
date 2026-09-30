@@ -25,7 +25,7 @@ if ( class_exists( 'TMC_Inventory_Importer' ) ) {
 class TMC_Inventory_Importer {
 
 	const REQUIRED       = array( 'site', 'language', 'type', 'title' );
-	const COLUMNS        = array( 'site', 'language', 'old_url', 'type', 'template', 'parent_path', 'slug', 'title', 'date', 'status', 'excerpt', 'content_html_file', 'content_html', 'documents', 'categories', 'translation_key', 'order', 'seo_title', 'seo_description', 'seo_noindex' );
+	const COLUMNS        = array( 'site', 'language', 'old_url', 'type', 'template', 'parent_path', 'slug', 'title', 'date', 'status', 'excerpt', 'content_html_file', 'content_html', 'documents', 'categories', 'translation_key', 'order', 'seo_title', 'seo_description', 'seo_noindex', 'sample' );
 	const REPORT_COLUMNS = array( 'row', 'site', 'language', 'old_url', 'type', 'title', 'action', 'post_id', 'new_url', 'redirect', 'translation', 'messages' );
 	const STATUSES       = array( 'publish', 'draft', 'pending', 'private' );
 	const PLACEHOLDER    = '<p class="callout">'; // seeded placeholder pages (seed-site-structure.php) carry this callout
@@ -62,6 +62,8 @@ class TMC_Inventory_Importer {
 	private $old_hosts = array();
 	/** @var array<string,int> */
 	private $counts = array();
+	/** @var string[] problems with the file as a whole (e.g. unknown columns) */
+	private $warnings = array();
 
 	/**
 	 * @param array $options csv (path, required), mode (dry-run|apply), base (directory of content and
@@ -140,6 +142,11 @@ class TMC_Inventory_Importer {
 		return array_values( $this->results );
 	}
 
+	/** Problems with the inventory as a whole (unknown columns). */
+	public function warnings() {
+		return $this->warnings;
+	}
+
 	/** Number of rows per action ("created", "would create", "error", …). */
 	public function counts() {
 		return $this->counts;
@@ -183,6 +190,10 @@ class TMC_Inventory_Importer {
 		if ( $missing ) {
 			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 			return new WP_Error( 'tmc_import', 'Required columns missing: ' . implode( ', ', $missing ) );
+		}
+		$unknown = array_filter( $this->header, fn( $column ) => '' !== $column && ! in_array( $column, self::COLUMNS, true ) && ! str_starts_with( $column, 'field:' ) );
+		if ( $unknown ) {
+			$this->warnings[] = 'Unknown columns ignored (check the spelling): ' . implode( ', ', $unknown );
 		}
 		$row_number = 1;
 		while ( ( $cells = fgetcsv( $handle, 0, ',', '"', '' ) ) !== false ) { // phpcs:ignore WordPress.CodeAnalysis.AssignmentInCondition
@@ -453,6 +464,10 @@ class TMC_Inventory_Importer {
 		$this->save_seo( $post_id, $row );
 		if ( 'post' === $type && $this->has_column( 'categories' ) ) {
 			$this->save_categories( $post_id, $lang, $row['categories'] ?? '', $result['messages'] );
+		}
+		if ( $this->has_column( 'sample' ) ) {
+			// Demonstration rows: excluded from sitemaps / structured data, removable in one go.
+			in_array( strtolower( $row['sample'] ), array( '1', 'yes', 'true' ), true ) ? update_post_meta( $post_id, '_tmc_sample', 1 ) : delete_post_meta( $post_id, '_tmc_sample' );
 		}
 		update_post_meta( $post_id, '_tmc_import_key', $import_key );
 		update_post_meta( $post_id, '_tmc_import_hash', $hash );

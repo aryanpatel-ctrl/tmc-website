@@ -142,6 +142,14 @@ $t( 'then HIT again', 'HIT' === $state( $http( $url ) ) );
 update_post_meta( $page, '_tmc_closed', current_time( 'mysql' ) ); // what the automatic-expiry job writes
 $t( 'meta change of a published item purges (expiry flags, content fields)', 'MISS' === $state( $http( $url ) ) );
 
+$warm( $url );
+$oembed_key = '_oembed_' . md5( "perf-$tag" );
+$oembed     = wp_insert_post( array( 'post_type' => 'oembed_cache', 'post_status' => 'publish', 'post_name' => md5( "perf-$tag" ), 'post_title' => "perf-oembed-$tag", 'post_content' => '{}' ) );
+update_post_meta( $page, $oembed_key, '<p>embed</p>' );
+$t( 'oEmbed results WordPress caches while rendering (post type, post meta) do not purge', 'HIT' === $state( $http( $url ) ) );
+wp_delete_post( $oembed, true );
+delete_post_meta( $page, $oembed_key );
+
 $menu = get_nav_menu_locations()['primary'] ?? 0;
 if ( $menu ) {
 	$warm( $url );

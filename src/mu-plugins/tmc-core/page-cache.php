@@ -117,10 +117,19 @@ function tmc_page_cache_purge_again() {
 
 /* ================================================================ purge triggers */
 
+/**
+ * Post types whose changes never alter a public page by themselves: caches and requests WordPress
+ * writes on its own, sometimes while rendering a page for a visitor (oEmbed results). Purging on
+ * them would empty the cache on ordinary page views. Customizer changes purge via customize_save_after.
+ */
+function tmc_page_cache_ignored_post_types() {
+	return (array) apply_filters( 'tmc_page_cache_ignored_post_types', array( 'oembed_cache', 'customize_changeset', 'user_request', 'revision' ) );
+}
+
 /** A post change matters to visitors when the post is (or was) public, or is a menu item / media item. */
 function tmc_page_cache_post_changed( $post ) {
 	$post = get_post( $post );
-	if ( ! $post || wp_is_post_revision( $post ) || wp_is_post_autosave( $post ) ) {
+	if ( ! $post || wp_is_post_revision( $post ) || wp_is_post_autosave( $post ) || in_array( $post->post_type, tmc_page_cache_ignored_post_types(), true ) ) {
 		return;
 	}
 	if ( in_array( $post->post_status, array( 'publish', 'private' ), true ) || in_array( $post->post_type, array( 'nav_menu_item', 'attachment' ), true ) ) {
@@ -140,14 +149,17 @@ add_action(
 // Publish, unpublish, schedule → publish, trash, restore.
 add_action(
 	'transition_post_status',
-	function ( $new_status, $old_status ) {
+	function ( $new_status, $old_status, $post ) {
 		$public = array( 'publish', 'private' );
+		if ( $post instanceof WP_Post && in_array( $post->post_type, tmc_page_cache_ignored_post_types(), true ) ) {
+			return;
+		}
 		if ( $new_status !== $old_status && ( in_array( $new_status, $public, true ) || in_array( $old_status, $public, true ) ) ) {
 			tmc_page_cache_purge_blog();
 		}
 	},
 	10,
-	2
+	3
 );
 
 add_action(
@@ -161,7 +173,8 @@ add_action( 'delete_attachment', 'tmc_page_cache_post_changed' );
 
 /** Meta of a public post (content fields, closing dates, the automatic-expiry flags …). */
 function tmc_page_cache_meta_changed( $meta_ids, $object_id, $meta_key ) {
-	if ( preg_match( '/^_(edit_lock|edit_last|wp_old_slug|wp_old_date|encloseme|pingme|wp_trash_meta_)/', (string) $meta_key ) ) {
+	// Editor bookkeeping, and oEmbed results WordPress caches in post meta while rendering a page.
+	if ( preg_match( '/^_(edit_lock|edit_last|wp_old_slug|wp_old_date|encloseme|pingme|wp_trash_meta_|oembed_)/', (string) $meta_key ) ) {
 		return;
 	}
 	if ( in_array( get_post_status( $object_id ), array( 'publish', 'private' ), true ) ) {

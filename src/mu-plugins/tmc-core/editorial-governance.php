@@ -10,8 +10,12 @@
  *     template sections. unfiltered_html and edit_css (Additional CSS) are Super Admin only.
  *   - Patterns: only TMC patterns ("tmc/*"). Core, remote (wordpress.org) and Openverse sources are
  *     switched off; editors cannot create their own reusable patterns.
- *   - The block rules are also enforced on the server when content is saved through the REST API
- *     (which the block editor uses), so they cannot be bypassed with a crafted request.
+ *   - Locked template and home sections keep their structure: a save that removes, moves, unlocks
+ *     or restructures one is refused (the editor's "Edit pattern" mode and crafted requests included).
+ *   - All of this is enforced on the server whenever a signed-in user saves: REST API (the block
+ *     editor) and every other web path (classic form, Quick Edit, bulk edit), so a crafted request
+ *     cannot bypass it. Blocks already in a page (placed by an administrator or imported by the
+ *     migration toolkit) do not stop others from editing the text around them.
  *   - Quality gate: content that still holds page-template prompts ("[Replace: …]") or placeholder
  *     links (href="#") cannot be published or scheduled.
  */
@@ -65,27 +69,146 @@ function tmc_user_has_full_block_palette( $user_id = 0 ) {
 	return $user_id > 0 && user_can( $user_id, 'manage_options' );
 }
 
-/**
- * Block names in $content that are not approved. Text outside block delimiters (plain text sent by
- * API clients, legacy content) is not a block choice and stays subject to kses like all content;
- * the Classic block itself is not in the inserter.
- *
- * @return string[]
- */
-function tmc_unapproved_blocks( $content ) {
+/** How often each unapproved block occurs in $content (block name => count). */
+function tmc_unapproved_block_counts( $content ) {
 	$approved = tmc_approved_blocks();
-	$found    = array();
-	$walk     = function ( array $blocks ) use ( &$walk, &$found, $approved ) {
+	$counts   = array();
+	$walk     = function ( array $blocks ) use ( &$walk, &$counts, $approved ) {
 		foreach ( $blocks as $block ) {
 			$name = $block['blockName'];
 			if ( null !== $name && ! in_array( $name, $approved, true ) ) {
-				$found[] = $name;
+				$counts[ $name ] = ( $counts[ $name ] ?? 0 ) + 1;
 			}
 			$walk( $block['innerBlocks'] );
 		}
 	};
 	$walk( parse_blocks( (string) $content ) );
-	return array_values( array_unique( $found ) );
+	return $counts;
+}
+
+/**
+ * Unapproved block names that $content adds. Text outside block delimiters (plain text sent by API
+ * clients, legacy content) is not a block choice and stays subject to kses like all content; the
+ * Classic block itself is not in the inserter. Blocks already in $previous (content placed by a Site
+ * Administrator or imported by the migration toolkit) do not stop others from editing the text around
+ * them; adding more of them does.
+ *
+ * @param string $content  Content about to be saved.
+ * @param string $previous Content before this save ('' for new content).
+ * @return string[]
+ */
+function tmc_unapproved_blocks( $content, $previous = '' ) {
+	$before = '' === (string) $previous ? array() : tmc_unapproved_block_counts( $previous );
+	$added  = array();
+	foreach ( tmc_unapproved_block_counts( $content ) as $name => $count ) {
+		if ( $count > ( $before[ $name ] ?? 0 ) ) {
+			$added[] = $name;
+		}
+	}
+	return $added;
+}
+
+/* ---------------------------------------------------------------- locked sections */
+
+/**
+ * Blocks whose children editors may add or remove inside a locked section (WordPress treats them as
+ * content: list items, buttons, the text inside a disclosure).
+ *
+ * @return string[]
+ */
+function tmc_content_containers() {
+	return (array) apply_filters( 'tmc_content_containers', array( 'core/list', 'core/buttons', 'core/details', 'core/accordion', 'core/accordion-item', 'core/accordion-panel', 'core/social-links' ) );
+}
+
+/** Attributes that shape a block's design; they are fixed inside locked sections (content attributes are free). */
+const TMC_DESIGN_ATTRIBUTES = array( 'align', 'backgroundColor', 'className', 'fontFamily', 'fontSize', 'gradient', 'layout', 'lock', 'style', 'tagName', 'templateLock', 'textColor', 'width' );
+
+/** Block name + design attributes of one block, and of its descendants unless it is a content container. */
+function tmc_block_structure( array $block, $with_children = true ) {
+	$attrs = array_intersect_key( (array) $block['attrs'], array_flip( TMC_DESIGN_ATTRIBUTES ) );
+	ksort( $attrs );
+	$children = array();
+	if ( $with_children && ! in_array( $block['blockName'], tmc_content_containers(), true ) ) {
+		foreach ( $block['innerBlocks'] as $inner ) {
+			$children[] = tmc_block_structure( $inner );
+		}
+	}
+	return array( $block['blockName'], $attrs, $children );
+}
+
+/**
+ * Top-level blocks of $content with their lock state (locked = page-template section or area, or a
+ * home section).
+ *
+ * @return array<int,array{key:string,label:string,index:int,locked:bool,remove:bool,move:bool,fixed:bool,shell:string,structure:string}>
+ */
+function tmc_locked_sections( $content ) {
+	$sections = array();
+	foreach ( array_values( array_filter( parse_blocks( (string) $content ), fn( $b ) => null !== $b['blockName'] ) ) as $index => $block ) {
+		$lock       = is_array( $block['attrs']['lock'] ?? null ) ? $block['attrs']['lock'] : array();
+		$fixed      = is_string( $block['attrs']['templateLock'] ?? null ) && '' !== $block['attrs']['templateLock'];
+		$class      = is_string( $block['attrs']['className'] ?? null ) ? $block['attrs']['className'] : '';
+		$sections[] = array(
+			'key'       => $block['blockName'] . ' ' . $class,
+			'label'     => '' !== $class ? $class : $block['blockName'],
+			'index'     => $index,
+			'locked'    => $fixed || ! empty( $lock['remove'] ) || ! empty( $lock['move'] ),
+			'remove'    => ! empty( $lock['remove'] ),
+			'move'      => ! empty( $lock['move'] ),
+			'fixed'     => $fixed,
+			'shell'     => md5( (string) wp_json_encode( tmc_block_structure( $block, false ) ) ),
+			'structure' => md5( (string) wp_json_encode( tmc_block_structure( $block ) ) ),
+		);
+	}
+	return $sections;
+}
+
+/**
+ * Locked sections of $previous that $content removes, moves, unlocks or restructures. Matching is by
+ * block and CSS class (unique per template), so renaming a section in the List View is harmless.
+ *
+ * @return string[] Problems, e.g. "removed: tmc-tpl-section tmc-tpl-intro".
+ */
+function tmc_locked_section_changes( $previous, $content ) {
+	$old = array_filter( tmc_locked_sections( $previous ), fn( $s ) => $s['locked'] );
+	if ( ! $old ) {
+		return array();
+	}
+	$new      = tmc_locked_sections( $content );
+	$used     = array();
+	$problems = array();
+	$order    = array();
+	foreach ( $old as $section ) {
+		$match = null;
+		foreach ( $new as $candidate ) {
+			if ( $candidate['key'] === $section['key'] && ! isset( $used[ $candidate['index'] ] ) ) {
+				$match = $candidate;
+				break;
+			}
+		}
+		$label = $section['label'];
+		if ( ! $match ) {
+			if ( $section['remove'] ) {
+				$problems[] = "removed: $label";
+			}
+			continue;
+		}
+		$used[ $match['index'] ] = true;
+		if ( $match['shell'] !== $section['shell'] ) {
+			$problems[] = "lock or layout changed: $label";
+		} elseif ( $section['fixed'] && $match['structure'] !== $section['structure'] ) {
+			$problems[] = "structure changed: $label";
+		}
+		if ( $section['move'] ) {
+			$order[] = array( $label, $match['index'] );
+		}
+	}
+	for ( $i = 1, $n = count( $order ); $i < $n; $i++ ) {
+		if ( $order[ $i ][1] < $order[ $i - 1 ][1] ) {
+			$problems[] = 'moved: ' . $order[ $i ][0];
+		}
+	}
+	return $problems;
 }
 
 /** True while page-template prompts or placeholder links remain in the content. */
@@ -160,36 +283,48 @@ function tmc_limit_block_patterns() {
 
 /* ---------------------------------------------------------------- server-side enforcement */
 
+/**
+ * Content editors write: public post types with the block editor, plus reusable patterns (wp_block).
+ * Theme data (navigation, templates, global styles) is not editor content and is not covered.
+ *
+ * @return string[]
+ */
+function tmc_governed_post_types() {
+	$types = array( 'wp_block' );
+	foreach ( get_post_types( array( 'public' => true ) ) as $type ) {
+		if ( 'attachment' !== $type && post_type_supports( $type, 'editor' ) ) {
+			$types[] = $type;
+		}
+	}
+	return $types;
+}
+
 add_action( 'rest_api_init', 'tmc_editorial_rest_hooks' );
 function tmc_editorial_rest_hooks() {
-	foreach ( get_post_types( array( 'show_in_rest' => true ) ) as $type ) {
-		if ( post_type_supports( $type, 'editor' ) ) {
-			add_filter( "rest_pre_insert_{$type}", 'tmc_editorial_rest_check', 20, 2 );
-		}
+	foreach ( tmc_governed_post_types() as $type ) {
+		add_filter( "rest_pre_insert_{$type}", 'tmc_editorial_rest_check', 20, 2 );
 	}
 }
 
 /**
- * Runs before the REST API writes a post (create, update, autosave).
+ * The governance rules for one save by the current user.
  *
- * @param stdClass|WP_Error $prepared Post about to be saved.
- * @param WP_REST_Request   $request  Request.
- * @return stdClass|WP_Error
+ * @param string       $type     Post type.
+ * @param string|null  $content  Content about to be saved (unslashed); null when the save leaves it unchanged.
+ * @param string       $status   Status after the save.
+ * @param WP_Post|null $existing The post before the save (null for new content).
+ * @return WP_Error|null Null when the save is allowed.
  */
-function tmc_editorial_rest_check( $prepared, $request ) {
-	if ( is_wp_error( $prepared ) ) {
-		return $prepared;
-	}
-	$existing = empty( $prepared->ID ) ? null : get_post( (int) $prepared->ID );
-	$type     = $prepared->post_type ?? ( $existing ? $existing->post_type : '' );
+function tmc_editorial_save_error( $type, $content, $status, $existing = null ) {
 	$full     = tmc_user_has_full_block_palette();
+	$previous = $existing ? (string) $existing->post_content : '';
 
 	if ( 'wp_block' === $type && ! $full ) {
 		return new WP_Error( 'tmc_patterns_restricted', 'Only Site Administrators can create reusable patterns. Use the TMC patterns in the block inserter.', array( 'status' => 403 ) );
 	}
 
-	if ( ! $full && isset( $prepared->post_content ) ) {
-		$blocked = tmc_unapproved_blocks( $prepared->post_content );
+	if ( ! $full && null !== $content && ( ! $existing || $content !== $previous ) ) {
+		$blocked = tmc_unapproved_blocks( $content, $previous );
 		if ( $blocked ) {
 			return new WP_Error(
 				'tmc_block_not_allowed',
@@ -197,16 +332,86 @@ function tmc_editorial_rest_check( $prepared, $request ) {
 				array( 'status' => 400, 'blocks' => $blocked )
 			);
 		}
+		$changes = $existing ? tmc_locked_section_changes( $previous, $content ) : array();
+		if ( $changes ) {
+			return new WP_Error(
+				'tmc_template_locked',
+				sprintf( 'The fixed sections of this page cannot be removed, moved or restructured (%s). Change only their text and links, or ask a Site Administrator.', implode( '; ', $changes ) ),
+				array( 'status' => 400, 'sections' => $changes )
+			);
+		}
 	}
 
-	$status  = $prepared->post_status ?? ( $existing ? $existing->post_status : 'draft' );
-	$content = $prepared->post_content ?? ( $existing ? $existing->post_content : '' );
-	if ( in_array( $status, array( 'publish', 'future' ), true ) && tmc_has_template_prompts( $content ) ) {
+	$effective = null !== $content ? $content : $previous;
+	if ( in_array( $status, array( 'publish', 'future' ), true ) && tmc_has_template_prompts( $effective ) ) {
 		return new WP_Error(
 			'tmc_template_incomplete',
 			'This content still contains template prompts ("[Replace: …]") or links that point to "#". Replace them with the real text and links before publishing.',
 			array( 'status' => 400 )
 		);
 	}
-	return $prepared;
+	return null;
+}
+
+/**
+ * Runs before the REST API writes a post (create, update). Autosaves never go live; they are
+ * checked when the editor saves.
+ *
+ * @param stdClass|WP_Error $prepared Post about to be saved.
+ * @param WP_REST_Request   $request  Request.
+ * @return stdClass|WP_Error
+ */
+function tmc_editorial_rest_check( $prepared, $request ) {
+	if ( is_wp_error( $prepared ) || ( $request instanceof WP_REST_Request && str_contains( $request->get_route(), '/autosaves' ) ) ) {
+		return $prepared;
+	}
+	$existing = empty( $prepared->ID ) ? null : get_post( (int) $prepared->ID );
+	$error    = tmc_editorial_save_error(
+		(string) ( $prepared->post_type ?? ( $existing ? $existing->post_type : '' ) ),
+		isset( $prepared->post_content ) ? (string) $prepared->post_content : null,
+		(string) ( $prepared->post_status ?? ( $existing ? $existing->post_status : 'draft' ) ),
+		$existing
+	);
+	return $error ? $error : $prepared;
+}
+
+/**
+ * The same rules for every other way a signed-in user saves content (classic post.php form, Quick
+ * Edit, bulk edit), so nothing bypasses the REST check. The network-publishing sync writes copies of
+ * already-checked originals and is not a user edit.
+ *
+ * @param array $data    Slashed post data about to be written (wp_insert_post_data).
+ * @param array $postarr Raw arguments of wp_insert_post().
+ * @return WP_Error|null
+ */
+function tmc_editorial_check_insert( array $data, array $postarr ) {
+	if ( ! is_user_logged_in() || ! in_array( (string) ( $data['post_type'] ?? '' ), tmc_governed_post_types(), true ) ) {
+		return null;
+	}
+	if ( function_exists( 'tmc_syndication_busy' ) && tmc_syndication_busy() ) {
+		return null;
+	}
+	$existing = empty( $postarr['ID'] ) ? null : get_post( (int) $postarr['ID'] );
+	$content  = wp_unslash( (string) ( $data['post_content'] ?? '' ) );
+	return tmc_editorial_save_error(
+		(string) $data['post_type'],
+		( $existing && $content === $existing->post_content ) ? null : $content,
+		(string) ( $data['post_status'] ?? 'draft' ),
+		$existing
+	);
+}
+
+// Web requests only: REST has its own check (above); WP-CLI is operators and seeding; restoring a
+// revision brings back the post's own history.
+add_filter( 'wp_insert_post_data', 'tmc_editorial_enforce_on_save', 99, 2 );
+function tmc_editorial_enforce_on_save( $data, $postarr ) {
+	if ( ( defined( 'WP_CLI' ) && WP_CLI ) || wp_is_serving_rest_request() || 'revision.php' === ( $GLOBALS['pagenow'] ?? '' ) ) {
+		return $data;
+	}
+	$error = tmc_editorial_check_insert( (array) $data, (array) $postarr );
+	if ( $error ) {
+		$status = (int) ( $error->get_error_data()['status'] ?? 400 );
+		wp_die( esc_html( $error->get_error_message() ), 'Not saved', array( 'response' => $status, 'back_link' => true ) );
+	}
+	return $data;
 }

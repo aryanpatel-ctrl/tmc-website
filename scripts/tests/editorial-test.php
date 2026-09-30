@@ -157,6 +157,70 @@ try {
 	}
 	$t( 'REST: Content Editor cannot create reusable patterns (HTTP ' . $res->get_status() . ')', in_array( $res->get_status(), array( 401, 403 ), true ) );
 	$t( 'nested unapproved blocks are found; plain text is left to kses', array( 'core/html' ) === tmc_unapproved_blocks( '<!-- wp:group --><div class="wp-block-group"><!-- wp:html --><b>x</b><!-- /wp:html --></div><!-- /wp:group -->' ) && array() === tmc_unapproved_blocks( 'Plain text from an API client.' ) );
+	$legacy = '<!-- wp:html --><b>x</b><!-- /wp:html -->';
+	$t( 'blocks already in a page (administrator, migration) do not block edits; adding more does', array() === tmc_unapproved_blocks( $legacy . '<!-- wp:paragraph --><p>New text</p><!-- /wp:paragraph -->', $legacy ) && array( 'core/html' ) === tmc_unapproved_blocks( $legacy . $legacy, $legacy ) );
+
+	WP_CLI::log( '— Locked sections keep their structure' );
+	$top  = fn( $id ) => array_values( array_filter( parse_blocks( (string) get_post_field( 'post_content', $id ) ), fn( $b ) => null !== $b['blockName'] ) );
+	$save = fn( $id, array $blocks ) => $rest( 'POST', "/wp/v2/pages/$id", array( 'content' => serialize_blocks( $blocks ) ) );
+	$contact = (int) ( $pages['contact'] ?? 0 );
+	$before  = (string) get_post_field( 'post_content', $contact );
+	$b       = $top( $contact ); // Introduction, Contact details, Location map (area), Directions
+	$t( 'contact page has its four sections', 4 === count( $b ) && 'Contact details' === ( $b[1]['attrs']['metadata']['name'] ?? '' ) );
+	wp_set_current_user( $unit_editor->ID );
+	$edit       = $b;
+	$edit[0]    = tmc_b_locked( array( tmc_b_paragraph( 'Sample: who to contact for what.', 'tmc-lead' ) ), 'tmc-tpl-intro', 'Introduction' );
+	$phones     = &$edit[1]['innerBlocks'][0]['innerBlocks'][1]['innerBlocks'];
+	$phones[1]  = tmc_b_list( array( 'Reception: sample number', 'Helpline: sample number', 'Enquiries: sample number' ) );
+	unset( $phones );
+	$edit[2]    = tmc_b_area( array( tmc_b_heading( 'Sample map heading' ), tmc_b_paragraph( 'Sample map text.' ) ), 'tmc-slot tmc-slot-map', 'Location map' );
+	$res        = $save( $contact, $edit );
+	$t( 'Content Editor edits text, adds a telephone number and fills the map area (HTTP ' . $res->get_status() . ' ' . $code( $res ) . ')', 200 === $res->get_status() && false !== strpos( get_post_field( 'post_content', $contact ), 'Enquiries: sample number' ) );
+	$edited = (string) get_post_field( 'post_content', $contact );
+	$b      = $top( $contact );
+	$cases  = array(
+		'removing a section'          => array_slice( $b, 1 ),
+		'unlocking a section'         => array_replace( $b, array( 1 => array_replace( $b[1], array( 'attrs' => array_diff_key( $b[1]['attrs'], array( 'templateLock' => 1 ) ) ) ) ) ),
+		'adding a block to a section' => array_replace( $b, array( 0 => tmc_b_locked( array_merge( $b[0]['innerBlocks'], array( tmc_b_paragraph( 'Extra' ) ) ), 'tmc-tpl-intro', 'Introduction' ) ) ),
+		'moving a section'            => array( $b[0], $b[1], $b[3], $b[2] ),
+		'removing a section\'s class' => array_replace( $b, array( 3 => tmc_b_group( $b[3]['innerBlocks'], '', array_diff_key( $b[3]['attrs'], array( 'className' => 1 ) ) ) ) ),
+	);
+	foreach ( $cases as $label => $blocks ) {
+		$res = $save( $contact, $blocks );
+		$t( "Content Editor: $label is refused (HTTP " . $res->get_status() . ' ' . $code( $res ) . ')', 400 === $res->get_status() && 'tmc_template_locked' === $code( $res ) );
+	}
+	$after = (string) get_post_field( 'post_content', $contact );
+	$t( 'refused saves leave the page unchanged', $edited !== $before && $after === $edited );
+
+	// Other web paths (classic form, Quick Edit) run the same rules through wp_insert_post_data.
+	$insert = fn( $id, $content, $status ) => tmc_editorial_check_insert( array( 'post_type' => 'page', 'post_content' => wp_slash( $content ), 'post_status' => $status ), array( 'ID' => $id ) );
+	$error  = $insert( 0, '<!-- wp:html --><b>x</b><!-- /wp:html -->', 'draft' );
+	$t( 'classic form: Content Editor cannot add Custom HTML', has_filter( 'wp_insert_post_data', 'tmc_editorial_enforce_on_save' ) && is_wp_error( $error ) && 'tmc_block_not_allowed' === $error->get_error_code() );
+	$error = $insert( $contact, serialize_blocks( array_slice( $b, 1 ) ), 'pending' );
+	$t( 'classic form: Content Editor cannot remove a locked section', is_wp_error( $error ) && 'tmc_template_locked' === $error->get_error_code() );
+	wp_set_current_user( $unit_reviewer->ID );
+	$error = $insert( $contact, $after, 'publish' );
+	$t( 'Quick Edit: Reviewer cannot publish a page with prompts', is_wp_error( $error ) && 'tmc_template_incomplete' === $error->get_error_code() );
+	$t( 'autosaves are not refused (checked when the editor saves)', ( (object) array( 'ID' => $contact ) ) == tmc_editorial_rest_check( (object) array( 'ID' => $contact ), new WP_REST_Request( 'POST', "/wp/v2/pages/$contact/autosaves" ) ) );
+	wp_set_current_user( $unit_admin->ID );
+	$res = $save( $contact, array_slice( $b, 1 ) );
+	$t( 'Site Administrator may restructure a template page (HTTP ' . $res->get_status() . ')', 200 === $res->get_status() && 3 === count( $top( $contact ) ) );
+	$t( 'Site Administrator: classic form accepts it too', null === $insert( $contact, serialize_blocks( $b ), 'pending' ) );
+
+	// Home-page style sections (locked, not pinned): text changes and removal are fine, restructuring is not.
+	$home_like     = array( tmc_section_hero( 'Sample', 'Sample heading', 'Sample text.', array( array( 'Sample action', '/patient-care/' ) ) ), tmc_section_about( 'Sample about', 'Sample text.', array( 'Read more', '/about-us/' ) ) );
+	$pages['home'] = (int) wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => "W5 sections $tag", 'post_content' => wp_slash( serialize_blocks( $home_like ) ) ) );
+	wp_set_current_user( $unit_reviewer->ID );
+	$h      = $top( $pages['home'] );
+	$h[0]   = tmc_section_hero( 'Sample', 'Changed heading', 'Changed text.', array( array( 'Changed action', '/patient-care/' ), array( 'Second action', '/contact-us/', true ) ) );
+	$res    = $save( $pages['home'], $h );
+	$ok     = 200 === $res->get_status();
+	$h[0]   = tmc_b_section( array_merge( $h[0]['innerBlocks'], array( tmc_b_paragraph( 'Extra' ) ) ), 'tmc-hero' );
+	$res    = $save( $pages['home'], $h );
+	$locked = 400 === $res->get_status() && 'tmc_template_locked' === $code( $res );
+	$res    = $save( $pages['home'], array( $top( $pages['home'] )[0] ) );
+	$t( 'home sections: Reviewer edits text and adds a button, cannot restructure, may remove an unpinned section', $ok && $locked && 200 === $res->get_status() && 1 === count( $top( $pages['home'] ) ) );
+	wp_set_current_user( $unit_editor->ID );
 
 	wp_set_current_user( $unit_reviewer->ID );
 	$t( 'Reviewer / Publisher: same restriction', is_array( get_allowed_block_types( $context ) ) );

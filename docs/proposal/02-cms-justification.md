@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-03 | 0.1 | R-4.5-1, R-4.5-2, R-12.1-*, R-13-2, R-13-3 (evaluation parameter 2: 15 marks) |
+| TMC-WEB-PRP-03 | 0.1 | R-4.5-1, R-4.5-2, R-12.1-\*, R-13-2, R-13-3 (evaluation parameter 2: 15 marks) |
 
 ## 1. Proposal
 

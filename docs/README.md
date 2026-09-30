@@ -28,7 +28,7 @@ portable (PDF) sets handed over to TMC are generated from them (section 4).
 |---|---|---|
 | TMC-WEB-ARC-01 | [System Architecture](architecture/system-architecture.md) | R-4.15-1, R-4.7-1 to R-4.7-9, R-2-10 |
 | TMC-WEB-ARC-02 | [Security Architecture](architecture/security-architecture.md) | R-4.8-1 to R-4.8-9, R-2-6, R-7-2 |
-| TMC-WEB-ARC-03 | [Integration and Interface Document](architecture/integration-interfaces.md) | R-4.15-4, R-4.4-*, R-4.12-* |
+| TMC-WEB-ARC-03 | [Integration and Interface Document](architecture/integration-interfaces.md) | R-4.15-4, R-4.4-\*, R-4.12-\* |
 | TMC-WEB-ARC-04 | [Data Model and Database Schema Reference](architecture/data-model.md) | R-8.2-5 |
 | TMC-WEB-ARC-05 | [Data Residency Compliance Statement (template)](architecture/data-residency-statement.md) | R-4.7-1, R-4.7-2, R-7-2 |
 | TMC-WEB-ARC-06 | [Access Control and Vendor Access Policy](architecture/access-control-policy.md) | R-4.7-5, R-4.8-2, R-4.8-3 |
@@ -81,7 +81,7 @@ portable (PDF) sets handed over to TMC are generated from them (section 4).
 | ID | Document | RTM |
 |---|---|---|
 | TMC-WEB-GOV-01 | [Execution Plan M1–M6](governance/execution-plan.md) | R-7-1, R-7-2 |
-| TMC-WEB-GOV-02 | [Team Structure and RACI](governance/raci-team-structure.md) | R-10-*, R-14-1 |
+| TMC-WEB-GOV-02 | [Team Structure and RACI](governance/raci-team-structure.md) | R-10-\*, R-14-1 |
 | TMC-WEB-GOV-03 | [Risk Register](governance/risk-register.md) | R-14-2 |
 | TMC-WEB-GOV-04 | [Change Request Procedure](governance/change-request-procedure.md) | R-14-3 |
 | TMC-WEB-GOV-05 | [Design Deviation Register](governance/design-deviation-register.md) | R-5-1 |
@@ -94,7 +94,7 @@ portable (PDF) sets handed over to TMC are generated from them (section 4).
 
 | ID | Document | RTM |
 |---|---|---|
-| TMC-WEB-PRP-00 to 09 | [Technical Proposal](proposal/README.md): company and eligibility (placeholders), solution and architecture, CMS justification, execution plan, content migration methodology, test strategy, security and compliance approach, documentation/training/warranty/AMC/support plan, statement of deviations | R-12.1-*, R-11-* |
+| TMC-WEB-PRP-00 to 09 | [Technical Proposal](proposal/README.md): company and eligibility (placeholders), solution and architecture, CMS justification, execution plan, content migration methodology, test strategy, security and compliance approach, documentation/training/warranty/AMC/support plan, statement of deviations | R-12.1-\*, R-11-\* |
 | TMC-WEB-EOI-00 to 06 | [EOI Response Pack](eoi/README.md): queries and suggestions letter, technical data sheet, Response Form, Vendor Capability Form, EOI checklist, submission checklist | E-2 to E-8 |
 
 ### 2.8 Licences and engineering

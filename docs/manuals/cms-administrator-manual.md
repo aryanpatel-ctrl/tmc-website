@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-MAN-01 | 0.1 | Draft; screens of parallel work streams confirmed at integration | R-4.15-6, R-8.2-6, R-4.16-2, R-4.6-*, R-4.13-2, R-2-10 |
+| TMC-WEB-MAN-01 | 0.1 | Draft; screens of parallel work streams confirmed at integration | R-4.15-6, R-8.2-6, R-4.16-2, R-4.6-\*, R-4.13-2, R-2-10 |
 
 **Audience.** TMC IT officers who hold the **Super Admin** role (whole network) and unit **Site
 Administrators** (one website). Content editing itself is covered by the

@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-06 | 0.1 | R-4.14-*, R-4.9-*, R-4.10-6, R-7.1-1 (evaluation parameter 8, with 04: 8 marks) |
+| TMC-WEB-PRP-06 | 0.1 | R-4.14-\*, R-4.9-\*, R-4.10-6, R-7.1-1 (evaluation parameter 8, with 04: 8 marks) |
 
 ## 1. Strategy
 

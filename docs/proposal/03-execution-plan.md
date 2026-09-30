@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-04 | 0.1 | R-7-1 to R-7-3, R-14-*, R-10-* (evaluation parameter 4: 10 marks) |
+| TMC-WEB-PRP-04 | 0.1 | R-7-1 to R-7-3, R-14-\*, R-10-\* (evaluation parameter 4: 10 marks) |
 
 ## 1. Plan
 

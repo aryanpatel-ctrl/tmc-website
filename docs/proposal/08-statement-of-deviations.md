@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-09 | 0.1 | R-12.1-* (SOW §12.1: "Signed acceptance of all terms and conditions of this EOI document, and a statement of deviations, if any") |
+| TMC-WEB-PRP-09 | 0.1 | R-12.1-\* (SOW §12.1: "Signed acceptance of all terms and conditions of this EOI document, and a statement of deviations, if any") |
 
 **(On company letterhead)**
 

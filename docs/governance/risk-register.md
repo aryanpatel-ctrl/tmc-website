@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-GOV-03 | 0.1 | Initial register (bid stage); updated monthly and shared with TMC IT (SOW §14) | R-14-2, R-11-* (evaluation parameter 4) |
+| TMC-WEB-GOV-03 | 0.1 | Initial register (bid stage); updated monthly and shared with TMC IT (SOW §14) | R-14-2, R-11-\* (evaluation parameter 4) |
 
 SOW §14: "The Vendor shall maintain a risk register and escalation matrix, updated monthly and shared
 with TMC IT." The escalation matrix is in [RACI and Team §4](raci-team-structure.md#4-escalation-matrix-project-phase).

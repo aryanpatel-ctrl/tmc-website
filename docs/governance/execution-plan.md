@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-GOV-01 | 0.1 | Draft; part of the Technical Bid (SOW §12.1) and of the project management plan at M1 | R-7-1, R-7-2, R-7-3, R-7.1-1, R-11-*, R-12.1-* |
+| TMC-WEB-GOV-01 | 0.1 | Draft; part of the Technical Bid (SOW §12.1) and of the project management plan at M1 | R-7-1, R-7-2, R-7-3, R-7.1-1, R-11-\*, R-12.1-\* |
 
 ## 1. Basis
 

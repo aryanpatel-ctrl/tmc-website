@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-ARC-01 | 0.1 | Draft for TMC IT review | R-4.15-1, R-4.7-1 to R-4.7-9, R-2-10, R-4.1-*, R-8.2-6 |
+| TMC-WEB-ARC-01 | 0.1 | Draft for TMC IT review | R-4.15-1, R-4.7-1 to R-4.7-9, R-2-10, R-4.1-\*, R-8.2-6 |
 
 **Project:** Development, CMS Implementation, Deployment, Content Migration, Security Certification,
 Training, Warranty and Maintenance of the TMC Website Ecosystem (EOI No. TMH/TMH/2026-27/CAP/EO/0009).

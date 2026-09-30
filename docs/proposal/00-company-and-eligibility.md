@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-PRP-01 | 0.1 | Template: to be completed by the bidder with evidenced facts only | R-9-*, R-12.1-*, R-10-* |
+| TMC-WEB-PRP-01 | 0.1 | Template: to be completed by the bidder with evidenced facts only | R-9-\*, R-12.1-\*, R-10-\* |
 
 > Complete every **[BIDDER TO FILL]** with verifiable facts and attach the evidence listed. Do not leave
 > any criterion without evidence: "non-compliance with any criterion may result in disqualification at the

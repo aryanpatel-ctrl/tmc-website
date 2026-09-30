@@ -57,11 +57,26 @@ local LINE = 110 -- characters per table line: tables are set in footnotesize on
 
 local CODE_WIDTH = 1.3 -- a monospace character is wider than an average proportional one
 
+local WIDE = 1.3 -- capitals and digits are wider than an average lower-case letter
+
+local function token_width(token)
+  local width = 0
+  for _, code in utf8.codes(token) do
+    if (code >= 65 and code <= 90) or (code >= 48 and code <= 57) then
+      width = width + WIDE
+    else
+      width = width + 1
+    end
+  end
+  return width
+end
+
 local function measure_cell(cell)
   local len, word = 0, 0
   local function add(text, factor)
     for token in text:gmatch("%S+") do
-      local l = (utf8.len(token) or #token) * factor
+      local ok, width = pcall(token_width, token)
+      local l = (ok and width or #token) * factor
       if l > word then word = l end
       len = len + l + 1
     end
@@ -105,7 +120,7 @@ function Table(tbl)
 
   local minimum, extra, min_total, extra_total = {}, {}, 0, 0
   for i = 1, n do
-    minimum[i] = math.min(word[i], 36) + 2
+    minimum[i] = math.min(word[i], 36) + 4 -- + cell padding (\tabcolsep on both sides)
     extra[i] = math.max(0, math.min(longest[i], 80) - minimum[i])
     min_total = min_total + minimum[i]
     extra_total = extra_total + extra[i]

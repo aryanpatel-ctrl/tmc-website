@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-08 | 0.1 | R-4.15-*, R-4.16-*, R-6-*, R-8.2-* (evaluation parameter 9: 7 marks) |
+| TMC-WEB-PRP-08 | 0.1 | R-4.15-\*, R-4.16-\*, R-6-\*, R-8.2-\* (evaluation parameter 9: 7 marks) |
 
 ## 1. Documentation (SOW §4.15, §8.2)
 

@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-OPS-07 | 0.1 | Draft for TMC IT approval | R-6-1, R-6-2, R-6-3, R-6-4, R-6-5, R-6-8, R-8.2-* |
+| TMC-WEB-OPS-07 | 0.1 | Draft for TMC IT approval | R-6-1, R-6-2, R-6-3, R-6-4, R-6-5, R-6-8, R-8.2-\* |
 
 ## 1. Contractual basis
 

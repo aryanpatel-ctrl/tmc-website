@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-TRN-01 | 0.1 | Draft for TMC IT approval; participant numbers and dates to be confirmed (EOI query Q-27) | R-4.16-1, R-4.16-2, R-4.16-3, R-2-8, R-8.1-* |
+| TMC-WEB-TRN-01 | 0.1 | Draft for TMC IT approval; participant numbers and dates to be confirmed (EOI query Q-27) | R-4.16-1, R-4.16-2, R-4.16-3, R-2-8, R-8.1-\* |
 
 ## 1. Requirement
 

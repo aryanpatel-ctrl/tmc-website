@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-GOV-02 | 0.1 | Template: names and CVs completed by the bidder | R-10-*, R-14-1, R-14-2, R-11-* |
+| TMC-WEB-GOV-02 | 0.1 | Template: names and CVs completed by the bidder | R-10-\*, R-14-1, R-14-2, R-11-\* |
 
 ## 1. Organisation
 

@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-02 | 0.1 | R-12.1-*, R-2-*, R-4.1-*, R-4.3-*, R-4.7-*, R-4.12-* (evaluation parameter 1: 15 marks) |
+| TMC-WEB-PRP-02 | 0.1 | R-12.1-\*, R-2-\*, R-4.1-\*, R-4.3-\*, R-4.7-\*, R-4.12-\* (evaluation parameter 1: 15 marks) |
 
 ## 1. Understanding of the requirement
 

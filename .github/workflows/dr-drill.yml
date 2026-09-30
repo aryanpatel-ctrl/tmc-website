@@ -1,0 +1,74 @@
+# DR drill in CI — tender §4.7: RPO 15 minutes and RTO 1 hour, demonstrated through periodic drills.
+#
+#   provision all six sites → create labelled test content (post + uploaded file) → take a backup →
+#   restore it into the isolated compose project "tmc-dr" (own volumes/networks, no published ports)
+#   → smoke test inside that network → verify the test content → Markdown report (job summary + artifact)
+#
+# Reusable (the integrator calls it from pipeline.yml with `uses: ./.github/workflows/dr-drill.yml`);
+# also runs monthly and on demand, so a current drill report always exists.
+name: DR drill
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 21 1 * *"   # 03:00 IST on the 2nd of every month
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    name: Backup, restore and DR drill
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Environment
+        run: ./scripts/make-env.sh ci
+
+      - name: Build and provision all six sites (the stack to protect)
+        run: ./scripts/setup.sh
+
+      - name: Create content that must survive the disaster
+        id: canary
+        run: |
+          set -a; . ./.env; set +a
+          title="DR canary ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          out="$(docker compose run --rm -T -e TMC_CANARY_TITLE="$title" wpcli --url="tmh.${TMC_BASE_DOMAIN}" eval-file /tmc-scripts/dr/canary.php)"
+          echo "$out"
+          upload="$(sed -n 's/^TMC_CANARY_UPLOAD=//p' <<<"$out" | tr -d '\r')"
+          test -n "$upload"
+          { echo "title=$title"; echo "upload=$upload"; } >> "$GITHUB_OUTPUT"
+
+      - name: Take a backup now
+        run: |
+          docker compose exec -T backup tmc-backup run manual
+          docker compose exec -T backup tmc-backup verify latest
+          docker compose exec -T backup tmc-backup list
+
+      - name: DR drill — restore into tmc-dr, measure RPO and RTO
+        env:
+          CANARY_TITLE: ${{ steps.canary.outputs.title }}
+          CANARY_UPLOAD: ${{ steps.canary.outputs.upload }}
+        run: |
+          ./scripts/dr/drill.sh --dr-dir "$RUNNER_TEMP/tmc-dr" --report "$RUNNER_TEMP/dr-report/dr-drill-report.md" \
+            --expect-site tmh. --expect-post "$CANARY_TITLE" --expect-upload "$CANARY_UPLOAD"
+
+      - name: Drill report in the job summary
+        if: always()
+        run: cat "$RUNNER_TEMP"/dr-report/dr-drill-report.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No drill report was written." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the drill report and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-drill-report
+          path: ${{ runner.temp }}/dr-report/
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --tail=150 backup wordpress db

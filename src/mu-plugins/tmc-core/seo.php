@@ -281,7 +281,9 @@ function tmc_seo_image( $post_id = 0 ) {
 
 /** Plain text, entities decoded, whitespace collapsed, cut on a word boundary. */
 function tmc_seo_plain( $html, $max = TMC_SEO_DESC_MAX ) {
-	$text = html_entity_decode( wp_strip_all_tags( strip_shortcodes( (string) $html ), true ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+	// A space at block boundaries, so "<h2>Title</h2><p>Text" does not become "TitleText".
+	$html = preg_replace( '~<(/?)(p|div|h[1-6]|li|ul|ol|br|tr|td|th|table|section|article|header|footer|figure|figcaption|blockquote|dt|dd)\b~i', ' <$1$2', strip_shortcodes( (string) $html ) );
+	$text = html_entity_decode( wp_strip_all_tags( (string) $html, true ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 	$text = trim( preg_replace( '/\s+/u', ' ', $text ) );
 	if ( mb_strlen( $text ) <= $max ) {
 		return $text;
@@ -297,6 +299,23 @@ function tmc_seo_post_description( WP_Post $post ) {
 		return tmc_seo_plain( $post->post_excerpt );
 	}
 	return tmc_seo_plain( excerpt_remove_blocks( $post->post_content ) );
+}
+
+/**
+ * Default description of the home page: its excerpt, the site tagline (Settings → General), or
+ * "<site name>: <theme tagline>". The home page is built from sections, so its text makes a poor summary.
+ */
+function tmc_seo_front_description( $post = null ) {
+	if ( $post && '' !== trim( $post->post_excerpt ) ) {
+		return tmc_seo_plain( $post->post_excerpt );
+	}
+	$tagline = tmc_seo_plain( get_bloginfo( 'description' ) );
+	if ( '' !== $tagline ) {
+		return $tagline;
+	}
+	$name = function_exists( 'tmc_site_name' ) ? tmc_site_name() : get_bloginfo( 'name' );
+	$name = html_entity_decode( (string) $name, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+	return function_exists( 'tmc_site_tagline' ) ? tmc_seo_plain( $name . ': ' . tmc_site_tagline() . '.' ) : $name;
 }
 
 /** Default description of the content-type listings. */
@@ -381,16 +400,13 @@ function tmc_seo_context() {
 		$post                   = get_queried_object();
 		$context['post_id']     = $post->ID;
 		$custom                 = (string) tmc_seo_field( $post->ID, 'tmc_seo_description' );
-		$context['description'] = '' !== $custom ? $custom : tmc_seo_post_description( $post );
+		$context['description'] = '' !== $custom ? $custom : ( is_front_page() ? tmc_seo_front_description( $post ) : tmc_seo_post_description( $post ) );
 		$context['image']       = tmc_seo_image( $post->ID );
-		$context['og_type']     = is_front_page() ? 'website' : 'article';
+		$context['og_type']     = 'post' === $post->post_type ? 'article' : 'website'; // news and notices are articles
 		$context['noindex']     = (bool) tmc_seo_field( $post->ID, 'tmc_seo_noindex' ) || tmc_seo_is_sample( $post->ID );
 		if ( function_exists( 'pll_get_post_language' ) ) {
 			$locale            = pll_get_post_language( $post->ID, 'locale' );
 			$context['locale'] = $locale ? $locale : $context['locale'];
-		}
-		if ( '' === $context['description'] && is_front_page() ) {
-			$context['description'] = tmc_seo_plain( get_bloginfo( 'description' ) );
 		}
 	} elseif ( is_post_type_archive() ) {
 		$type                   = get_query_var( 'post_type' );
@@ -404,7 +420,7 @@ function tmc_seo_context() {
 			: sprintf( __( '%1$s from %2$s.', 'tmc' ), $term ? $term->name : '', get_bloginfo( 'name' ) );
 		$context['image']       = tmc_seo_default_image();
 	} elseif ( is_front_page() || is_home() ) {
-		$context['description'] = tmc_seo_plain( get_bloginfo( 'description' ) );
+		$context['description'] = tmc_seo_front_description();
 		$context['image']       = tmc_seo_default_image();
 	} elseif ( is_search() || is_404() ) {
 		$context['noindex'] = true;

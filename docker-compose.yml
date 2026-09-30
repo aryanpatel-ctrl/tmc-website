@@ -20,10 +20,22 @@ x-wp-env: &wp-env
   WORDPRESS_TABLE_PREFIX: tmc_
   # HMAC key for the tamper-evident audit log — kept out of the database on purpose
   TMC_AUDIT_KEY: ${TMC_AUDIT_KEY}
+  # Security settings (docs/security/owasp-top10.md). Unset = the secure default.
+  TMC_ENV: ${TMC_ENV:-local}
+  TMC_ENFORCE_MFA: ${TMC_ENFORCE_MFA:-1}
+  TMC_MFA_GRACE_HOURS: ${TMC_MFA_GRACE_HOURS:-0}
+  TMC_ADMIN_ALLOW_CIDRS: ${TMC_ADMIN_ALLOW_CIDRS:-}
+  TMC_ADMIN_IDLE_MINUTES: ${TMC_ADMIN_IDLE_MINUTES:-30}
+  TMC_APP_PASSWORD_ROLES: ${TMC_APP_PASSWORD_ROLES:-}
+  TMC_SECURITY_CONTACT: ${TMC_SECURITY_CONTACT:-}
+  TMC_HSTS_INCLUDE_SUBDOMAINS: ${TMC_HSTS_INCLUDE_SUBDOMAINS:-0}
   WORDPRESS_CONFIG_EXTRA: |
     /* ---- TMC project settings ---- */
     define('WP_ENVIRONMENT_TYPE', 'staging');
     define('DISALLOW_FILE_EDIT', true);
+    /* Server: no plugin/theme/core installs or updates from the admin screens; releases arrive only
+       through the CI/CD pipeline. WP-CLI (pipeline, cron auto-updates) is not affected. */
+    if (getenv('TMC_ENV') === 'server' && PHP_SAPI !== 'cli') { define('DISALLOW_FILE_MODS', true); }
     define('WP_MEMORY_LIMIT', '256M');
     define('WP_AUTO_UPDATE_CORE', 'minor');
     define('WP_REDIS_HOST', 'redis');

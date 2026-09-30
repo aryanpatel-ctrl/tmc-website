@@ -137,9 +137,44 @@ services:
           sleep 60
         done
 
+  # Scheduled backups (tender §4.7, RPO 15 min): consistent DB dump + incremental files + config,
+  # checksummed, with retention, into the backup_data volume. See backup/tmc-backup.sh and
+  # docs/operations/backup-and-dr.md. Internal network only; no secrets are written to backups.
+  backup:
+    build: ./backup
+    image: tmc-backup:latest
+    container_name: tmc-backup
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      TMC_TABLE_PREFIX: tmc_
+      TMC_ENV: ${TMC_ENV:-}
+      TMC_BASE_DOMAIN: ${TMC_BASE_DOMAIN}
+      TMC_WP_ENVIRONMENT: ${TMC_WP_ENVIRONMENT:-staging}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-tmc-website}
+      TMC_BACKUP_INTERVAL_MINUTES: ${TMC_BACKUP_INTERVAL_MINUTES:-15}
+      TZ: UTC
+    volumes:
+      - wp_html:/source:ro
+      - backup_data:/backups
+      - ./:/project:ro   # release record + compose/proxy files only (allow-list); .env is never read
+    networks: [tmc_internal]
+    healthcheck:
+      test: ["CMD", "tmc-backup", "health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
 volumes:
   db_data:
   wp_html:
+  backup_data:
 
 networks:
   # DB + cache: no internet, not reachable from any other container on the host

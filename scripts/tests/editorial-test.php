@@ -353,8 +353,9 @@ try {
 	$t( 'the translation\'s copy is unaffected', 'publish' === get_post_status( $c_hi ) );
 	switch_to_blog( $main );
 	wp_update_post( array( 'ID' => $en, 'post_status' => 'publish' ) );
+	$en_date = get_post_field( 'post_date', $en );
 	restore_current_blog();
-	$t( 'publishing it again restores the copy', 'publish' === get_post_status( $c_en ) );
+	$t( 'publishing it again restores the copy, with the original\'s date', 'publish' === get_post_status( $c_en ) && $en_date === get_post_field( 'post_date', $c_en ) );
 
 	WP_CLI::log( '— Network publishing: scheduling' );
 	switch_to_blog( $main );

@@ -371,6 +371,7 @@ function tmc_syndication_write_copy( $origin, $member, array $payload, $hash, $c
 		'post_name'      => $payload['name'],
 		'post_date'      => $payload['date'],
 		'post_date_gmt'  => $payload['date_gmt'],
+		'edit_date'      => true, // keep the original's dates even when a copy moves between draft and live
 		'post_author'    => $payload['author'],
 		'comment_status' => 'closed',
 		'ping_status'    => 'closed',

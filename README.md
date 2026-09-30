@@ -31,6 +31,8 @@ Hindi versions are under `/hi/` on every site.
 
 - Work on a branch, open a pull request: CI runs on GitHub's machines only.
 - Merge to `main`: the same checks run again, then the release is deployed to UAT.
+- **Production:** push a tag `vX.Y.Z` on the commit UAT runs → *Release to production* (gate, re-test,
+  manual approval). Environments, promotion and rollback: `docs/operations/environments.md`.
 - **Rollback / redeploy:** Actions → *Pipeline* → *Run workflow* → enter an older commit or tag.
   Every deploy first saves a database backup in `~/docker/tmc-website/backups/` (last 10 kept).
 - Release history on the server: `~/docker/tmc-website/.release-history`.
@@ -65,6 +67,9 @@ created by the idempotent seed scripts, so a fresh machine or CI ends up with th
 | `wordpress/` | Image: WordPress + PHP 8.3 + phpredis, hardened Apache/PHP config |
 | `mock/tmc-apps/` | DEMO-only mock of the TMC application backends (isolated `tmc_apps` network) — see `docs/integration/gateway.md` |
 | `nginx/tmc-website.conf` | UAT route in nginx-proxy-manager |
+| `backup/`, `scripts/backup/`, `scripts/dr/` | 15-minute backups, off-host copy, restore, DR drill (`docs/operations/backup-and-dr.md`) |
+| `scripts/sla/`, `scripts/perf/`, `scripts/ops/` | monthly availability report, capacity test, update check |
+| `docs/operations/` | environments, backup/DR, monitoring, patching, capacity |
 
 ## Features (tender mapping)
 
@@ -80,4 +85,7 @@ created by the idempotent seed scripts, so a fresh machine or CI ends up with th
 | §4.9 accessibility | Skip link, text size, high contrast, keyboard mega-menu, focus ring, pause for moving content |
 | §4.10 SEO | Clean URLs, hreflang, sitemap, per-page last-updated |
 | §4.13 multilingual | Polylang: English + Hindi, more languages without code changes |
-| §4.7 environments, promotion, rollback | Dev (local) → CI → UAT via this pipeline; DB backup per deploy |
+| §4.7 environments, promotion, rollback | Dev (local) → CI → UAT → Production (tag + approval) → DR; backup per deploy |
+| §4.7 RPO 15 min / RTO 1 h, backups | backup every 15 min (DB + files + config, checksummed, retention), off-host copy, timed DR drill in CI |
+| §4.7 peak load | Redis object cache + full-page cache with purge on change, Brotli, static caching; k6 capacity test |
+| §6 SLA 99.5 %, patching | `/wp-json/tmc/v1/health` for Uptime Kuma, monthly availability report; Dependabot + update check |

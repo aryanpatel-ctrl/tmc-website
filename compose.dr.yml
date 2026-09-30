@@ -1,0 +1,23 @@
+# DR drill environment (tender §4.7: separate DR environment, RTO 1 hour, periodic drills).
+#
+# An isolated compose project for restoring backups next to a running stack on the same Docker
+# host without touching it: its own project name (COMPOSE_PROJECT_NAME=tmc-dr in its .env), so its
+# own volumes and networks; its own container names (below); and no published ports — it is
+# reached only from inside its own network. scripts/dr/drill.sh creates, checks and removes it.
+#
+#   .env of the DR directory:  COMPOSE_PROJECT_NAME=tmc-dr
+#                              COMPOSE_FILE=docker-compose.yml:compose.dr.yml
+#
+# A real failover runs on the DR host with the production configuration instead
+# (compose.prod.yml) — see docs/operations/backup-and-dr.md.
+services:
+  db:
+    container_name: tmc-dr-db
+  redis:
+    container_name: tmc-dr-redis
+  wordpress:
+    container_name: tmc-dr-wp
+  cron:
+    container_name: tmc-dr-cron
+  backup:
+    container_name: tmc-dr-backup

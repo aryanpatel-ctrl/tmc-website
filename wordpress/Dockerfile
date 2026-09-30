@@ -19,7 +19,10 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends 'poppler-utils=25.03.0-5*'; \
     rm -rf /var/lib/apt/lists/*
 
-RUN a2enmod remoteip headers expires
+# Compression is configured in apache-tmc.conf (Brotli preferred, gzip fallback); Debian's default
+# deflate.conf would otherwise run gzip first for every client that accepts both.
+RUN a2enmod remoteip headers expires brotli \
+    && echo '# Compression: see /etc/apache2/conf-enabled/zz-tmc.conf' > /etc/apache2/mods-available/deflate.conf
 
 COPY php.ini /usr/local/etc/php/conf.d/zz-tmc.ini
 COPY apache-tmc.conf /etc/apache2/conf-enabled/zz-tmc.conf

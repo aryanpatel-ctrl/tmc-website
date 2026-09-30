@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # HTTP smoke test of every site in both languages. Works on any environment: requests go to
 # 127.0.0.1:80 with the site's Host header (compose.local.yml locally/CI, nginx-proxy-manager on the server).
+# SMOKE_ORIGIN (environment or .env) sends them elsewhere, e.g. http://127.0.0.1:8080 on production or
+# http://wordpress from inside an isolated compose network (scripts/dr/drill.sh).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 set -a; . ./.env; set +a
+ORIGIN="${SMOKE_ORIGIN:-http://127.0.0.1}"
 
 SITES=("" "tmh." "hbchrcv." "mpmmcc." "hbchrcmzp." "hbchpunjab.")
 FAILED=0
@@ -13,7 +16,7 @@ trap 'rm -f "$BODY"' EXIT
 check() { # host path expected-status [must-contain...]
   local host="$1" path="$2" want="$3"; shift 3
   local got
-  got="$(curl -s -o "$BODY" -w '%{http_code}' -m 20 -H "Host: $host" "http://127.0.0.1$path")"
+  got="$(curl -s -o "$BODY" -w '%{http_code}' -m 20 -H "Host: $host" "$ORIGIN$path")"
   local problem=""
   [ "$got" = "$want" ] || problem="HTTP $got (want $want)"
   for needle in "$@"; do

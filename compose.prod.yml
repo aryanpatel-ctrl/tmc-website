@@ -1,0 +1,25 @@
+# Production (tender §4.7: separate Dev, UAT, Production and DR environments).
+#
+# Used on TMC's production host (MeitY-empanelled, in India) and, for a real failover, on the DR
+# host. Deployed only by .github/workflows/release.yml (release tag → manual approval →
+# scripts/deploy.sh with TMC_DEPLOY_TARGET=production). The directory's .env comes from
+# `scripts/make-env.sh prod` and sets:
+#   COMPOSE_PROJECT_NAME=tmc-prod   COMPOSE_FILE=docker-compose.yml:compose.prod.yml
+#   TMC_WP_ENVIRONMENT=production   TMC_PROXY_ROUTE=none   TMC_HTTP_PORT / SMOKE_ORIGIN
+#
+# WordPress listens on the host's loopback only; TMC's reverse proxy / load balancer terminates
+# TLS and forwards to it (X-Forwarded-Proto is honoured, see docker-compose.yml). Own container
+# names, so production can never be confused with a UAT or DR stack on the same Docker host.
+services:
+  db:
+    container_name: tmc-prod-db
+  redis:
+    container_name: tmc-prod-redis
+  wordpress:
+    container_name: tmc-prod-wp
+    ports:
+      - "127.0.0.1:${TMC_HTTP_PORT:-8080}:80"
+  cron:
+    container_name: tmc-prod-cron
+  backup:
+    container_name: tmc-prod-backup

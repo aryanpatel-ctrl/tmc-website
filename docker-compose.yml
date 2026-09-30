@@ -38,7 +38,7 @@ x-wp-env: &wp-env
   TMC_APP_PAYMENTS_KEY: ${TMC_APP_PAYMENTS_KEY:-${TMC_APPS_MOCK_KEY:-}}
   WORDPRESS_CONFIG_EXTRA: |
     /* ---- TMC project settings ---- */
-    define('WP_ENVIRONMENT_TYPE', 'staging');
+    define('WP_ENVIRONMENT_TYPE', '${TMC_WP_ENVIRONMENT:-staging}'); // production on the production stack (compose.prod.yml / .env)
     define('DISALLOW_FILE_EDIT', true);
     /* Server: no plugin/theme/core installs or updates from the admin screens; releases arrive only
        through the CI/CD pipeline. WP-CLI (pipeline, cron auto-updates) is not affected. */
@@ -48,6 +48,7 @@ x-wp-env: &wp-env
     define('WP_REDIS_HOST', 'redis');
     define('WP_REDIS_PORT', 6379);
     define('WP_CACHE_KEY_SALT', 'tmc_');
+    define('WP_CACHE', true); // full-page cache for anonymous visitors: src/mu-plugins/tmc-page-cache (advanced-cache.php)
     define('DISABLE_WP_CRON', true); // scheduled jobs run from the "cron" container
     /* Behind reverse proxy (nginx-proxy-manager / Cloudflare) */
     if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($$_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) { $$_SERVER['HTTPS'] = 'on'; }
@@ -180,9 +181,44 @@ services:
       timeout: 5s
       retries: 3
 
+  # Scheduled backups (tender §4.7, RPO 15 min): consistent DB dump + incremental files + config,
+  # checksummed, with retention, into the backup_data volume. See backup/tmc-backup.sh and
+  # docs/operations/backup-and-dr.md. Internal network only; no secrets are written to backups.
+  backup:
+    build: ./backup
+    image: tmc-backup:latest
+    container_name: tmc-backup
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      TMC_TABLE_PREFIX: tmc_
+      TMC_ENV: ${TMC_ENV:-}
+      TMC_BASE_DOMAIN: ${TMC_BASE_DOMAIN}
+      TMC_WP_ENVIRONMENT: ${TMC_WP_ENVIRONMENT:-staging}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-tmc-website}
+      TMC_BACKUP_INTERVAL_MINUTES: ${TMC_BACKUP_INTERVAL_MINUTES:-15}
+      TZ: UTC
+    volumes:
+      - wp_html:/source:ro
+      - backup_data:/backups
+      - ./:/project:ro   # release record + compose/proxy files only (allow-list); .env is never read
+    networks: [tmc_internal]
+    healthcheck:
+      test: ["CMD", "tmc-backup", "health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
 volumes:
   db_data:
   wp_html:
+  backup_data:
 
 networks:
   # DB + cache: no internet, not reachable from any other container on the host

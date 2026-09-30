@@ -1,0 +1,161 @@
+/* ==========================================================================
+   Editorial platform: page-template components, source note, component library.
+   Tokens only (var(--c-*)); high-contrast overrides at the end.
+   ========================================================================== */
+
+/* ---------- Page templates ---------- */
+.tmc-lead { font-size: var(--wp--preset--font-size--medium, 1.125rem); color: var(--c-ink); }
+.tmc-tpl-section > :last-child,
+.tmc-tpl-area > :last-child { margin-bottom: 0; }
+
+/* Cards and people: responsive grids of repeatable items */
+.tmc-cards,
+.tmc-people { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.tmc-cards > *,
+.tmc-people > * { margin: 0 !important; }
+.tmc-card,
+.tmc-person {
+	padding: 1.25rem;
+	background: var(--c-white);
+	border: 1px solid var(--c-line);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow);
+}
+.tmc-card > *,
+.tmc-person > * { margin: 0 0 0.5rem; }
+.tmc-card > :last-child,
+.tmc-person > :last-child { margin-bottom: 0; }
+.entry-content .tmc-card-title,
+.entry-content .tmc-person-name { font-size: var(--wp--preset--font-size--medium, 1.125rem); margin-top: 0; }
+.tmc-card-link { font-weight: 600; }
+.tmc-card-link a::after { content: " →"; }
+.tmc-person-role { color: var(--c-muted); font-weight: 600; font-size: 0.95rem; }
+
+/* FAQ: native details / summary, 44px targets, visible state */
+.wp-block-details {
+	border: 1px solid var(--c-line);
+	border-radius: var(--radius);
+	background: var(--c-white);
+	padding: 0 1rem;
+}
+.wp-block-details + .wp-block-details { margin-top: 0.75rem; }
+.wp-block-details > summary {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	min-height: 44px;
+	padding: 0.65rem 0;
+	font-weight: 600;
+	color: var(--c-primary-dark);
+	cursor: pointer;
+	list-style: none;
+}
+.wp-block-details > summary::-webkit-details-marker { display: none; }
+.wp-block-details > summary::before {
+	content: "+";
+	flex: none;
+	width: 1.5rem;
+	height: 1.5rem;
+	border: 2px solid currentColor;
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 700;
+	line-height: 1;
+}
+.wp-block-details[open] > summary::before { content: "−"; }
+.wp-block-details[open] > summary { border-bottom: 1px solid var(--c-line); margin-bottom: 0.75rem; }
+.wp-block-details > :not(summary) { margin-block: 0 0.9rem; }
+
+/* Contact page */
+.tmc-contact-columns { gap: 2rem; }
+.entry-content .tmc-contact-details h2 { font-size: var(--wp--preset--font-size--medium, 1.125rem); margin-top: 1rem; }
+
+/* Slots other modules fill (map, online service, documents) */
+.tmc-slot:empty { display: none; }
+
+/* Help box on service pages */
+.tmc-service-help > h2:first-child { margin-top: 0; }
+
+/* ---------- Centrally published items on unit websites ---------- */
+.syndicated-note {
+	margin-top: 2rem;
+	padding: 0.75rem 1rem;
+	border-left: 4px solid var(--c-primary);
+	background: var(--c-surface);
+	font-size: 0.95rem;
+}
+
+/* ---------- Component library ---------- */
+.component-library { gap: 2.5rem; }
+.cl-toc { border: 1px solid var(--c-line); border-radius: var(--radius); background: var(--c-surface); padding: 1rem 1.25rem; }
+.cl-toc > ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem 2rem; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+.cl-toc > ul > li > a { font-weight: 700; }
+.cl-toc ul ul { margin: 0.35rem 0 0; padding-left: 1rem; font-size: 0.95rem; }
+.cl-group > h2 { font-size: 1.6rem; color: var(--c-primary-dark); padding-bottom: 0.5rem; border-bottom: 3px solid var(--c-line); }
+.cl-item { margin: 2rem 0; }
+.cl-item > h3 { font-size: 1.25rem; margin-bottom: 0.35rem; }
+.cl-anchor { color: inherit; text-decoration: none; }
+.cl-anchor:hover { text-decoration: underline; }
+.cl-specimen {
+	margin: 1rem 0;
+	padding: 1.25rem;
+	border: 1px dashed var(--c-line);
+	border-radius: var(--radius);
+	background: var(--c-white);
+	overflow-x: auto;
+}
+.cl-specimen > :last-child { margin-bottom: 0; }
+.cl-usage { display: grid; gap: 0.25rem; margin: 0; font-size: 0.9rem; }
+.cl-usage > div { display: grid; grid-template-columns: 1fr; gap: 0 1rem; }
+@media (min-width: 640px) { .cl-usage > div { grid-template-columns: 8rem 1fr; } }
+.cl-usage dt { font-weight: 700; color: var(--c-muted); }
+.cl-usage dd { margin: 0; }
+.cl-usage code, .cl-colours code, .cl-type-scale code, .cl-spacing code { overflow-wrap: anywhere; }
+.cl-muted { color: var(--c-muted); font-size: 0.875rem; }
+.cl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.cl-list { margin: 0; }
+
+.cl-chip {
+	display: inline-block;
+	width: 1.75rem;
+	height: 1.75rem;
+	margin-right: 0.35rem;
+	vertical-align: middle;
+	border: 1px solid var(--c-ink);
+	border-radius: 4px;
+	background-color: var(--cl-chip, transparent);
+}
+.cl-grade { display: inline-block; margin-left: 0.25rem; padding: 0 0.4rem; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; }
+.cl-grade.is-pass { background: #e3f4ea; color: #0a5c2e; }
+.cl-grade.is-partial { background: #fff4d6; color: #6b4a00; }
+.cl-grade.is-fail { background: #fbe4e4; color: #8a1c1c; }
+
+.cl-type-scale, .cl-spacing { list-style: none; margin: 0 0 1rem; padding: 0; }
+.cl-type-scale li, .cl-spacing li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--c-line); }
+.cl-type-sample { line-height: 1.3; }
+.cl-space-bar { display: inline-block; height: 1rem; background: var(--c-secondary); border-radius: 2px; align-self: center; }
+
+.cl-preview { border: 1px solid var(--c-line); border-radius: var(--radius); margin-bottom: 0.75rem; }
+.cl-preview > summary { min-height: 44px; padding: 0.65rem 1rem; font-weight: 600; cursor: pointer; }
+.cl-preview > summary code { margin-left: 0.5rem; font-weight: 400; }
+.cl-preview > p, .cl-preview-body { padding: 0 1rem; }
+.cl-preview-body { padding-bottom: 1rem; }
+.cl-home { margin-inline: -1.25rem; }
+
+/* ---------- High contrast (GIGW) ---------- */
+html[data-contrast="high"] .cl-chip { background-color: var(--cl-chip, transparent) !important; border-color: #fff !important; }
+html[data-contrast="high"] .cl-space-bar { background-color: #fff !important; }
+html[data-contrast="high"] .cl-grade { background-color: #ff0 !important; color: #000 !important; }
+html[data-contrast="high"] .wp-block-details > summary::before { border-color: #ff0 !important; color: #ff0 !important; }
+html[data-contrast="high"] .syndicated-note,
+html[data-contrast="high"] .tmc-card,
+html[data-contrast="high"] .tmc-person,
+html[data-contrast="high"] .wp-block-details,
+html[data-contrast="high"] .cl-specimen { border: 1px solid #fff !important; }
+
+@media print {
+	.cl-toc { display: none; }
+	.cl-preview:not([open]) > :not(summary) { display: block; }
+}

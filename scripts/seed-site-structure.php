@@ -498,5 +498,13 @@ foreach ( tmc_w4_seed_site() as $line ) {
 	$log( $line );
 }
 
+/* ================================================================ audience entry points + component library */
+// Idempotent helper in tmc-core/editorial-ia.php (also run by migration 050 on existing sites).
+$editorial_ia = tmc_ensure_editorial_ia();
+if ( is_wp_error( $editorial_ia ) ) {
+	WP_CLI::error( 'editorial IA: ' . $editorial_ia->get_error_message() );
+}
+$log( 'audience entry points' . ( $is_main ? ' + component library' : '' ) );
+
 flush_rewrite_rules( false );
 WP_CLI::success( "$host seeded" );

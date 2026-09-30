@@ -58,6 +58,7 @@ $rows = array(
 	array( $site, 'en', "$old/orphan.html", 'page', '', "imp-$tag-missing-parent", "imp-$tag-orphan", "Orphan $tag", '', '', '', '', '<p>x</p>', '', '', '', '', '', '', '' ),
 	array( $site, 'en', "$old/evil.html", 'page', '', '', "imp-$tag-evil", "Evil file $tag", '', '', '', '', '<p>x</p>', 'files/evil.php', '', '', '', '', '', '' ),
 	array( $site, 'en', "$old/escape.html", 'page', '', '', "imp-$tag-escape", "Escape $tag", '', '', '', '../../etc/passwd', '', '', '', '', '', '', '', '' ),
+	array( $site, 'en', "$old/duplicate.html", 'page', '', '', "imp-$tag-parent", "Duplicate $tag", '', '', '', '', '<p>Same address as the parent row.</p>', '', '', '', '', '', '', '' ),
 );
 $csv    = "$dir/inventory.csv";
 $handle = fopen( $csv, 'w' );
@@ -71,7 +72,7 @@ $count_by_slug = fn( $slug ) => (int) $wpdb->get_var( $wpdb->prepare( "SELECT CO
 WP_CLI::log( '— Dry run' );
 $dry    = new TMC_Inventory_Importer( array( 'csv' => $csv, 'mode' => 'dry-run' ) );
 $report = $dry->run();
-$t( 'dry run completes', is_array( $report ) && 12 === count( $report ) );
+$t( 'dry run completes', is_array( $report ) && 13 === count( $report ) );
 $t( 'nothing created', 0 === $count_by_slug( "imp-$tag-parent" ) && 0 === $count_by_slug( "imp-$tag-job" ) && null === tmc_redirect_resolve( "$old/about.html" ) );
 $t( 'no document added', 0 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'attachment' AND post_title = %s", "Notice $tag" ) ) );
 $child = $by_title( $report, "Import child $tag" );
@@ -82,9 +83,9 @@ $t( 'placeholder page will be filled, editor page protected', 'would update' ===
 $t( 'other site skipped', 'skipped (other site)' === ( $by_title( $report, "Other site $tag" )['action'] ?? '' ) );
 $errors = array_column( array_filter( $report, fn( $r ) => 'error' === $r['action'] ), 'title' );
 sort( $errors );
-$expect = array( "Bad type $tag", "Escape $tag", "Evil file $tag", "Orphan $tag" );
+$expect = array( "Bad type $tag", "Duplicate $tag", "Escape $tag", "Evil file $tag", "Orphan $tag" );
 sort( $expect );
-$t( 'invalid rows reported: unknown type, missing parent, disallowed file, path outside folder (' . implode( ', ', $errors ) . ')', $expect === $errors );
+$t( 'invalid rows reported: unknown type, duplicate address, missing parent, disallowed file, path outside folder (' . implode( ', ', $errors ) . ')', $expect === $errors );
 $t( 'link rewriting previewed', false !== strpos( implode( ' ', (array) ( $by_title( $report, "Import parent $tag" )['messages'] ?? array() ) ), 'would be updated' ) );
 
 WP_CLI::log( '— Real run' );
@@ -124,15 +125,15 @@ $hit = tmc_redirect_resolve( "$old/hi/about.html" );
 $t( 'Hindi old URL → Hindi page', $hit && $hi && get_permalink( $hi ) === $hit['location'] && false !== strpos( $hit['location'], '/hi/' ) );
 $hit = tmc_redirect_resolve( "$old/files/notice.pdf" );
 $t( 'old document URL → file in the media library', $hit && $attachment && wp_get_attachment_url( $attachment ) === $hit['location'] );
-$t( 'no redirect for rows that failed', null === tmc_redirect_resolve( "$old/orphan.html" ) && null === tmc_redirect_resolve( "$old/bad-type" ) );
+$t( 'no redirect for rows that failed', null === tmc_redirect_resolve( "$old/orphan.html" ) && null === tmc_redirect_resolve( "$old/bad-type" ) && null === tmc_redirect_resolve( "$old/duplicate.html" ) );
 
 WP_CLI::log( '— Report' );
 $report_file = "$dir/report.csv";
 $t( 'report written', $apply->write_report( $report_file ) && is_readable( $report_file ) );
 $lines  = array_map( fn( $line ) => str_getcsv( $line, ',', '"', '' ), array_filter( explode( "\n", preg_replace( '/^\xEF\xBB\xBF/', '', (string) file_get_contents( $report_file ) ) ) ) );
-$t( 'report: header + one line per inventory row', TMC_Inventory_Importer::REPORT_COLUMNS === $lines[0] && 13 === count( $lines ) );
+$t( 'report: header + one line per inventory row', TMC_Inventory_Importer::REPORT_COLUMNS === $lines[0] && 14 === count( $lines ) );
 $counts = $apply->counts();
-$t( 'counts: 5 created, 1 updated, 1 skipped (exists), 1 other site, 4 errors (' . wp_json_encode( $counts ) . ')', 5 === ( $counts['created'] ?? 0 ) && 1 === ( $counts['updated'] ?? 0 ) && 1 === ( $counts['skipped (exists)'] ?? 0 ) && 1 === ( $counts['skipped (other site)'] ?? 0 ) && 4 === ( $counts['error'] ?? 0 ) );
+$t( 'counts: 5 created, 1 updated, 1 skipped (exists), 1 other site, 5 errors (' . wp_json_encode( $counts ) . ')', 5 === ( $counts['created'] ?? 0 ) && 1 === ( $counts['updated'] ?? 0 ) && 1 === ( $counts['skipped (exists)'] ?? 0 ) && 1 === ( $counts['skipped (other site)'] ?? 0 ) && 5 === ( $counts['error'] ?? 0 ) );
 $filled = get_post( $placeholder );
 $t( 'placeholder page filled; editor page untouched', false !== strpos( $filled->post_content, 'Real content from TMC.' ) && "Real page $tag" === get_post( $real )->post_title );
 

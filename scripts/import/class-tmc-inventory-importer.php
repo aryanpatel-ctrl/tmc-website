@@ -64,6 +64,8 @@ class TMC_Inventory_Importer {
 	private $counts = array();
 	/** @var string[] problems with the file as a whole (e.g. unknown columns) */
 	private $warnings = array();
+	/** @var array<string,int> "type|lang|path" => row that claimed the address in this run */
+	private $claimed = array();
 
 	/**
 	 * @param array $options csv (path, required), mode (dry-run|apply), base (directory of content and
@@ -322,6 +324,10 @@ class TMC_Inventory_Importer {
 			}
 		}
 		$path = trim( ( '' !== $parent_path ? $parent_path . '/' : '' ) . $slug, '/' );
+		if ( isset( $this->claimed[ "$type|$lang|$path" ] ) ) {
+			return $fail( sprintf( 'Same address as row %d (/%s/ in "%s"); give one of them another slug or parent.', $this->claimed[ "$type|$lang|$path" ], $path, $lang ) );
+		}
+		$this->claimed[ "$type|$lang|$path" ] = $line;
 
 		$template = $this->resolve_template( $type, $row['template'] ?? '', $result['messages'] );
 
@@ -345,12 +351,13 @@ class TMC_Inventory_Importer {
 		// ---- existing content?
 		$import_key = sha1( implode( '|', array( $this->site_key, $lang, $old_key ? 'url:' . $old_key : "path:$type:$path" ) ) );
 		$existing   = $this->find_by_import_key( $import_key );
-		$adopted    = false;
+		$adopted    = '';
 		if ( ! $existing ) {
 			$existing = $this->find_by_path( $type, $lang, $path );
 			if ( $existing ) {
 				$placeholder = false !== strpos( $existing->post_content, self::PLACEHOLDER ) || '' === trim( $existing->post_content );
-				if ( ! $placeholder && ! $this->force ) {
+				$ours        = '' !== (string) get_post_meta( $existing->ID, '_tmc_import_key', true ); // imported earlier (e.g. from a row whose old URL was corrected)
+				if ( ! $placeholder && ! $ours && ! $this->force ) {
 					$result['action']     = 'skipped (exists)';
 					$result['post_id']    = $existing->ID;
 					$result['new_url']    = $this->relative_url( $existing->ID );
@@ -358,7 +365,7 @@ class TMC_Inventory_Importer {
 					$this->register_planned( $type, $lang, $path );
 					return $result;
 				}
-				$adopted = true;
+				$adopted = $ours ? 'matches the item imported earlier at this address' : ( $placeholder ? 'fills the placeholder page at this address' : 'overwrites the existing page at this address (force=1)' );
 			}
 		}
 
@@ -397,7 +404,7 @@ class TMC_Inventory_Importer {
 			$result['post_id'] = $existing ? $existing->ID : '';
 			$result['new_url'] = $this->predict_url( $type, $lang, $path );
 			if ( $adopted ) {
-				$result['messages'][] = 'Fills the existing placeholder page at this address.';
+				$result['messages'][] = 'Would update: ' . $adopted . '.';
 			}
 			foreach ( $documents as $doc ) {
 				$result['messages'][] = ( $this->find_attachment( $doc['sha1'] ) ? 'Document already in media library: ' : 'Would add document: ' ) . basename( $doc['file'] );
@@ -479,7 +486,7 @@ class TMC_Inventory_Importer {
 		$result['post_id']      = $post_id;
 		$result['new_url']      = $this->relative_url( $post_id );
 		if ( $adopted ) {
-			$result['messages'][] = 'Filled the existing placeholder page at this address.';
+			$result['messages'][] = 'Updated: ' . $adopted . '.';
 		}
 		if ( 'publish' !== $status ) {
 			$result['messages'][] = sprintf( 'Saved as %s: the new address works once the item is published.', $status );

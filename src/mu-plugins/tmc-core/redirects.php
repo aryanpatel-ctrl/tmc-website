@@ -121,9 +121,13 @@ function tmc_redirect_split( $raw ) {
 		}
 		return array( 'path' => '/' . ltrim( $parts['path'] ?? '/', '/' ), 'query' => (string) ( $parts['query'] ?? '' ) );
 	}
-	$raw   = strtok( $raw, '#' );
-	$parts = explode( '?', (string) $raw, 2 );
+	$parts = explode( '?', tmc_redirect_without_fragment( $raw ), 2 );
 	return array( 'path' => '/' . ltrim( str_replace( ' ', '%20', $parts[0] ), '/' ), 'query' => (string) ( $parts[1] ?? '' ) );
+}
+
+/** The address without its "#fragment". */
+function tmc_redirect_without_fragment( $address ) {
+	return explode( '#', (string) $address, 2 )[0];
 }
 
 /** PCRE for a stored pattern: case-insensitive, UTF-8, "~" delimiters. */
@@ -172,7 +176,7 @@ function tmc_redirect_target_key( $target ) {
 	if ( ! tmc_redirect_is_local( $target ) ) {
 		return '';
 	}
-	$parts = tmc_redirect_split( strtok( $target, '#' ) );
+	$parts = tmc_redirect_split( tmc_redirect_without_fragment( $target ) );
 	return is_wp_error( $parts ) ? '' : tmc_redirect_key( $parts['path'], $parts['query'] );
 }
 
@@ -293,7 +297,7 @@ function tmc_redirect_resolve( $address, $query_only = false ) {
 			break; // a loop created outside the admin screen: stop at the last good address
 		}
 		$seen[ $key ] = true;
-		$next         = tmc_redirect_match( strtok( $target, '#' ) );
+		$next         = tmc_redirect_match( tmc_redirect_without_fragment( $target ) );
 		if ( ! $next ) {
 			break;
 		}
@@ -381,7 +385,7 @@ function tmc_redirect_trace( $source_key, $target, $exclude_id = 0, $regex = '' 
 			return array( 'loop' => true, 'path' => $path, 'ends_gone' => false );
 		}
 		$visited[ $key ] = true;
-		$next            = tmc_redirect_match( strtok( $current, '#' ) );
+		$next            = tmc_redirect_match( tmc_redirect_without_fragment( $current ) );
 		if ( ! $next || (int) $next['rule']->id === (int) $exclude_id ) {
 			break;
 		}
@@ -810,7 +814,7 @@ function tmc_redirects_list( $search, $filter, $paged ) {
 		if ( $rule->is_regex ) {
 			$flags[] = '<span class="tmc-flag">regex</span>';
 		}
-		if ( 410 !== (int) $rule->status && tmc_redirect_is_local( $rule->target ) && tmc_redirect_match( strtok( $rule->target, '#' ) ) ) {
+		if ( 410 !== (int) $rule->status && tmc_redirect_is_local( $rule->target ) && tmc_redirect_match( tmc_redirect_without_fragment( $rule->target ) ) ) {
 			$flags[] = '<span class="tmc-flag tmc-flag-warn">chain: the new address is redirected again</span>';
 		}
 		printf(

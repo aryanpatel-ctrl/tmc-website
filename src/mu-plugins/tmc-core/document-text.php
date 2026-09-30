@@ -2,10 +2,12 @@
 /**
  * Text extraction from uploaded documents, so site search finds words inside them (tender §4.12).
  *
- * When a document is uploaded its text is extracted once and stored in attachment meta:
- *   _tmc_doc_text         plain UTF-8 text (capped at TMC_DOC_TEXT_MAX characters)
- *   _tmc_doc_text_method  how it was extracted: pdftotext | basic | docx | xlsx | pptx | odf | text | none
- *   _tmc_doc_text_at      Unix time of the extraction
+ * When a document is uploaded its text is extracted once and stored:
+ *   {prefix}tmc_document_text  one row per attachment: plain UTF-8 text (capped at TMC_DOC_TEXT_MAX
+ *                              characters), method, time. A table rather than post meta, so large texts
+ *                              are never loaded into the meta cache whenever an attachment is used.
+ *   _tmc_doc_text_method       attachment meta: pdftotext | basic | docx | xlsx | pptx | odf | text | none | failed | missing
+ *   _tmc_doc_text_chars        attachment meta: number of characters extracted
  *
  * PDFs: pdftotext (poppler-utils, installed in the WordPress image) is used when it is available.
  * Otherwise (e.g. WP-CLI containers) a small built-in reader handles PDFs with simple text encoding
@@ -21,6 +23,53 @@ const TMC_DOC_TEXT_MAX       = 300000;   // characters kept per document
 const TMC_DOC_FILE_MAX       = 67108864; // 64 MB: larger files are not read
 const TMC_DOC_EXTRACT_SECS   = 60;
 const TMC_DOC_PDF_MAX_PAGES  = 500;
+const TMC_DOC_TEXT_DB_VERSION = 1;
+
+function tmc_document_text_table() {
+	global $wpdb;
+	return $wpdb->prefix . 'tmc_document_text';
+}
+
+/** Create/upgrade the extracted-text table of the current site. */
+function tmc_document_text_install() {
+	if ( (int) get_option( 'tmc_doc_text_db_version' ) === TMC_DOC_TEXT_DB_VERSION ) {
+		return;
+	}
+	global $wpdb;
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	$table = tmc_document_text_table();
+	dbDelta(
+		"CREATE TABLE {$table} (
+			post_id bigint(20) unsigned NOT NULL,
+			method varchar(20) NOT NULL DEFAULT '',
+			extracted_at datetime NOT NULL,
+			content mediumtext NOT NULL,
+			PRIMARY KEY  (post_id)
+		) {$wpdb->get_charset_collate()};"
+	);
+	update_option( 'tmc_doc_text_db_version', TMC_DOC_TEXT_DB_VERSION );
+}
+add_action( 'init', 'tmc_document_text_install', 1 );
+
+/** Extracted text of a document ('' if none). */
+function tmc_document_get_text( $attachment_id ) {
+	global $wpdb;
+	if ( (int) get_option( 'tmc_doc_text_db_version' ) !== TMC_DOC_TEXT_DB_VERSION ) {
+		return '';
+	}
+	$table = tmc_document_text_table();
+	return (string) $wpdb->get_var( $wpdb->prepare( "SELECT content FROM {$table} WHERE post_id = %d", $attachment_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+}
+
+add_action(
+	'delete_attachment',
+	function ( $attachment_id ) {
+		global $wpdb;
+		if ( (int) get_option( 'tmc_doc_text_db_version' ) === TMC_DOC_TEXT_DB_VERSION ) {
+			$wpdb->delete( tmc_document_text_table(), array( 'post_id' => (int) $attachment_id ), array( '%d' ) );
+		}
+	}
+);
 
 /** File extension → MIME type of the files treated as documents (not images or media). */
 function tmc_document_mime_types() {
@@ -69,9 +118,20 @@ function tmc_document_extract( $attachment_id ) {
 		return 'missing';
 	}
 	list( $text, $method ) = tmc_document_text_from_file( $file, (string) get_post_mime_type( $attachment_id ) );
-	update_post_meta( $attachment_id, '_tmc_doc_text', wp_slash( $text ) );
+	global $wpdb;
+	tmc_document_text_install();
+	$wpdb->replace(
+		tmc_document_text_table(),
+		array(
+			'post_id'      => (int) $attachment_id,
+			'method'       => $method,
+			'extracted_at' => current_time( 'mysql', true ),
+			'content'      => $text,
+		),
+		array( '%d', '%s', '%s', '%s' )
+	);
 	update_post_meta( $attachment_id, '_tmc_doc_text_method', $method );
-	update_post_meta( $attachment_id, '_tmc_doc_text_at', time() );
+	update_post_meta( $attachment_id, '_tmc_doc_text_chars', mb_strlen( $text ) );
 	return $method;
 }
 
@@ -93,7 +153,11 @@ function tmc_document_text_from_file( $file, $mime ) {
 				return array( tmc_document_normalise_text( $text ), 'pdftotext' );
 			}
 			$text = tmc_document_normalise_text( tmc_pdf_text_basic( $file ) );
-			return array( $text, '' === $text ? 'none' : 'basic' );
+			if ( '' !== $text ) {
+				return array( $text, 'basic' );
+			}
+			// "failed": pdftotext could not read it either (damaged or encrypted) — not retried.
+			return array( '', tmc_pdftotext_binary() ? 'failed' : 'none' );
 		case 'docx':
 			return tmc_document_zip_text( $file, '#^word/(document|header\d*|footer\d*|footnotes)\.xml$#', 'docx' );
 		case 'xlsx':

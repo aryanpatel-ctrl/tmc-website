@@ -220,7 +220,7 @@ function tmc_document_fields( $fields, $post ) {
 		'helps' => 'Date of issue. Used for the year filter. Empty = upload date.',
 	);
 	$method = (string) get_post_meta( $post->ID, '_tmc_doc_text_method', true );
-	$chars  = mb_strlen( (string) get_post_meta( $post->ID, '_tmc_doc_text', true ) );
+	$chars  = (int) get_post_meta( $post->ID, '_tmc_doc_text_chars', true );
 	$fields['tmc_doctext'] = array(
 		'label' => 'Search text',
 		'input' => 'html',

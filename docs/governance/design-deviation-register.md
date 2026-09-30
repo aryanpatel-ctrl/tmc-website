@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-GOV-05 | 0.1 | Open register; maintained from receipt of Annexures A–C until Project Closure and through AMC | R-5-1, R-1-3, R-3-1 to R-3-3, R-7.1-1 |
+| TMC-WEB-GOV-05 | 0.2 | Open register; maintained from receipt of Annexures A–C until Project Closure and through AMC | R-5-1, R-1-3, R-3-1 to R-3-3, R-7.1-1 |
 
 ## 1. Purpose
 
@@ -35,8 +35,8 @@ Deviations are proposed through the [Change Request Procedure](change-request-pr
 | Check | Method |
 |---|---|
 | Design tokens | Colours, fonts, sizes and spacing exist only as tokens in `src/themes/tmc/theme.json`; editors cannot choose custom values (`custom: false`), so pages cannot drift from the tokens |
-| Templates and components | Visual comparison of each template against its Annexure C frame at the defined breakpoints (visual regression in CI, W6) |
-| Behaviour | Component behaviour (menus, accordions, tabs, carousels) checked against Annexure A descriptions in the end-to-end tests (W6) |
+| Templates and components | Visual comparison of each template against its Annexure C frame at the defined breakpoints: visual regression suite `tests/visual/visual.spec.js` in the CI quality gates; its baselines are approved against the Figma design once Annexure C is received ([Quality gates](../testing/quality-gates.md#visual-regression-baselines)) |
+| Behaviour | Component behaviour (menus, accordions, tabs, carousels) checked against Annexure A descriptions in the end-to-end tests (`tests/e2e/`, Chromium, Firefox and WebKit at three widths) |
 | IA | Page tree and menus of each site compared with Annexure B |
 
 ## 4. Register

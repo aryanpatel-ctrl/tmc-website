@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-TRN-01 | 0.1 | Draft for TMC IT approval; participant numbers and dates to be confirmed (EOI query Q-27) | R-4.16-1, R-4.16-2, R-4.16-3, R-2-8, R-8.1-\* |
+| TMC-WEB-TRN-01 | 0.2 | Draft for TMC IT approval; participant numbers and dates to be confirmed (EOI query Q-27) | R-4.16-1, R-4.16-2, R-4.16-3, R-2-8, R-8.1-\* |
 
 ## 1. Requirement
 
@@ -66,7 +66,7 @@ completed by M6 (SOW §7: "training completed").
 | Day 2, 1 | CI/CD pipeline, releases, promotion, rollback | Exercise O-3 |
 | Day 2, 2 | Backups, restore, DR drill with RPO/RTO measurement | Exercise O-4 |
 | Day 2, 3 | Patch management and the licence inventory | Exercise O-5 |
-| Day 2, 4 | Monitoring and daily checks (W7), logs | Exercise O-6 |
+| Day 2, 4 | Monitoring and daily checks (health endpoint `/wp-json/tmc/v1/health`, *Network Admin → Health & Backups*, Uptime Kuma, monthly availability report), logs | Exercise O-6 |
 | Day 3, 1 | Security administration: MFA, admin allow-list, audit log, security events | Exercise O-7 |
 | Day 3, 2 | Incident response: containment, evidence, recovery; CERT-In reporting | Exercise O-8 (table-top) |
 | Day 3, 3 | Secret rotation | Exercise O-9 |

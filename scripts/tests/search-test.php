@@ -197,7 +197,7 @@ for ( $n = 0; $n < 4; $n++ ) {
 }
 $t( 'rate limit per IP: 4th request within the window → 429 (' . implode( ',', $statuses ) . ')', array( 200, 200, 200, 429 ) === $statuses && (int) ( $last->get_headers()['Retry-After'] ?? 0 ) > 0 );
 remove_filter( 'tmc_suggest_rate_limit', $limit );
-delete_transient( 'tmc_rl_suggest_' . md5( $_SERVER['REMOTE_ADDR'] ) );
+tmc_rate_limit_reset( 'suggest' );
 delete_transient( 'tmc_rl_suggest_' . md5( (string) $ip_before ) );
 if ( null === $ip_before ) {
 	unset( $_SERVER['REMOTE_ADDR'] );

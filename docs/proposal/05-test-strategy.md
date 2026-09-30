@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-06 | 0.1 | R-4.14-\*, R-4.9-\*, R-4.10-6, R-7.1-1 (evaluation parameter 8, with 04: 8 marks) |
+| TMC-WEB-PRP-06 | 0.2 | R-4.14-\*, R-4.9-\*, R-4.10-6, R-7.1-1 (evaluation parameter 8, with 04: 8 marks) |
 
 ## 1. Strategy
 
@@ -22,16 +22,16 @@ The detailed plan submitted for TMC approval is the [Test Plan](../testing/test-
 | Level | Coverage | Tooling |
 |---|---|---|
 | Static analysis | PHP 8.3 syntax, JSON, JavaScript, shell, compose configuration | `scripts/lint.sh` |
-| CMS integration tests | Role permissions, unit isolation, review workflow, translation links, audit trail and tamper detection; content types, lifecycle, expiry, listings (43 checks today, growing with each feature) | WP-CLI test suites in `scripts/tests/` |
+| CMS integration tests | Role permissions, unit isolation, review workflow, translation links, audit trail and tamper detection; content types, lifecycle, expiry, listings; search, security, SEO, redirects, analytics, application gateway, editorial platform, importer, health, backup and page cache (14 suites) | WP-CLI test suites in `scripts/tests/` |
 | Smoke tests | Every site, both languages, key pages and listings, error pages, blocked endpoints, no PHP errors | `scripts/smoke-test.sh` + feature checks |
-| End-to-end, cross-browser, responsive | User journeys per template on Chromium, Firefox and WebKit at mobile, tablet and desktop sizes | Playwright |
-| Accessibility | Every template scanned (WCAG 2.2 AA) + manual keyboard, screen-reader, zoom and GIGW checks | axe-core + checklist |
-| Performance | Per template, desktop and mobile, against agreed thresholds | Lighthouse CI |
-| Load and stress | Agreed peak concurrency; failure point | k6 or equivalent |
-| Security | Secret scan, image and dependency scan, DAST baseline; pre-VAPT assessment; CERT-In empanelled VAPT; segregation tests | CI security gate; agency |
-| Links, orphans, HTML validity | Every site | Crawler, W3C validator |
-| Migration verification | Inventory vs imported; redirects | Import and verification reports |
-| Backup/DR | Restore and timed DR drill (RPO 15 min, RTO 1 h) | Drill scripts and record |
+| End-to-end, cross-browser, responsive | User journeys per template on Chromium, Firefox and WebKit at 360, 768 and 1280 px | Playwright (CI quality gates) |
+| Accessibility | Every template scanned (WCAG 2.2 AA) + manual keyboard, screen-reader, zoom and GIGW checks | axe-core (CI quality gates) + checklist |
+| Performance | Per template, desktop and mobile, against agreed thresholds | Lighthouse CI (CI quality gates; [thresholds](../testing/thresholds.md) proposed until TMC agrees them) |
+| Load and stress | Agreed peak concurrency; failure point | k6 (capacity test in CI; load test on UAT) |
+| Security | Secret scan, image and dependency scan, DAST baseline; pre-VAPT assessment; CERT-In empanelled VAPT; segregation tests | CI security gate (gitleaks, Trivy, OWASP ZAP); agency |
+| Links, orphans, HTML validity | Every site | Link and orphan crawler; Nu HTML Checker (W3C validator engine) |
+| Migration verification | Inventory vs imported; redirects | Importer report; link crawl; redirect list |
+| Backup/DR | Restore and timed DR drill (RPO 15 min, RTO 1 h) | `scripts/dr/drill.sh` (CI on every change and monthly) and drill record |
 | UAT | TMC testers per role with approved scripts | Issue tracker with defect form |
 
 ## 3. Quality assurance practices

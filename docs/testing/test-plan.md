@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-TST-01 | 0.1 | Submitted for TMC approval (SOW §4.14); approach presented at M1, detailed plan approved before M3 | R-4.14-1 to R-4.14-6, R-7.1-1, R-4.9-\*, R-4.10-6, R-4.11-3/4, R-4.8-5/7, R-4.15-8 |
+| TMC-WEB-TST-01 | 0.2 | Draft for TMC IT approval (SOW §4.14); approach presented at M1, detailed plan approved before M3 | R-4.14-1 to R-4.14-6, R-7.1-1, R-4.9-\*, R-4.10-6, R-4.11-3/4, R-4.8-5/7, R-4.15-8 |
 
 ## 1. Purpose and approval
 
@@ -17,8 +17,9 @@ This plan defines the scope, levels, environments, entry and exit criteria, defe
 UAT process, the Go-Live acceptance per website and the reports produced. Tests are automated wherever
 possible and run in CI on every change, so the evidence for each Go-Live is reproducible.
 
-**Status markers.** *In place* = implemented in this repository and running in CI; *W1–W7* = delivered by
-the named work stream (tool and report names verified at integration).
+**Status markers.** *In place* = implemented in this repository and running in CI; *External* = performed
+by an external agency or certifying body; *TMC input* = the tooling is in place and the activity waits for
+information or material from TMC.
 
 ## 2. References
 
@@ -39,7 +40,7 @@ the named work stream (tool and report names verified at integration).
 | Content types | Tenders & EOIs, events (list, calendar, `.ics`), careers, departments, doctors (filter), news and notices |
 | CMS workflows | Roles and permissions, draft → review → return/approve → publish/schedule, automatic expiry, revisions, translations |
 | Audit trail | Every administrative event recorded; tamper detection; export |
-| Integrations | Application gateway and front ends (W4), payment hand-off (W4), search with suggestions and documents (W1), maps and social (W4), analytics (W3) |
+| Integrations | Application gateway and front ends, payment hand-off, search with suggestions and documents, maps and social links, analytics |
 | Non-functional | Accessibility, responsiveness, browser compatibility, performance and load, security, backup/restore and DR, HTML validity, links and orphans |
 | Content migration | Completeness, rendering, IA placement, redirects |
 
@@ -55,16 +56,16 @@ the named work stream (tool and report names verified at integration).
 | # | Level / type | What | Tool | When | Status |
 |---|---|---|---|---|---|
 | L1 | Static checks | PHP 8.3 syntax of every file, `theme.json`, JavaScript syntax, shell scripts, compose files | `scripts/lint.sh`, `docker compose config` | Every push (CI job *Lint*) | In place |
-| L2 | Integration tests (CMS) | Permissions per role through the REST API, unit-site isolation, review queue, return with note, resubmission, publishing, Hindi translation links and URLs, audit records and tamper detection (`workflow-test.php`, 20 checks); content types and translation, migration, menus, lifecycle (open/closed, upcoming/past), current and archive listings, notice expiry, the expiry job and its audit records, re-opening, doctor filter, Content Editor permissions on tenders (`content-test.php`, 23 checks); feature suites of W1–W7 | `scripts/run-tests.sh` (WP-CLI against a freshly built network) | Every push (CI job *Integration test*) | In place; extended by each work stream |
+| L2 | Integration tests (CMS) | Permissions per role through the REST API, unit-site isolation, review queue, return with note, resubmission, publishing, Hindi translation links and URLs, audit records and tamper detection (`workflow-test.php`, 20 checks); content types and translation, migration, menus, lifecycle (open/closed, upcoming/past), current and archive listings, notice expiry, the expiry job and its audit records, re-opening, doctor filter, Content Editor permissions on tenders (`content-test.php`, 23 checks); feature suites `search-test.php`, `security-test.php`, `seo-test.php`, `redirects-test.php`, `analytics-test.php`, `apps-test.php`, `editorial-test.php`, `import-test.php`, `health-test.php`, `backup-test.php`, `perf-test.php`, `quality-gates-test.php` | `scripts/run-tests.sh` (WP-CLI against a freshly built network) | Every push (CI job *Integration test*) | In place |
 | L3 | System smoke test | Every site in both languages, key pages, listings (current and archive), event calendar and `.ics` download, doctor filter, 404, static assets, `xmlrpc.php` blocked, no PHP errors in any page | `scripts/smoke-test.sh` + `scripts/smoke.d/*.sh` | Every push; after every deployment | In place |
-| L4 | End-to-end, cross-browser and cross-device | User journeys per template; Chromium, Firefox, WebKit; mobile, tablet, desktop breakpoints | Playwright (W6) | Every push to `main`; before each Go-Live | W6 |
-| L5 | Accessibility | Automated scan of every template (both languages) + manual checks (keyboard, screen reader NVDA/TalkBack, zoom 200 %, contrast, GIGW checklist) | axe-core (W6) + manual checklist | Every release; manual before each Go-Live | W6 |
-| L6 | Performance | Per template, desktop and mobile | Lighthouse CI (W6) | Every release | W6 |
-| L7 | Load and stress | Peak concurrent users agreed with TMC; stress to failure point | k6 or equivalent (W6/W7) | Before each Go-Live; annually | W6/W7 |
-| L8 | Security | Secret scan, image and dependency scan, DAST baseline (every release); internal pre-assessment; **VAPT by a CERT-In empanelled agency** before each Go-Live; segregation tests S-1 to S-6 | CI security gate (W2); agency tools | Every release; before Go-Live; annually | W2 / agency |
-| L9 | Links, orphans, HTML validity | Crawl of every site; broken links; pages not reachable from navigation/sitemap; W3C validation | Crawler + validator (W6) | Every release; before Go-Live (clean report) | W6 |
-| L10 | Migration verification | Inventory vs imported items; rendering; placement; redirects for old URLs | Import reports (W3), verification report (W6) | Each migration run | W3/W6 |
-| L11 | Backup, restore and DR | Restore of the latest backup; timed DR drill (RPO 15 min, RTO 1 h) | Scripts and drill record (W7) | Before Go-Live; quarterly | W7 |
+| L4 | End-to-end, cross-browser and cross-device | User journeys per template; Chromium, Firefox, WebKit; mobile, tablet, desktop breakpoints | Playwright 1.63.0 (`tests/e2e/`; Chromium, Firefox, WebKit at 360, 768 and 1280 px) | Every push and pull request (CI job *Quality gates*); before each Go-Live | In place |
+| L5 | Accessibility | Automated scan of every template (both languages) + manual checks (keyboard, screen reader NVDA/TalkBack, zoom 200 %, contrast, GIGW checklist) | axe-core 4.13.0 (`tests/a11y/`) + manual checklist | Every push; manual before each Go-Live | In place (automated); manual checks before each Go-Live |
+| L6 | Performance | Per template, desktop and mobile | Lighthouse CI 0.15.1 (`tests/lighthouse/`, budgets in [thresholds](thresholds.md)) | Every push | In place; thresholds are proposed until TMC agrees them (TMC input, Q-07) |
+| L7 | Load and stress | Peak concurrent users agreed with TMC; stress to failure point | k6 2.3.0: capacity test on every push (`.github/workflows/capacity.yml`, page cache and search) and UAT load test (`.github/workflows/load-test.yml`, manual; profiles smoke, average, peak, stress) | Before each Go-Live; annually | In place; peak concurrency to be agreed with TMC (TMC input, Q-07) |
+| L8 | Security | Secret scan, image and dependency scan, DAST baseline (every release); internal pre-assessment; **VAPT by a CERT-In empanelled agency** before each Go-Live; segregation tests S-1 to S-6 | CI security gate (`.github/workflows/security.yml`: gitleaks, Trivy, OWASP ZAP baseline); [Pre-VAPT checklist](../security/pre-vapt-checklist.md); agency tools | Every push; before Go-Live; annually | In place (CI gate); VAPT: External (CERT-In empanelled agency), not yet performed |
+| L9 | Links, orphans, HTML validity | Crawl of every site; broken links; pages not reachable from navigation/sitemap; W3C validation | `tests/links/crawl.js` + Nu HTML Checker (`tests/html/`) | Every push; before Go-Live (clean report) | In place |
+| L10 | Migration verification | Inventory vs imported items; rendering; placement; redirects for old URLs | Importer report (`scripts/import/import-inventory.php report=…`), link and orphan crawl, redirect list (*Tools → Redirects*) | Each migration run | In place (tooling); runs once TMC supplies the approved content (TMC input) |
+| L11 | Backup, restore and DR | Restore of the latest backup; timed DR drill (RPO 15 min, RTO 1 h) | `scripts/dr/drill.sh` (CI `.github/workflows/dr-drill.yml` on every push and monthly) and the drill record | Before Go-Live; quarterly | In place (drill against the CI stack); drill on the Production/DR hosts once TMC provides them |
 | L12 | User acceptance testing | TMC testers execute UAT scripts per role | UAT on the UAT environment | Before each Go-Live (§8) | Process in this plan |
 
 Traceability: every requirement in the [RTM](../requirements/RTM.md) names its verification; the test
@@ -75,7 +76,7 @@ report of each release lists the suites run and their results.
 | Environment | Used for | Data | Accounts |
 |---|---|---|---|
 | Development | Developer testing | Seeded sample data | Local |
-| CI (GitHub-hosted, rebuilt per run) | L1–L3 on every push; L4–L6, L8–L9 per work stream | Seeded sample data only | Demo accounts created by `scripts/create-demo-users.sh` (one per role) |
+| CI (GitHub-hosted, rebuilt per run) | L1–L3 on every push; L4–L6, L8 (CI gate), L9 and L11 (drill) on every push, each on its own freshly built stack | Seeded sample data only | Demo accounts created by `scripts/create-demo-users.sh` (one per role) |
 | UAT | L4–L7, L9–L12, VAPT (unless TMC directs Production-equivalent) | Sample data + TMC test and migrated content | Training/UAT accounts per tester and role |
 | Production | Post-deployment smoke test; post-Go-Live link scan; annual VAPT as agreed | Live | Named accounts only |
 | DR | L11 drills | Restored backups | As Production |
@@ -186,11 +187,11 @@ acceptance report*, artifact `quality-reports`; see [quality gates](quality-gate
 
 | # | SOW §7.1 criterion | Evidence | Produced by |
 |---|---|---|---|
-| 1 | Full conformance with the approved design system and IA, no unapproved variants | Visual comparison against Annexure C per template; design deviation register with TMC approvals only | W6 visual regression; [Design Deviation Register](../governance/design-deviation-register.md) |
-| 2 | Zero broken links and no orphaned pages (automated scan) | Link and orphan report of the site: 0 / 0 | W6 crawler |
-| 3 | WCAG 2.2 Level AA | Automated scan of every template: 0 violations; manual checklist signed | W6 + manual (L5) |
-| 4 | Responsive across breakpoints; current major browsers | End-to-end results on Chromium, Firefox, WebKit at mobile/tablet/desktop | W6 (L4) |
-| 5 | Performance thresholds met for every template in use | Lighthouse report per template, desktop and mobile | W6 (L6) |
+| 1 | Full conformance with the approved design system and IA, no unapproved variants | Visual comparison against Annexure C per template; design deviation register with TMC approvals only | Visual regression suite (`tests/visual/`; baselines approved once Annexure C is received); [Design Deviation Register](../governance/design-deviation-register.md) |
+| 2 | Zero broken links and no orphaned pages (automated scan) | Link and orphan report of the site: 0 / 0 | Link crawler (`tests/links/crawl.js`) |
+| 3 | WCAG 2.2 Level AA | Automated scan of every template: 0 violations; manual checklist signed | axe-core gate + manual (L5) |
+| 4 | Responsive across breakpoints; current major browsers | End-to-end results on Chromium, Firefox, WebKit at mobile/tablet/desktop | Playwright E2E gate (L4) |
+| 5 | Performance thresholds met for every template in use | Lighthouse report per template, desktop and mobile | Lighthouse gate (L6) |
 | 6 | VAPT completed and all observations closed; segregation evidence accepted | VAPT report + closure report; segregation tests S-1 to S-6 | Agency; [Observation Remediation](../operations/security-observation-remediation.md); [Security Architecture §3.1](../architecture/security-architecture.md#31-segregation-validation-test-performed-at-m2-and-before-each-go-live) |
 | 7 | Safe-to-Host obtained; STQC obtained or under process as applicable | Certificates / application acknowledgement | Vendor (certifying bodies) |
 | 8 | Content migration completed and confirmed by TMC and the unit | Signed post-migration confirmation | [Content Migration Coordination §6](../operations/content-migration-coordination.md#6-post-migration-confirmation-one-per-website) |
@@ -253,12 +254,12 @@ report is signed by the Vendor QA engineer and accepted by TMC IT.
 |---|---|---|
 | Test plan (this document) and UAT scripts | M1 (approach), before M3 (detailed) | This repository |
 | CI run report (lint, suites, smoke) | Every push | GitHub Actions run summary and logs |
-| Accessibility, cross-browser, performance, link/orphan, HTML validity reports | Every release; Go-Live evidence | W6 CI artefacts |
-| Security gate report; pre-VAPT readiness report | Every release; before VAPT | W2 CI artefacts |
+| Accessibility, cross-browser, performance, link/orphan, HTML validity reports | Every release; Go-Live evidence | CI artifacts `quality-reports` (with the Go-Live acceptance report) and `quality-<gate>` |
+| Security gate report; pre-VAPT readiness report | Every release; before VAPT | CI artifacts `security-secrets-report`, `security-image-reports`, `security-dast-reports`; [Pre-VAPT checklist](../security/pre-vapt-checklist.md) |
 | VAPT report and closure report; Safe-to-Host; STQC | Before Go-Live; M6; annually | Agency / certifying body |
-| Load test report | Before Go-Live | W6/W7 |
-| DR drill record | Before Go-Live; quarterly | W7, [Backup and Restoration §6](../operations/backup-restore.md#6-disaster-recovery-drill-record) |
-| Migration verification and redirect reports | Each migration | W3/W6 |
+| Load test report | Before Go-Live | CI artifacts `capacity-report` (every push) and `quality-load` (UAT load test) |
+| DR drill record | Before Go-Live; quarterly | CI artifact `dr-drill-report`; [Backup and Restoration §6](../operations/backup-restore.md#6-disaster-recovery-drill-record) |
+| Migration verification and redirect reports | Each migration | Importer `report.csv`; link crawl; redirect export from *Tools → Redirects* |
 | UAT status and sign-off; defect closure report | Daily during UAT; each Go-Live | §8, §10.3 |
 
 Generated reports are stored with the release, not committed to the repository.
@@ -280,7 +281,7 @@ Generated reports are stored with the release, not committed to the repository.
 |---|---|---|
 | 1 | Performance thresholds and peak load not yet defined (Q-07) | Proposed thresholds (§6.2) measured from the start; confirmed at M2 |
 | 2 | Annexures A–C arrive late | Tests are template-driven; visual baselines captured when designs arrive |
-| 3 | TMC application APIs not available for integration testing | Contract-based mock endpoints in UAT (W4); live test once TMC provides endpoints |
+| 3 | TMC application APIs not available for integration testing | Contract-based demonstration back end (`tmc-apps-mock`) in CI and UAT, exercised by `apps-test.php` and `scripts/smoke.d/apps.sh`; live test once TMC provides the endpoints |
 | 4 | Tester availability at units during UAT | UAT schedule agreed with unit coordinators at M3; online UAT sessions |
 | 5 | VAPT agency lead time | Agency engaged at M3; internal pre-assessment each release reduces findings |
 

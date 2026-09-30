@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-OPS-02 | 0.1 | Draft; variables of parallel work streams to be added at integration | R-4.15-3, R-8.2-4 |
+| TMC-WEB-OPS-02 | 0.2 | Draft for TMC IT approval | R-4.15-3, R-8.2-4 |
 
 Every setting of the ecosystem, where it is defined and how to change it. Live credential values are
 never written in this document; they are handed over to TMC separately and securely (SOW §8.2).
@@ -58,7 +58,8 @@ All optional: unset or empty means the default shown. They are passed to the con
 | `TMC_SUGGEST_RATE_LIMIT` | `120` | Search suggestions per minute per IP address |
 | `TMC_MATOMO_URL` | empty | Matomo address (overrides the network setting; analytics stay off until configured) |
 | `TMC_DEMO` / `TMC_APPS_MOCK_KEY` | `1` + generated key on local, CI and UAT; `0` on production | Demonstration data and the DEMO application mock |
-| `TMC_APP_<SERVICE>_KEY` | the mock key in demo environments | API key of each registered TMC application service ([gateway](../integration/gateway.md)) |
+| `TMC_APP_<SERVICE>_KEY` (`TMC_APP_APPOINTMENTS_KEY`, `TMC_APP_RESULTS_KEY`, `TMC_APP_FORMS_KEY`, `TMC_APP_PAYMENTS_KEY`) | the mock key in demo environments | API key of each registered TMC application service ([gateway](../integration/gateway.md)) |
+| `TMC_PDFTOTEXT` | unset (`/usr/bin/pdftotext`, `/usr/local/bin/pdftotext`) | Path of the `pdftotext` program used to index the text of PDF documents for search ([search and documents](../features/search-and-documents.md)) |
 | `TMC_WP_ENVIRONMENT` | `staging`; `production` on production | Sets `WP_ENVIRONMENT_TYPE` (robots, sitemaps, search-engine visibility) |
 | `TMC_OFFSITE_TARGET`, `TMC_OFFSITE_SSH_KEY`, `TMC_OFFSITE_KNOWN_HOSTS`, `TMC_OFFSITE_PORT`, `TMC_OFFSITE_BWLIMIT`, `TMC_OFFSITE_PRUNE` | unset | Off-host backup copy ([backup and DR](backup-and-dr.md)) |
 | `TMC_BACKUP_INTERVAL_MINUTES`, `TMC_BACKUP_KEEP_RECENT_HOURS`, `TMC_BACKUP_KEEP_DAILY_DAYS`, `TMC_BACKUP_KEEP_MONTHLY_MONTHS` | `15`, `48`, `30`, `12` | Backup schedule and retention |
@@ -74,12 +75,15 @@ Outbound mail through a TMC SMTP relay is not configured in this release (EOI qu
 |---|---|
 | `db` | `mariadb:11.4.13`; `--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max-allowed-packet=64M`; volume `db_data`; network `tmc_internal`; health check `healthcheck.sh --connect --innodb_initialized` every 10 s |
 | `redis` | `valkey/valkey:8.1.10-alpine` (Redis-compatible, BSD-3-Clause); `valkey-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""` (no persistence); network `tmc_internal` |
-| `wordpress` | Built from `./wordpress` as `tmc-wordpress:latest`; depends on healthy `db`; environment `*wp-env`; volumes `wp_html`, `src/mu-plugins` (ro), `src/themes/tmc` (ro); networks `tmc_internal`, `tmc_edge` |
-| `wpcli` | `wordpress:cli-php8.3`, user `33:33`, profile `tools` (not started by `up`); mounts `scripts/` read-only at `/tmc-scripts` |
-| `cron` | `wordpress:cli-php8.3`, user `33:33`; loop: for each site `wp cron event run --due-now`, then `sleep 60`; network `tmc_internal` only |
+| `wordpress` | Built from `./wordpress` as `tmc-wordpress:latest`; depends on healthy `db`; environment `*wp-env`; volumes `wp_html`, `src/mu-plugins` (ro), `src/themes/tmc` (ro); networks `tmc_internal`, `tmc_edge`, `tmc_apps` |
+| `wpcli` | `wordpress:cli-2.12.0-php8.3`, user `33:33`, profile `tools` (not started by `up`); mounts `scripts/` read-only at `/tmc-scripts`; networks `tmc_internal`, `tmc_edge`, `tmc_apps` |
+| `cron` | `wordpress:cli-2.12.0-php8.3`, user `33:33`; loop: for each site `wp cron event run --due-now`, then `sleep 60`; network `tmc_internal` only |
+| `tmc-apps-mock` | Demonstration only: `php:8.3.35-cli-alpine` stand-in for TMC's application back ends (appointments, results, online forms, payments); read-only, unprivileged user, network `tmc_apps` only; answers only requests carrying `TMC_APPS_MOCK_KEY`; not started on production (`compose.prod.yml`) |
+| `backup` | Built from `./backup` as `tmc-backup:latest`; scheduled backups every `TMC_BACKUP_INTERVAL_MINUTES` with retention; volumes `wp_html` (read-only) and `backup_data`; network `tmc_internal` only; health check `tmc-backup health` ([backup and DR](backup-and-dr.md)) |
 
-Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with internet). Volumes:
-`db_data`, `wp_html`.
+Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with internet), `tmc_apps`
+(`internal: true`; WordPress to TMC application back ends only). Volumes: `db_data`, `wp_html`,
+`backup_data`.
 
 ### 2.2 WordPress constants (`WORDPRESS_CONFIG_EXTRA`)
 
@@ -102,7 +106,7 @@ Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with int
 | File | Setting |
 |---|---|
 | `compose.local.yml` | `wordpress.ports: 127.0.0.1:80:80` |
-| `compose.server.yml` | `wordpress.networks: [tmc_internal, tmc_edge, homelab]`; external network `homelab` |
+| `compose.server.yml` | `wordpress.networks: [tmc_internal, tmc_edge, tmc_apps, homelab]`; external network `homelab` |
 | `compose.prod.yml` | Production / real failover: project `tmc-prod`, own container names, WordPress on `127.0.0.1:${TMC_HTTP_PORT:-8080}`, DEMO mock not started |
 | `compose.dr.yml` | DR drill: project `tmc-dr`, own container names, no published ports |
 
@@ -136,7 +140,8 @@ Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with int
 | Permalinks | `/%postname%/` | `install-network.sh` |
 | Search-engine visibility (`blog_public`) | `1` on production (`WP_ENVIRONMENT_TYPE=production`), `0` everywhere else | `install-network.sh` |
 | Active theme | `tmc` (network-enabled) | `setup.sh` |
-| Plugin | Polylang `3.8.10`, network-active | `setup.sh` (`POLYLANG_VERSION`) |
+| Plugins | Polylang `3.8.10`, Two Factor `0.17.0`, network-active | `setup.sh` (`POLYLANG_VERSION`, `TWO_FACTOR_VERSION`) |
+| Plugin | Redis Object Cache `3.0.0`, network-active | `setup-cache.sh` (`REDIS_CACHE_VERSION`) |
 | Language packs | `hi_IN`, `en_GB` (core and plugins) | `setup.sh` |
 | Languages | English `en` (`en_GB`, default, no URL prefix), Hindi `hi` (`hi_IN`, `/hi/`) | `setup-languages.php` |
 | Polylang options | `force_lang=1` (language from directory), `hide_default=true`, `rewrite=true`, `browser=false`, `redirect_lang=true`, `media_support=false` | `setup-languages.php` |
@@ -165,6 +170,11 @@ Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with int
 | Site title and tagline | *Settings → General* (audited) | Site Administrator |
 | Users and roles | *Users* (site) / *Network Admin → Users* | Site Administrator / Super Admin |
 | Upload file types and maximum size (network) | *Network Admin → Settings* (audited) | Super Admin |
+| Redirects (301/410) of a site, bulk import, hit log | *Tools → Redirects* | Site Administrator |
+| Web analytics provider (none, Matomo or GA4), per-site analytics IDs, search-console verification tokens, default social-sharing image | *Network Admin → Settings → Analytics & Search* | Super Admin |
+| TMC application services (gateway endpoints, enabled actions) | *Network Admin → Settings → TMC applications* | Super Admin |
+| Documents and media of all sites (overview, PDF text indexing status) | *Network Admin → Media & documents* | Super Admin |
+| Health checks, recent backups, page-cache purge | *Network Admin → Health & Backups* | Super Admin |
 
 ## 5. Changing the base domain
 

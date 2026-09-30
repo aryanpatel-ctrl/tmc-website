@@ -2,13 +2,16 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-OPS-05 | 0.1 | Draft for TMC IT approval | R-6-3, R-6-2, R-4.8-5, R-6-4 |
+| TMC-WEB-OPS-05 | 0.2 | Draft for TMC IT approval | R-6-3, R-6-2, R-4.8-5, R-6-4 |
 
 SOW §6.2 requires "upgrades of the CMS core, modules, plugins, frameworks, and databases through the AMC
 period, with security patches applied within the timelines specified in Section 6.4", and SOW §6.4 sets
 "Security patch application: within 30 days of release; critical patches on priority". SOW §4.8 requires
 that "all releases shall be subject to vulnerability assessment before promotion to production". This
 procedure states how every component is kept current and how a patch reaches Production.
+
+> **Scope.** Formal procedure and policy (roles, deadlines, approvals, records). How updates are detected
+> and applied technically (Dependabot, update checks, pinned versions) is in [patching.md](patching.md).
 
 ---
 
@@ -129,13 +132,12 @@ support report and the quarterly review.
 
 ## 8. Observations on the current baseline
 
-These points were identified while writing this procedure from the repository. They are tracked as
-follow-up items for the integrator and the owning work streams and are listed so that TMC has a complete
-picture.
+These points were identified while writing this procedure from the repository. All four have been
+resolved in the delivered code; they are kept here so that TMC has a complete picture of the baseline.
 
 | # | Observation | Consequence | Proposed action | Owner |
 |---|---|---|---|---|
-| O-1 | *Resolved at integration:* core minor updates could not install themselves (the `cron` container has no internet access and the core files persist in `wp_html`). `setup.sh` now brings WordPress core to the release pinned by the image tag in `wordpress/Dockerfile` (`wp core update --version=…` and a network database upgrade), so a core update is a normal release through Dependabot, CI and UAT. | — | — | Integrator |
-| O-2 | *Resolved at integration:* `setup.sh` now compares the installed Polylang, Two Factor and Redis Object Cache versions with the pinned ones and reinstalls (`--force`) when they differ. | — | — | Integrator |
-| O-3 | *Resolved at integration:* every image is pinned to an exact release (`wordpress:7.1.2-php8.3-apache`, `mariadb:11.4.13`, `valkey/valkey:8.1.10-alpine`, `wordpress:cli-2.12.0-php8.3`, `php:8.3.35-cli-alpine`), and phpredis to 6.3.0. Dependabot proposes updates. Digest pinning remains optional. | — | — | Integrator |
-| O-4 | *Resolved at integration:* `redis:7-alpine` (Redis 7.4.x, RSALv2/SSPLv1, not OSI-approved) was replaced by `valkey/valkey:8.1.10-alpine` (BSD-3-Clause, protocol-compatible; the service keeps the name `redis`, so `WP_REDIS_HOST` is unchanged). | — | — | Integrator |
+| O-1 | *Resolved:* core minor updates could not install themselves (the `cron` container has no internet access and the core files persist in `wp_html`). `setup.sh` now brings WordPress core to the release pinned by the image tag in `wordpress/Dockerfile` (`wp core update --version=…` and a network database upgrade), so a core update is a normal release through Dependabot, CI and UAT. | — | — | Vendor |
+| O-2 | *Resolved:* `setup.sh` now compares the installed Polylang, Two Factor and Redis Object Cache versions with the pinned ones and reinstalls (`--force`) when they differ. | — | — | Vendor |
+| O-3 | *Resolved:* every image is pinned to an exact release (`wordpress:7.1.2-php8.3-apache`, `mariadb:11.4.13`, `valkey/valkey:8.1.10-alpine`, `wordpress:cli-2.12.0-php8.3`, `php:8.3.35-cli-alpine`), and phpredis to 6.3.0. Dependabot proposes updates. Digest pinning remains optional. | — | — | Vendor |
+| O-4 | *Resolved:* `redis:7-alpine` (Redis 7.4.x, RSALv2/SSPLv1, not OSI-approved) was replaced by `valkey/valkey:8.1.10-alpine` (BSD-3-Clause, protocol-compatible; the service keeps the name `redis`, so `WP_REDIS_HOST` is unchanged). | — | — | Vendor |

@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-DOC-00 | 0.1 | Draft | R-4.15-1 to R-4.15-9, R-8.2-6, R-2-8 |
+| TMC-WEB-DOC-00 | 0.2 | Draft for TMC IT approval | R-4.15-1 to R-4.15-9, R-8.2-6, R-2-8 |
 
 This register lists every document of the TMC Website Ecosystem (EOI No. TMH/TMH/2026-27/CAP/EO/0009),
 its document ID, and the requirements of the [Requirements Traceability Matrix](requirements/RTM.md) that
@@ -17,7 +17,6 @@ portable (PDF) sets handed over to TMC are generated from them (section 4).
 | **Version / Status** | 0.x = draft; 1.0 = approved by TMC IT for the milestone at which it is due. Each release updates the version of every document it changes (SOW §4.15) |
 | **[BIDDER TO FILL]** | Company particulars (names, experience, certificates, contacts) to be completed by the bidder with facts that can be evidenced. No such fact is asserted anywhere in these documents |
 | **[TMC TO FILL] / [TMC TO CONFIRM]** | Information or a decision that only TMC can provide (contacts, business hours, DR location and similar); related EOI queries are numbered Q-nn in the [queries letter](eoi/queries-letter.md) |
-| **Verify at integration** | No longer used: every such statement was confirmed against the integrated code (branch `feat/integration`) and replaced by the actual routes, settings and variable names |
 | **Sample / demonstration data** | Content seeded on development and UAT environments is labelled as sample data in the content itself and flagged `_tmc_sample = 1` for removal before Go-Live. It is not information about TMC |
 
 ## 2. Register

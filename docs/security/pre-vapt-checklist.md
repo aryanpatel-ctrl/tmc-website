@@ -17,7 +17,7 @@ Release candidate: `__________` (git tag / commit) · Environment: `__________` 
 | 1.2 | Security gate green: gitleaks, Trivy (no fixable CRITICAL), ZAP baseline (no FAIL rule) | Built | Artifacts `security-secrets-report`, `security-image-reports`, `security-dast-reports` |
 | 1.3 | Every WARN in the ZAP report is either in the accepted list (`security/zap-baseline.conf`, `docs/security/owasp-top10.md`) or has a fix/ticket | Built (review each release) | ZAP HTML report, reviewer's notes |
 | 1.4 | HIGH vulnerabilities in `trivy-image-high-critical.txt` reviewed; rebuild on the latest patched base image | Ops | Trivy report |
-| 1.5 | `security-test.php` passed in full (about 125 checks) | Built | CI log |
+| 1.5 | `scripts/tests/security-test.php` passed in full (127 checks) | Built | CI log |
 | 1.6 | OWASP Top 10 mapping reviewed for changes since the last test | Built | `docs/security/owasp-top10.md` |
 
 ## 2. Hosting and network
@@ -66,7 +66,7 @@ Release candidate: `__________` (git tag / commit) · Environment: `__________` 
 | 5.2 | Admin area reachable only from the allow-list; public `admin-ajax.php`/`admin-post.php` still work for visitors | Built | `security-test.php` section 1; smoke |
 | 5.3 | No patient or clinical data in the CMS, forms or uploads | TMC / Ops | Content review |
 | 5.4 | Uploaded documents are public by design; nothing confidential in the media library | TMC | Content review |
-| 5.5 | Database backups encrypted and access-controlled | Pending (W7) | Backup/DR workstream |
+| 5.5 | Database backups encrypted and access-controlled | Built / Ops | Built: owner-only files (`0700`/`0600`), `backup` service on the internal network only, off-host copy over SSH with a restricted key (`backup/tmc-backup.sh`, `scripts/backup/offsite-copy.sh`). Ops: encrypted disks/volumes on the host and the off-host target ([Backup and DR](../operations/backup-and-dr.md)) |
 
 ## 6. Logging and monitoring
 
@@ -74,8 +74,8 @@ Release candidate: `__________` (git tag / commit) · Environment: `__________` 
 |---|---|---|---|
 | 6.1 | Audit log intact (Network Admin → Audit Log → Verify integrity) | Built | Screenshot of the result |
 | 6.2 | Security events present: `login_failed`, `login_lockout`, `admin_access_blocked`, `mfa_*` | Built | Audit log filter / CSV export |
-| 6.3 | Container logs forwarded to TMC's log store; alerts on lockouts, blocked admin access and MFA removal | Pending (Ops) | Monitoring setup |
-| 6.4 | Log retention period agreed and documented | Pending (W8, R-4.8-4) | Retention policy document |
+| 6.3 | Container logs forwarded to TMC's log store; alerts on lockouts, blocked admin access and MFA removal | Ops / TMC | To be set up on the production host; TMC provides the central log store. The events themselves are recorded in the audit log (item 6.2) |
+| 6.4 | Log retention period agreed and documented | Built / TMC | Documented in the [Audit Log Retention Policy](../architecture/audit-log-retention-policy.md) (R-4.8-4); periods to be confirmed by TMC (EOI query Q-25) |
 
 ## 7. Information for the VAPT agency
 

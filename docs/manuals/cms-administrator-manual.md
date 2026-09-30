@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-MAN-01 | 0.1 | Draft; screens of parallel work streams confirmed at integration | R-4.15-6, R-8.2-6, R-4.16-2, R-4.6-\*, R-4.13-2, R-2-10 |
+| TMC-WEB-MAN-01 | 0.2 | Draft for TMC IT approval | R-4.15-6, R-8.2-6, R-4.16-2, R-4.6-\*, R-4.13-2, R-2-10 |
 
 **Audience.** TMC IT officers who hold the **Super Admin** role (whole network) and unit **Site
 Administrators** (one website). Content editing itself is covered by the
@@ -126,6 +126,10 @@ list. The result goes into the
 | Contact details and social media links | *Appearance → Customize → TMC contact details* | Address, phone, e-mail; Facebook, X, YouTube, Instagram, LinkedIn URLs. Shown in the footer and contact areas. |
 | Hindi version of the address | *Languages → Translations*, group "TMC contact details" | Enter the Hindi text and save. |
 | Menus | *Appearance → Menus* | See §5.1. |
+| Redirects from old addresses (301) and withdrawn pages (410) | *Tools → Redirects* | Add, edit, search, CSV import and export; the hit counter shows which old addresses are still used. Every change is logged. Details: [SEO, redirects and analytics](../seo/seo-redirects-analytics.md). |
+| Web analytics and search-console verification (network) | *Network Admin → Settings → Analytics & Search* (Super Admin) | Provider (none, self-hosted Matomo or GA4), per-site IDs and verification tokens, default social-sharing image. Off until configured; the choice of tool is TMC's (EOI query Q-15). |
+| TMC application services (network) | *Network Admin → Settings → TMC applications* (Super Admin) | Registry of the approved application endpoints used by the online-service pages; API keys are never entered here (they come from the server environment). See the [gateway specification](../integration/gateway.md). |
+| Health and backups (network) | *Network Admin → Health & Backups* (Super Admin) | Current health checks, recent backups and off-host copies, and a button to purge the page cache. |
 
 ### 5.1 Menus
 
@@ -154,8 +158,14 @@ language with the switcher; the browser language is not used to redirect.
 ### 6.2 Translating fixed interface text
 
 Interface text of the theme (buttons, headings of listings, accessibility bar) is translated in code
-(`src/themes/tmc/languages/`). Site-specific strings registered with Polylang (e.g. the address) are
-translated in *Languages → Translations*.
+(`src/themes/tmc/languages/hi_IN.l10n.php`). Site-specific strings registered with Polylang (e.g. the
+address) are translated in *Languages → Translations*.
+
+**Pending:** the Hindi file covers the core interface (header, footer, accessibility bar, navigation and
+listings). Interface text added with the later features (search facets and suggestions, document
+library, application front ends, component library, share links and similar) still appears in English
+on Hindi pages. The Vendor adds the Hindi translations to this file through a normal release before the
+Go-Live of each website; TMC approves the Hindi wording (SOW §4.13).
 
 ### 6.3 Adding a third or fourth language (SOW §4.13)
 

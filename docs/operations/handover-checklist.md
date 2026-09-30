@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-OPS-08 | 0.1 | Template: completed at Project Closure (M6) and again at the end of the AMC | R-8.2-1 to R-8.2-8, R-2-9, R-13-1 to R-13-3, R-4.15-9 |
+| TMC-WEB-OPS-08 | 0.2 | Template: completed at Project Closure (M6) and again at the end of the AMC | R-8.2-1 to R-8.2-8, R-2-9, R-13-1 to R-13-3, R-4.15-9 |
 
 SOW §8.2: "At Project Closure, and again at the conclusion of the AMC period, the Vendor shall carry out a
 complete handover to TMC … Handover shall be treated as complete only upon written acceptance by TMC IT,
@@ -62,8 +62,8 @@ receipt.
 | C2 | Configuration backup passphrase | | | |
 | C3 | Repository organisation owner rights | | | — |
 | C4 | CI/CD runner registration (re-register the runner under TMC's account) | | | |
-| C5 | Monitoring, backup storage and log store accounts (W7) | | | |
-| C6 | Integration credentials for TMC application endpoints (W4) — normally TMC-held already | | | |
+| C5 | Monitoring (uptime monitor), off-host backup target (`TMC_OFFSITE_*` SSH key) and log store accounts | | | |
+| C6 | Integration credentials for TMC application endpoints (`TMC_APP_<SERVICE>_KEY` of the application gateway) — normally TMC-held already | | | |
 | C7 | Certificates and keys (TLS) — normally TMC-held already | | | |
 
 ## Part D: Vendor exit (access removal)

@@ -34,6 +34,14 @@ if [ "${TMC_ENV:-}" != "$want_env" ]; then
   echo "Refusing: deploy target '$TARGET' needs TMC_ENV=$want_env in $DEST/.env (found '${TMC_ENV:-unset}')" >&2
   exit 1
 fi
+# UAT .env files created before the application gateway get its demo settings once (the key is
+# generated here and never printed). Production never runs the demo backend.
+if [ "$TARGET" = uat ] && ! grep -q '^TMC_APPS_MOCK_KEY=' .env; then
+  printf '\n# Application gateway demo backend (added by deploy.sh; see docs/integration/gateway.md)\nTMC_DEMO=1\nTMC_APPS_MOCK_KEY=%s\n' \
+    "$(openssl rand -base64 64 | tr -dc 'A-Za-z0-9' | head -c 40)" >> .env
+  set -a; . ./.env; set +a
+  echo "==> added TMC_DEMO and a generated TMC_APPS_MOCK_KEY to $DEST/.env"
+fi
 echo "==> deploying $SHA to $TARGET ($TMC_BASE_DOMAIN, $DEST)"
 
 echo "==> [1/6] backup"

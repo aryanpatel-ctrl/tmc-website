@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-05 | 0.1 | R-4.11-1 to R-4.11-5, R-2-4, R-7.1-1 (evaluation parameter 8, with 05: 8 marks) |
+| TMC-WEB-PRP-05 | 0.2 | R-4.11-1 to R-4.11-5, R-2-4, R-7.1-1 (evaluation parameter 8, with 05: 8 marks) |
 
 ## 1. Scope and principles
 
@@ -54,10 +54,10 @@ flowchart LR
 
 | Need | Tool |
 |---|---|
-| Import from inventory (CSV) and files into pages, posts and content types, idempotent re-runs | Migration toolkit on WP-CLI (work stream W3; command names verified at integration) |
+| Import from inventory (CSV) and files into pages, posts and content types, idempotent re-runs | Migration toolkit on WP-CLI: `scripts/import/import-inventory.php` (dry run by default, `mode=apply`, per-row `report=` CSV; [importer guide](../migration/importer.md)); tested by `scripts/tests/import-test.php` |
 | Mapping to templates and fields | Content-type field schema (`tmc_field_schema()`) — the same schema drives the editor, so imported items are indistinguishable from edited ones |
-| Redirects (301/410), bulk import from the old-URL list, hit log | Redirect manager (W3) |
-| Broken links and orphans | Crawler with orphan detection against the sitemap and navigation (W6) |
+| Redirects (301/410), bulk import from the old-URL list, hit log | Redirect manager (*Tools → Redirects*; CSV import/export, hit counter); the importer creates a 301 from every `old_url` |
+| Broken links and orphans | Link crawler `tests/links/crawl.js` with orphan detection against the published-URL inventory (`scripts/published-urls.php`) ([Quality gates](../testing/quality-gates.md#links-and-orphaned-pages)) |
 | Translations | Polylang translation links set by the importer |
 | Evidence | Import and verification reports archived with the release |
 

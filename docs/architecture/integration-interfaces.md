@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-ARC-03 | 0.1 | Draft; W4 details to be confirmed at integration | R-4.15-4, R-4.4-1 to R-4.4-3, R-4.12-1 to R-4.12-5, R-4.10-7 |
+| TMC-WEB-ARC-03 | 0.2 | Draft for TMC IT approval | R-4.15-4, R-4.4-1 to R-4.4-3, R-4.12-1 to R-4.12-5, R-4.10-7 |
 
 This document lists every interface of the website ecosystem: with TMC-developed applications, with
 external services, with operators, and between internal components. It is updated at each release
@@ -29,17 +29,17 @@ external services, with operators, and between internal components. It is update
 | IF-02 | CMS administration (`/wp-admin`, `/wp-login.php`) | Browser → website | HTTPS | Username + password + TOTP MFA (Two Factor 0.17.0, enforced for privileged roles) from allow-listed networks only | In place (`security-test.php`, `smoke.d/security.sh`) |
 | IF-03 | WordPress REST API (`/wp-json/`) used by the block editor | Browser → website | HTTPS + JSON | WordPress cookie + nonce | In place (core) |
 | IF-04 | Event calendar download (`/events/<slug>/?ics=1`) | Browser → website | HTTPS, `text/calendar` (RFC 5545) | None | In place |
-| IF-05 | XML sitemap (`/wp-sitemap.xml`) and HTML sitemap (`/sitemap/`) | Crawlers/browsers → website | HTTPS | None | In place (core + theme); robots per environment in W3 |
+| IF-05 | XML sitemap (`/wp-sitemap.xml`) and HTML sitemap (`/sitemap/`) | Crawlers/browsers → website | HTTPS | None | In place (core + theme); robots per environment (`seo.php`: indexable only when `WP_ENVIRONMENT_TYPE=production`; `seo-test.php`) |
 | IF-06 | Application gateway: TMC application endpoints | Website (server) → TMC API | HTTPS | Per endpoint (API key / mutual TLS / token as TMC specifies); keys only from the environment (`TMC_APP_<SERVICE>_KEY`) | In place: `/wp-json/tmc/v1/apps/<service>/<action>`, registry under *Network Admin → Settings → TMC applications* ([gateway spec](../integration/gateway.md)); tested against the DEMO mock backend |
 | IF-07 | Donation payment hand-off | Browser → TMC-approved payment gateway → return URL | HTTPS redirect / form POST | Gateway-specific signature verification | Hand-off built and tested against the DEMO mock gateway ([gateway spec](../integration/gateway.md)); the real gateway and its signature scheme are TMC inputs |
 | IF-08 | Location maps | Website → browser | Accessible map block (`tmc/location-map`): text address and directions link always; the OpenStreetMap embed loads only when the visitor asks (CSP allows only that frame origin); no API key | None | In place (`apps-test.php`) |
-| IF-09 | Social media | Website → browser | Plain links (per-site Customizer settings) and share links; no embedded third-party scripts | None | Links in place; share links W4 |
+| IF-09 | Social media | Website → browser | Plain links (per-site Customizer settings) and share links on news/notices, events and tenders (platform share pages, e-mail, "Copy link"); no embedded third-party scripts | None | In place (theme `inc/social.php`); the official account URLs are a TMC input |
 | IF-10 | Site search with suggestions (content + documents) | Browser → website | HTTPS; suggestions via `GET /wp-json/tmc/v1/suggest` (rate-limited per IP) | None | In place (`search-test.php`, `smoke.d/search.sh`, E2E keyboard test) |
 | IF-11 | Web analytics and search console | Website → TMC-approved analytics | Self-hosted / India-resident option preferred | Per tool | Built: Matomo (cookieless) or GA4 (consent denied by default), off until configured under *Network Admin → Settings → Analytics & Search*; the choice of tool is an EOI query (Q-15) |
 | IF-12 | Outbound e-mail (workflow notifications) | Website → SMTP relay | SMTP with TLS | Relay credentials | **Not configured**: needs a TMC-provided relay (EOI query Q-23) |
 | IF-13 | Release delivery | GitHub → self-hosted runner → Docker host | HTTPS (runner long-poll) | Runner registration token | In place |
 | IF-14 | Backups | Docker host → backup storage in India | TLS | SSH key (`TMC_OFFSITE_SSH_KEY`) and pinned host key | Built: `scripts/backup/offsite-copy.sh` (rsync over SSH, verified after copy), exercised by the CI DR drill; the India-resident target is a TMC input |
-| IF-15 | Logs | Docker host → central log store | TLS | Agent credentials | TMC infrastructure / W7 |
+| IF-15 | Logs | Docker host → central log store | TLS | Agent credentials | TMC infrastructure: to be connected on the production host to TMC's central log store (180-day retention) |
 | IF-16 | Content import (migration) | Operator → WP-CLI importer | CSV/inventory files | Server shell (MFA) | In place: `scripts/import/import-inventory.php` (WP-CLI `eval-file`), dry run, report CSV ([importer guide](../migration/importer.md)); tested by `import-test.php` |
 
 ## 3. Application gateway (IF-06)
@@ -114,7 +114,8 @@ query Q-09.
 | Departments | `/departments/` | `/hi/departments/` | — |
 | Doctors | `/doctors/` | `/hi/doctors/` | `?department=<id>&name=<text>` filter |
 | News / notices | `/category/news/`, `/category/notices/` | Hindi category slugs | — |
-| Search | `/?s=<terms>` | `/hi/?s=<terms>` | W1 extends with document results and filters |
+| Search | `/?s=<terms>` | `/hi/?s=<terms>` | Results include documents (with PDF text); `&type=<content type>` filter; suggestions from `/wp-json/tmc/v1/suggest` |
+| Documents | `/documents/` | — (English page only in this release; editors can add the **Documents** block to a Hindi page) | `?doc_type=<type>&doc_year=<year>`, `doc_page` for pagination |
 | Sitemap | `/sitemap/` | `/hi/sitemap-hi/` | — |
 
 ## 6. Change history
@@ -122,3 +123,4 @@ query Q-09.
 | Version | Date | Change | Author |
 |---|---|---|---|
 | 0.1 | 29/09/2026 | First draft from repository state | Project team |
+| 0.2 | 30/09/2026 | Aligned with the integrated code: robots per environment, share links, search and document URLs, log interface | Project team |

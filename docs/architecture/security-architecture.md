@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-ARC-02 | 0.1 | Draft: submitted for TMC approval at Milestone M2; re-validated before each Go-Live | R-4.8-1 to R-4.8-9, R-2-6, R-4.4-3, R-4.12-1/2, R-7-2 |
+| TMC-WEB-ARC-02 | 0.2 | Draft for TMC IT approval (Milestone M2); re-validated before each Go-Live | R-4.8-1 to R-4.8-9, R-2-6, R-4.4-3, R-4.12-1/2, R-7-2 |
 
 **Purpose.** SOW §4.8 requires "a security architecture document, describing the segregation approach,
 network and data flows, and access controls, submitted for TMC's approval at Milestone M2 and
@@ -48,7 +48,7 @@ flowchart TB
     end
     subgraph app["Z2 Web application"]
         wp["tmc-wp<br/>Apache + PHP 8.3 + WordPress"]
-        gw["Application gateway module<br/>(allow-listed endpoints, W4)"]
+        gw["Application gateway module<br/>(allow-listed endpoints)"]
     end
     subgraph data["Z3 Web data"]
         db[("MariaDB")]
@@ -123,7 +123,7 @@ All of the above are **In place** and verified in CI by `scripts/tests/security-
 |---|---|---|---|
 | Website and CMS in a network zone segregated from clinical systems | Zones Z1–Z4 hosted on infrastructure (VPC/VLAN/subnet) separate from Z6 | TMC infrastructure + project | Network diagram signed by TMC IT; firewall rule export |
 | No direct connectivity to clinical systems, databases, patient data stores or internal file shares | Default-deny egress from Z1–Z4 towards TMC internal ranges; the only exception is Z2 → Z5 allow-listed endpoints | TMC firewall; project provides the required rule set | Segregation test (below) |
-| Interaction only through approved, controlled, allow-listed endpoints | Application gateway: server-side registry of approved endpoints, unknown endpoints refused, upstream URLs never exposed to browsers (R-4.12-1) | Project (W4) | `scripts/tests/apps-test.php`, `scripts/smoke.d/apps.sh` and the network segregation check (`.github/workflows/apps-gateway.yml`) in every CI run |
+| Interaction only through approved, controlled, allow-listed endpoints | Application gateway: server-side registry of approved endpoints, unknown endpoints refused, upstream URLs never exposed to browsers (R-4.12-1) | Project (application gateway, `apps-gateway.php`) | `scripts/tests/apps-test.php`, `scripts/smoke.d/apps.sh` and the network segregation check (`.github/workflows/apps-gateway.yml`) in every CI run |
 | Separate accounts, databases, credentials | Own MariaDB instance and users, own `.env` secrets, own cloud/host accounts | Project + TMC | Credential inventory in handover |
 
 ### 3.1 Segregation validation test (performed at M2 and before each Go-Live)
@@ -267,16 +267,16 @@ within Indian jurisdiction. TMC may specify a longer period.
 
 | OWASP Top 10 (2021) risk | Principal controls in this code base | Status |
 |---|---|---|
-| A01 Broken access control | Capability checks on every write; roles restricted; REST permission checks exercised per role in `workflow-test.php`; nonces | In place; extended by W2 |
+| A01 Broken access control | Capability checks on every write; roles restricted; REST permission checks exercised per role in `workflow-test.php`; nonces | In place (`workflow-test.php`; admin allow-list and user-enumeration blocking in `security-test.php`) |
 | A02 Cryptographic failures | TLS at perimeter; HMAC-SHA256 audit chain; WordPress password hashing; secrets outside the DB | In place / TMC infrastructure (TLS) |
 | A03 Injection | `$wpdb->prepare` for all queries with input; output escaping (`esc_html`, `esc_attr`, `esc_url`, `wp_kses_post`); CSV-formula neutralisation in the audit export | In place |
 | A04 Insecure design | Segregation by zone; no clinical data; review workflow; threat-led design (this document) | In place |
-| A05 Security misconfiguration | Hardened Apache/PHP, file editing disabled, XML-RPC denied, uploads non-executable, reproducible provisioning | In place; CSP/HSTS in W2 |
-| A06 Vulnerable and outdated components | Pinned versions; patch SLA of 30 days; image and dependency scanning in CI (W2) | Partly in place |
-| A07 Identification and authentication failures | MFA, rate limiting, session policy (W2); failed-login logging | In place (`security-test.php`) |
+| A05 Security misconfiguration | Hardened Apache/PHP, file editing disabled, XML-RPC denied, uploads non-executable, reproducible provisioning | In place (CSP, HSTS, COOP/CORP in `security-headers.php` and `apache-tmc.conf`; `security-test.php`, `scripts/smoke.d/security.sh`) |
+| A06 Vulnerable and outdated components | Pinned versions; patch SLA of 30 days; Trivy image scanning in the CI security gate (`security.yml`); Dependabot for images, Compose files and CI actions; weekly check of pinned plugins and core (`updates.yml`) | In place |
+| A07 Identification and authentication failures | MFA (Two Factor, `TMC_ENFORCE_MFA`), login lockout, session policy; failed-login logging | In place (`security-test.php`) |
 | A08 Software and data integrity failures | All releases from Git through CI; no plugin/theme installation from the admin UI in Production; tamper-evident audit log | In place |
-| A09 Security logging and monitoring failures | Audit log + container logs + central retention; monitoring (W7) | Partly in place |
-| A10 Server-side request forgery | Gateway accepts only registered endpoints; no user-supplied upstream URLs (W4) | In place (`apps-test.php`) |
+| A09 Security logging and monitoring failures | Tamper-evident audit log with security events; health endpoint `/wp-json/tmc/v1/health` for uptime monitoring (`health-test.php`); container logs forwarded to a central log store with 180-day retention | In place (audit log, health endpoint) / TMC infrastructure (central log store) |
+| A10 Server-side request forgery | Gateway accepts only registered endpoints; no user-supplied upstream URLs | In place (`apps-test.php`) |
 
 The full OWASP mapping with test evidence is [docs/security/owasp-top10.md](../security/owasp-top10.md);
 the pre-VAPT readiness checklist is [docs/security/pre-vapt-checklist.md](../security/pre-vapt-checklist.md).
@@ -317,9 +317,9 @@ credentials are handed over to TMC separately and securely (SOW §8.2), never in
 
 | Certification | When | Scope | Prerequisites prepared by the project |
 |---|---|---|---|
-| VAPT by a CERT-In empanelled agency | Before M4 Go-Live (TMC + pilot unit), before M5 Go-Live (remaining units), annually in AMC | All six websites, CMS, hosting configuration | Internal pre-assessment report (W2), this document, asset list, test accounts per role |
+| VAPT by a CERT-In empanelled agency | Before M4 Go-Live (TMC + pilot unit), before M5 Go-Live (remaining units), annually in AMC | All six websites, CMS, hosting configuration | Internal pre-assessment ([Pre-VAPT checklist](../security/pre-vapt-checklist.md) and CI security-gate reports), this document, asset list, test accounts per role |
 | Safe-to-Host certificate | Before each Go-Live; renewed as required | Websites as deployed | Closed VAPT report |
-| STQC certification | Initiated after M4; obtained by M6; re-certification every three years or as the standard requires | Website ecosystem | Accessibility (WCAG 2.2 AA / GIGW 3.0) and quality evidence from W6 |
+| STQC certification | Initiated after M4; obtained by M6; re-certification every three years or as the standard requires | Website ecosystem | Accessibility (WCAG 2.2 AA / GIGW 3.0) and quality evidence from the CI quality gates ([Quality gates](../testing/quality-gates.md)) |
 
 Observations from VAPT, STQC or TMC's own review are closed at no cost to TMC following the
 [Security Observation Remediation Procedure](../operations/security-observation-remediation.md) (R-4.8-9).

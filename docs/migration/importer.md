@@ -2,8 +2,9 @@
 
 Requirements: R-4.11-1 (migrate TMC-approved content), R-4.11-2 (map it to templates and content
 types), R-4.11-4 (redirects for superseded URLs) and R-2-4 (accurate, complete migration).
-The post-migration crawl for broken links and orphan pages (R-4.11-3/4) is owned by W6; the
-sign-off form (R-4.11-5) by W8.
+The post-migration crawl for broken links and orphan pages (R-4.11-3/4) is part of the quality gates
+([Quality gates](../testing/quality-gates.md#links-and-orphaned-pages)); the sign-off form (R-4.11-5) is in
+[Content Migration Coordination](../operations/content-migration-coordination.md).
 
 TMC supplies the content. We turn it into a **content inventory** (a CSV file, one row per page or
 item per language) and load it with a WP-CLI script that is safe to run again and again.
@@ -111,7 +112,7 @@ files/annual-report-2024.pdf …
 
    The script exits with status 2 if any row has an error, so it can be used in automation.
 4. **Verify**: open a sample of pages in both languages, the menus and the sitemap; run the link
-   and orphan-page crawl (W6) and the smoke test. Old URLs can be checked in Tools → Redirects
+   and orphan-page crawl (`tests/links/crawl.js`, `npm run links` in `tests/`) and the smoke test. Old URLs can be checked in Tools → Redirects
    (hit counter) or with `curl -I https://<site>/<old-url>`.
 5. **Sign-off**: attach `report.csv` to the migration confirmation (R-4.11-5).
 

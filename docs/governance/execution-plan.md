@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-GOV-01 | 0.1 | Draft; part of the Technical Bid (SOW §12.1) and of the project management plan at M1 | R-7-1, R-7-2, R-7-3, R-7.1-1, R-11-\*, R-12.1-\* |
+| TMC-WEB-GOV-01 | 0.2 | Draft for TMC IT approval; part of the Technical Bid (SOW §12.1) and of the project management plan at M1 | R-7-1, R-7-2, R-7-3, R-7.1-1, R-11-\*, R-12.1-\* |
 
 ## 1. Basis
 
@@ -30,19 +30,22 @@ approvals, certification and audit schedules"; the dependencies on TMC inputs ar
 2. **Everything as code.** Every environment is built from this repository by the same scripts; every
    change passes CI (six sites built from scratch, tests, smoke checks) before it reaches UAT. This keeps
    the six sites consistent and makes each milestone demonstrable at any time.
-3. **Parallel work streams** on a common base, integrated continuously:
+3. **Parallel work streams** on a common base, integrated continuously. The work breakdown below
+   (work streams W1–W8) is used for planning in this plan; the
+   [monthly progress report](templates/monthly-progress-report.md) reports progress under the same
+   areas by name:
 
-| Work stream | Scope | Main milestone |
-|---|---|---|
-| Core (done) | Multisite, roles, review workflow, tamper-evident audit log, content types, automatic expiry, CI/CD to UAT | M2–M3 |
-| W1 | Search (full text, suggestions, documents) and document library | M3 |
-| W2 | Security hardening (MFA, admin network restriction, CSP/HSTS, rate limiting), CI security gate, pre-VAPT readiness | M2–M4 |
-| W3 | SEO metadata, structured data, sitemap/robots, redirects, analytics, migration toolkit | M3–M4 |
-| W4 | Application gateway and front ends (appointments, results, forms, donation hand-off), maps, social | M4 |
-| W5 | Page templates (Annexure B), component library page, network publishing | M3 |
-| W6 | Quality gates: cross-browser, accessibility, performance, links/orphans, HTML validity, Go-Live acceptance report | M3–M5 |
-| W7 | Production and DR environments, 15-minute backups, DR drill, monitoring, performance | M2, M4 |
-| W8 | Documentation, training, governance, proposal and EOI pack | M1–M6 |
+| Work stream | Scope | Main milestone | Status (30/09/2026) |
+|---|---|---|---|
+| Core | Multisite, roles, review workflow, tamper-evident audit log, content types, automatic expiry, CI/CD to UAT | M2–M3 | Built and tested in CI |
+| W1 | Search (full text, suggestions, documents) and document library | M3 | Built and tested in CI (`search-test.php`, `scripts/smoke.d/search.sh`) |
+| W2 | Security hardening (MFA, admin network restriction, CSP/HSTS, rate limiting), CI security gate, pre-VAPT readiness | M2–M4 | Built and tested in CI (`security-test.php`, `.github/workflows/security.yml`); VAPT by the external agency pending |
+| W3 | SEO metadata, structured data, sitemap/robots, redirects, analytics, migration toolkit | M3–M4 | Built and tested in CI (`seo-test.php`, `redirects-test.php`, `analytics-test.php`, `import-test.php`); migration awaits TMC content |
+| W4 | Application gateway and front ends (appointments, results, forms, donation hand-off), maps, social | M4 | Built and tested against the demonstration back end (`apps-test.php`); connection to real endpoints awaits TMC's API specifications (Q-09) |
+| W5 | Page templates (Annexure B), component library page, network publishing | M3 | Platform built and tested (`editorial-test.php`); templates and component library to be aligned with Annexures A–C when received |
+| W6 | Quality gates: cross-browser, accessibility, performance, links/orphans, HTML validity, Go-Live acceptance report | M3–M5 | Built and running in CI on every push; performance thresholds await TMC (Q-07) |
+| W7 | Production and DR environments, 15-minute backups, DR drill, monitoring, performance | M2, M4 | Backup service, DR drill, health endpoint, page cache and production release workflow built and tested in CI; Production and DR hosts are TMC inputs |
+| W8 | Documentation, training, governance, proposal and EOI pack | M1–M6 | Drafts delivered for TMC IT approval; updated with every release |
 
 4. **Pilot unit.** The first unit website is proposed to be **TMH Mumbai** [TMC TO CONFIRM], because it
    shares the Parel campus and the IT Department with TMC, which shortens content coordination.
@@ -65,7 +68,7 @@ approvals, certification and audit schedules"; the dependencies on TMC inputs ar
 |---|---|---|
 | Design inputs formally received and confirmed | Receipt note of Annexures A, B, C with a list of gaps/queries | Governance record |
 | CMS platform approved by TMC | [CMS Justification](../proposal/02-cms-justification.md); demonstration of the working platform on UAT | Proposal, UAT |
-| Development, UAT, Production and DR provisioned | Same scripts on every environment; smoke test passing on each; DR restore rehearsal | `scripts/setup.sh`, `scripts/deploy.sh`, W7 overrides; [Installation Guide](../operations/installation-deployment.md) |
+| Development, UAT, Production and DR provisioned | Same scripts on every environment; smoke test passing on each; DR restore rehearsal | `scripts/setup.sh`, `scripts/deploy.sh`, `compose.prod.yml`, `compose.dr.yml`, `scripts/dr/drill.sh`; [Installation Guide](../operations/installation-deployment.md) |
 | Security architecture document submitted and approved | [Security Architecture Document](../architecture/security-architecture.md) with segregation tests S-1 to S-6 run on the provisioned zones | `docs/architecture/` |
 | Data residency compliance statement submitted and approved | [Data Residency Statement](../architecture/data-residency-statement.md) completed and signed | `docs/architecture/` |
 | (supporting) | [System Architecture](../architecture/system-architecture.md), [Access Control Policy](../architecture/access-control-policy.md), [Audit Log Retention Policy](../architecture/audit-log-retention-policy.md) | `docs/architecture/` |

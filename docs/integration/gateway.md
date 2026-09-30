@@ -5,7 +5,9 @@ no patient data on the website), R-4.12-1, R-4.12-2, R-4.12-3 (secure endpoints,
 control, logging, payment gateway hand-off), R-4.8-1 (network segregation, integration part),
 R-4.3-6 / R-4.3-7 / R-4.12-4 (location maps, social media).
 
-**Code:** `src/mu-plugins/tmc-core/apps-gateway.php` (gateway), `apps-admin.php` (registry screen),
+**Code:** `src/mu-plugins/tmc-core/apps-gateway.php` (protection, the call, REST interface),
+`apps-registry.php` (catalogue and registry), `apps-validation.php` (input), `apps-responses.php`
+(response allow-lists), `rate-limit.php` (shared rate limiter), `apps-admin.php` (registry screen),
 `src/themes/tmc/inc/apps-blocks.php` (front ends), `inc/location-map.php`, `inc/social.php`,
 `mock/tmc-apps/router.php` (DEMO backend). **Tests:** `scripts/tests/apps-test.php`,
 `scripts/smoke.d/apps.sh`, `mock/tmc-apps/contract-test.php`.

@@ -4,7 +4,7 @@ VAPT, STQC, TMC security reviews and independent design/quality reviews
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-OPS-06 | 0.1 | Draft for TMC IT approval | R-4.8-9, R-5-2, R-4.8-7, R-6-4, R-7.1-1 |
+| TMC-WEB-OPS-06 | 0.2 | Draft for TMC IT approval | R-4.8-9, R-5-2, R-4.8-7, R-6-4, R-7.1-1 |
 
 ## 1. Purpose
 
@@ -27,7 +27,7 @@ closed").
 | STQC | STQC audit / certification | M6; re-certification every three years or as the standard requires (SOW §6.4) |
 | TMC-SEC | TMC's own security review (TMC IT, CISO) | Any time |
 | IND | Independent review or validation by TMC or a TMC-appointed agency (design conformance, accessibility, quality) | Any stage, including warranty and AMC (SOW §5) |
-| INT | The project's own pre-assessment: CI security gate, pre-VAPT readiness review, accessibility and performance scans (W2, W6) | Every release; before submitting to external agencies |
+| INT | The project's own pre-assessment: CI security gate, pre-VAPT readiness review, accessibility and performance scans (security gate `.github/workflows/security.yml`, quality gates `.github/workflows/quality.yml`, [Pre-VAPT checklist](../security/pre-vapt-checklist.md)) | Every release; before submitting to external agencies |
 
 ## 3. Principles
 

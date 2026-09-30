@@ -1,5 +1,8 @@
 # Patching and upgrades
 
+> **Scope.** Technical reference: how updates are detected and applied in this repository. The formal
+> patch management procedure (roles, approvals, records) is [patch-management.md](patch-management.md).
+
 Requirement: **R-6-3** — upgrades of core, plugins, frameworks and the database; **security patches
 within 30 days, critical ones on priority**. Every change goes through the same pipeline as a
 feature ([environments.md](environments.md)): pull request → CI → UAT → release tag → approval →

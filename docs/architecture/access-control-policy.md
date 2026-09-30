@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-ARC-06 | 0.1 | Draft for TMC IT approval | R-4.7-5, R-4.8-2, R-4.8-3, R-4.6-2, R-13-5 |
+| TMC-WEB-ARC-06 | 0.2 | Draft for TMC IT approval | R-4.7-5, R-4.8-2, R-4.8-3, R-4.6-2, R-13-5 |
 
 ## 1. Purpose and scope
 
@@ -50,7 +50,7 @@ authentication, restricted network access, and role-based authorization."
 |---|---|---|
 | Request | Written request from the unit head or TMC IT, stating site(s) and role | Support ticket stating purpose and duration |
 | Approval | TMC IT (Super Admin) for Site Administrator; Site Administrator for Reviewer/Content Editor on their site | TMC IT |
-| Creation | Created by the approving administrator; user sets own password; MFA enrolment enforced at first login (W2) | Created by TMC IT in TMC's identity system; MFA mandatory |
+| Creation | Created by the approving administrator; user sets own password; MFA enrolment enforced at first login for Super Admins, Site Administrators and Reviewer / Publishers (Two Factor plugin; `TMC_ENFORCE_MFA=1`, `scripts/tests/security-test.php`) | Created by TMC IT in TMC's identity system; MFA mandatory |
 | Recording | Automatically recorded in the audit log (`user_created`, `user_added_to_site`, `user_role_changed`) | Recorded in the access register (section 7) |
 | Review | Quarterly: each Site Administrator confirms the user list of their site; TMC IT confirms Super Admins | Quarterly by TMC IT; monthly for vendor accounts |
 | Removal | Same day on transfer or exit (`remove user from site`; network removal for leavers) | Same day; vendor accounts disabled automatically at expiry of the ticket window |

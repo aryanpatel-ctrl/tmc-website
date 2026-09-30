@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-04 | 0.1 | R-7-1 to R-7-3, R-14-\*, R-10-\* (evaluation parameter 4: 10 marks) |
+| TMC-WEB-PRP-04 | 0.2 | R-7-1 to R-7-3, R-14-\*, R-10-\* (evaluation parameter 4: 10 marks) |
 
 ## 1. Plan
 
@@ -24,15 +24,18 @@ plan follows the milestone table.
 
 ## 2. Why the plan is achievable
 
-1. **The platform exists.** The CMS network, roles, workflow, audit log, content types, expiry, and CI/CD
-   to UAT are already implemented and tested; project time goes into Annexure A–C conformance, the
-   remaining features, migration, testing and certification.
+1. **The platform exists.** The CMS network, roles, workflow, audit log, content types, expiry, search
+   and document library, security hardening (MFA, CSP, admin allow-list), SEO, redirects and analytics,
+   the application gateway (tested against a demonstration back end), the editorial platform, caching,
+   backup and DR tooling, monitoring, and CI/CD with automated quality gates are already implemented and
+   tested; project time goes into Annexure A–C conformance, connection to TMC's real application
+   endpoints, migration, testing and certification.
 2. **Build once, reuse five times.** All six websites share one code base and one provisioning path;
    the four remaining units at M5 differ mainly in content (SOW §4.1).
 3. **Continuous verification.** Every change builds all six sites from scratch and runs the test suites,
    so milestone demonstrations are routine rather than special events.
-4. **Parallel work streams** with clear file ownership and non-overlapping migration ranges
-   ([Engineering Conventions](../engineering/CONVENTIONS.md)).
+4. **Parallel development by feature area** with clear file ownership and non-overlapping migration
+   ranges ([Engineering Conventions](../engineering/CONVENTIONS.md)), integrated continuously through CI.
 5. **Certification started early.** VAPT is booked at M3; STQC is initiated immediately after M4.
 
 ## 3. Project management

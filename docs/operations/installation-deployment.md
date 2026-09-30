@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-OPS-01 | 0.1 | Draft | R-4.15-2, R-4.7-3, R-4.7-4, R-8.2-3, R-8.2-8 |
+| TMC-WEB-OPS-01 | 0.2 | Draft for TMC IT approval | R-4.15-2, R-4.7-3, R-4.7-4, R-8.2-3, R-8.2-8 |
 
 This guide takes a new server from nothing to live websites, describes routine deployment and rollback,
 and lists the pre-Go-Live steps. Everything is done with the scripts in this repository; no manual change
@@ -152,7 +152,9 @@ The smoke test must end with `==> smoke test passed`.
 ### Step 6: first administrator actions
 
 1. Log in at `https://<base>/wp-login.php` as `WP_ADMIN_USER` with `WP_ADMIN_PASSWORD` from `.env`;
-   change the password immediately and enrol MFA (W2).
+   change the password immediately and enrol MFA: until an authenticator app is enrolled, every admin
+   screen opens the profile page where the Two Factor plugin sets it up (`TMC_ENFORCE_MFA=1`; see the
+   [System and Security Administration Manual](../manuals/system-security-administration-manual.md)).
 2. Create named Super Admin accounts for the TMC IT officers, then remove Super Admin rights from the
    bootstrap account or disable it (TMC decision).
 3. Create site users per the [CMS Administrator Manual](../manuals/cms-administrator-manual.md#4-users-and-roles).

@@ -7,7 +7,7 @@ crawl directives), R-4.10-5 and R-4.11-4 (redirects), R-4.10-7 (analytics and se
 |---|---|---|
 | Metadata, social tags, robots, sitemaps | `src/mu-plugins/tmc-core/seo.php` (+ `admin/seo.js`) | `scripts/tests/seo-test.php`, `scripts/smoke.d/seo.sh` |
 | Structured data (JSON-LD) | `src/mu-plugins/tmc-core/seo-schema.php` | `scripts/tests/seo-test.php` |
-| Redirect manager | `src/mu-plugins/tmc-core/redirects.php`, `src/themes/tmc/410.php`, migration `030-redirects-table` | `scripts/tests/redirects-test.php` |
+| Redirect manager | `src/mu-plugins/tmc-core/redirects.php` (rules), `redirects-csv.php`, `redirects-admin.php`, `src/themes/tmc/410.php`, migration `030-redirects-table` | `scripts/tests/redirects-test.php` |
 | Analytics and search console | `src/mu-plugins/tmc-core/analytics.php` | `scripts/tests/analytics-test.php` |
 
 ## For editors: "Search and social sharing"
@@ -62,10 +62,11 @@ XML sitemaps (`/wp-sitemap.xml`, per language) list pages, news, tenders, events
 departments, doctors and categories. Sample items and hidden pages are left out; the user sitemap is
 switched off (it would disclose login names). Each entry carries its last-modified date.
 
-**Go-live switch:** production needs `WP_ENVIRONMENT_TYPE` set to `production` (today
-`docker-compose.yml` sets `staging` for every environment) and `blog_public = 1` (today
-`scripts/install-network.sh` sets `0` on every site). Both are environment settings owned by the
-production environment work (W7); nothing in this module needs to change.
+**Go-live switch:** production needs `WP_ENVIRONMENT_TYPE` set to `production` and `blog_public = 1`.
+Both follow from the environment: `docker-compose.yml` sets `WP_ENVIRONMENT_TYPE` from
+`TMC_WP_ENVIRONMENT` (`staging` by default; `scripts/make-env.sh prod` writes `production`), and
+`scripts/install-network.sh` sets `blog_public` to `1` only when the environment type is `production`
+([Environments](../operations/environments.md)). Nothing in this module needs to change.
 
 ## Redirect manager (Tools → Redirects)
 
@@ -91,7 +92,7 @@ Site Administrators manage the redirects of their own site:
   captured groups.
 - Every change, import, export and the regex switch is recorded in the audit log.
 
-Lookups are one indexed database query per 404 (cached in the object cache once W7 enables it),
+Lookups are one indexed database query per 404 (cached in the Redis object cache),
 plus a hit-counter update when a rule applies. The content importer creates its 301s here.
 
 ## Analytics and search console (Network Admin → Settings → Analytics & Search)
@@ -118,6 +119,7 @@ section describing the provider, and the same text is offered in Settings → Pr
 dashboard of each site shows links to its Matomo dashboard (or Google Analytics), Search Console and
 Bing Webmaster Tools, and the sitemap address to submit.
 
-If a Content Security Policy is introduced (W2), allow the Matomo host in `script-src`, `img-src`
-and `connect-src`; the inline tracker is printed with `wp_get_inline_script_tag()`, so a nonce can
-be added through the `wp_inline_script_attributes` filter.
+The Content Security Policy (`security-headers.php`) allows the configured analytics origin
+automatically: the Matomo host (or the Google Analytics hosts for GA4) is added to `script-src`,
+`img-src` and `connect-src` only while that provider is active, and the inline tracker receives the
+per-request nonce through the `wp_inline_script_attributes` filter.

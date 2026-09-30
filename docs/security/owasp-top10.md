@@ -60,7 +60,8 @@ the environment.
 |---|---|---|
 | Fail-closed defaults: MFA enforced unless `TMC_ENFORCE_MFA=0`; an admin allow-list with no valid entry allows nobody; missing Two Factor plugin blocks privileged accounts instead of skipping MFA | `security-mfa.php`, `security-network.php` | `security-test.php` sections 1, 4 |
 | Rate limiting of sign-in per username and per IP with exponential backoff | `security-login.php` | `security-test.php` section 3 |
-| Public website segregated from clinical systems; database and cache on an internal network | `docker-compose.yml` | Security architecture document (W8, R-4.8-8) |
+| Rate limiting of the public search-suggestion endpoint and the application gateway (one shared per-client helper; client IP stored only as a keyed hash) | `rate-limit.php`, `search-suggest.php`, `apps-gateway.php` | `search-test.php`, `apps-test.php` |
+| Public website segregated from clinical systems; database and cache on an internal network; TMC application back ends reachable only over the isolated `tmc_apps` network | `docker-compose.yml` | [Security Architecture](../architecture/security-architecture.md) (R-4.8-8); network segregation check in `.github/workflows/apps-gateway.yml` |
 
 ## A05 Security Misconfiguration
 
@@ -123,7 +124,8 @@ the container log:
 | User, role, Super Admin, plugin, theme, site and setting changes | `audit-log.php` |
 
 Follow-up (operations): forward the container log to TMC's central log store / SIEM and alert on
-`login_lockout`, `admin_access_blocked` and `mfa_*` removals; the retention policy is documented by W8 (R-4.8-4).
+`login_lockout`, `admin_access_blocked` and `mfa_*` removals; the retention periods are set in the
+[Audit Log Retention Policy](../architecture/audit-log-retention-policy.md) (R-4.8-4).
 
 ## A10 Server-Side Request Forgery
 

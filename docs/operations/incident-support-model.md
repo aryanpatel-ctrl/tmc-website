@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-OPS-04 | 0.1 | Draft for TMC IT approval | R-6-5, R-6-6, R-6-7, R-6-8, R-6-4, R-4.14-6 |
+| TMC-WEB-OPS-04 | 0.2 | Draft for TMC IT approval | R-6-5, R-6-6, R-6-7, R-6-8, R-6-4, R-4.14-6 |
 
 This document defines how incidents and service requests are reported, prioritised, resolved, escalated
 and reported during the warranty (12 months from Project Closure) and the AMC (4 years after warranty)
@@ -36,7 +36,7 @@ query Q-12), the following working definitions are proposed; they do not relax a
 | Reporting time | Time the incident is logged in the support channel (§3) by TMC or detected by monitoring, whichever is earlier |
 | Resolution | Service restored for users (permanent fix or TMC-accepted workaround); a permanent fix for a workaround follows under the same ticket |
 | Clock stops | Only while waiting for information or access that only TMC can provide, recorded in the ticket |
-| Availability | (Minutes in month − unplanned downtime minutes) ÷ minutes in month, measured by external HTTP monitoring of each website's home page from within India every minute (W7); planned maintenance notified at least 3 business days in advance is excluded |
+| Availability | (Minutes in month − unplanned downtime minutes) ÷ minutes in month, measured by external HTTP monitoring of each website's home page from within India every minute (Uptime Kuma monitors and `scripts/sla/availability-report.sh`, see [Monitoring](monitoring.md)); planned maintenance notified at least 3 business days in advance is excluded |
 | Availability of TMC-owned infrastructure | Outages caused by TMC-owned infrastructure outside the Vendor's control are recorded separately (EOI query Q-08) |
 
 ### 1.2 Priority definitions

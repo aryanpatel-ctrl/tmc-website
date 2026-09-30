@@ -128,5 +128,5 @@ through the proxy by the UAT load test (`tests/load/`).
 
 | Date | Change | Reason | Approved by |
 |---|---|---|---|
-| 2026-09-30 | Initial thresholds (this file) | Tender W6 quality gates; values proposed pending TMC's targets | — (awaiting TMC) |
+| 2026-09-30 | Initial thresholds (this file) | Automated quality gates (SOW §4.9, §4.10, §4.14); values proposed until TMC sets its targets | — (awaiting TMC) |
 | 2026-09-30 | Capacity gate uses one connection per request | Models the reverse proxy in front of Apache (see above); thresholds unchanged | — (awaiting TMC) |

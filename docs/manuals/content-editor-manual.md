@@ -2,15 +2,16 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-MAN-03 | 0.1 | Draft; screens of parallel work streams confirmed at integration | R-4.15-7, R-8.2-6, R-4.16-2, R-4.16-3, R-4.3-2, R-4.6-1, R-4.6-3, R-4.6-5 |
+| TMC-WEB-MAN-03 | 0.2 | Draft for TMC IT approval | R-4.15-7, R-8.2-6, R-4.16-2, R-4.16-3, R-4.3-2, R-4.6-1, R-4.6-3, R-4.6-5 |
 
 **Audience.** TMC-level and unit-level **Content Editors** (who write and submit content) and
 **Reviewer / Publishers** (who check, approve, publish and schedule it). No knowledge of HTML, CSS or
 code is needed: every page is built from approved templates, sections and fields.
 
 **Before you start.** You need an account with a role on your website (ask your Site Administrator),
-the six-digit code from your authenticator application (for Reviewer / Publishers; W2, verify at
-integration), and the content approved by the content owner of your unit. The one-page
+the six-digit code from your authenticator application (required for Reviewer / Publishers: at the
+first sign-in you are taken to your profile page to set it up, and single-use backup codes are offered
+there), and the content approved by the content owner of your unit. The one-page
 [quick reference cards](quick-reference/README.md) summarise this manual for each role.
 
 ---
@@ -66,8 +67,9 @@ you can compare or restore (§12).
 5. In the sidebar under **Page → Page attributes**, choose the **Parent** page so the page sits at the
    right place in the menu, breadcrumbs and sitemap; use **Order** to position it among its siblings.
 6. Optional: **Excerpt** — one or two sentences used in listings and search results. Page metadata for
-   search engines and social sharing (title, description) is edited in the SEO panel (W3, verify at
-   integration).
+   search engines and social sharing is edited in the **Search and social sharing** panel below the
+   content: *SEO title*, *Meta description*, *Social sharing image* and *Hide from search engines*. Leave a
+   field empty to use the default shown.
 7. Click **Save draft**, then **Preview** to see it as visitors will.
 8. When it is ready: **Submit for Review** (Content Editor) or **Publish** (Reviewer / Publisher).
 
@@ -101,6 +103,11 @@ them on the home page.
    empty for items that stay current.
 5. Add a **Featured image** if the item will appear as a card.
 6. Save, preview, submit for review / publish.
+
+**TMC-wide items (TMC site only).** On the TMC site, news items, notices and events have a **Publish to
+unit websites** panel. TMC Reviewer / Publishers (and TMC Site Administrators) tick the unit websites
+that should carry the item; each gets a read-only copy, with its Hindi version, that follows every later
+change to the original. Unit editors cannot edit these copies; changes are made once, on the TMC site.
 
 ## 5. Tenders and EOIs
 
@@ -201,9 +208,13 @@ suggested address or type a short transliteration.
 | Upload only material TMC has the right to publish; no patient-identifiable information | Legal and privacy |
 
 *Media → Add New Media File* uploads files; the maximum size is 64 MB. Documents can then be attached to
-tenders and job openings (**Add documents**) or linked from a page with the **File** block. The central
-document library with document types and filters is described separately when delivered (W1, verify at
-integration).
+tenders and job openings (**Add documents**) or linked from a page with the **File** block. Each document has a
+**Document type** (Annual report, Circular, Office order, Form, Policy, Tender document, Result, Other)
+and a **Document date** (date of issue) in the media window or the attachment screen; new uploads start
+as *Other* (or *Tender document* on a tender). Every document then appears in the public document
+library at `/documents/` (filter by type and year) and in site search, including the words inside
+PDFs. To list documents on any page, add the **Documents** block (a fixed list, one type with "View
+all", or the full library).
 
 ## 11. Review, approval and scheduling
 

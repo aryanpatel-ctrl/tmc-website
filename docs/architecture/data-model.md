@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-ARC-04 | 0.1 | Draft | R-8.2-5, R-4.6-4, R-4.6-5, R-4.8-4 |
+| TMC-WEB-ARC-04 | 0.2 | Draft for TMC IT approval | R-8.2-5, R-4.6-4, R-4.6-5, R-4.8-4 |
 
 This reference describes the database schema, the project-specific data stored in it, the seed data and
 the migration mechanism, as required for handover (SOW §8.2: "Database schema, seed data, and migration
@@ -146,15 +146,15 @@ recording author, timestamp, and changes for every modification").
 | `scripts/create-demo-users.sh` | One demo account per role (UAT only; passwords only in `demo-users.txt`) | Yes |
 
 The information architecture is **provisional** until TMC supplies Annexure B; then it is replaced by
-migrations in the W5 range. All sample content carries `_tmc_sample = 1`; the pre-Go-Live checklist
+new migrations in `scripts/migrations/`. All sample content carries `_tmc_sample = 1`; the pre-Go-Live checklist
 deletes it (see [Installation and Deployment Guide](../operations/installation-deployment.md#7-pre-go-live-content-clean-up)).
 
 ## 7. Migrations
 
 `scripts/migrate.php` runs every file in `scripts/migrations/` once per site in name order and records
 the name in the site option `tmc_migrations`; each application is written to the audit log
-(`migration_applied`). A migration returns `false` to fail the provisioning run. Number ranges per work
-stream are fixed in [Engineering Conventions](../engineering/CONVENTIONS.md#migration-numbers-avoid-collisions).
+(`migration_applied`). A migration returns `false` to fail the provisioning run. Number ranges per feature
+area are fixed in [Engineering Conventions](../engineering/CONVENTIONS.md#migration-numbers-avoid-collisions).
 
 To list what has been applied on a site:
 
@@ -166,6 +166,6 @@ docker compose run --rm -T wpcli --url=tmh.<base-domain> option get tmc_migratio
 
 | Data | Reason |
 |---|---|
-| Clinical or patient data | SOW §4.4; application front ends pass data through (W4) |
+| Clinical or patient data | SOW §4.4; the application gateway and front ends pass data through to TMC's applications without storing it |
 | Payment card or bank data | Handled only by the TMC-approved payment gateway |
 | Secrets (DB passwords, audit key, API credentials) | Environment only (`getenv`), never in the database |

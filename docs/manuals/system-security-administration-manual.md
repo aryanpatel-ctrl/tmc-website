@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-MAN-02 | 0.1 | Draft; W2 (security) and W7 (monitoring, backup, DR) procedures confirmed at integration | R-8.2-6, R-4.15-6, R-4.16-2, R-4.8-2 to R-4.8-4, R-4.7-5 |
+| TMC-WEB-MAN-02 | 0.2 | Draft for TMC IT approval | R-8.2-6, R-4.15-6, R-4.16-2, R-4.8-2 to R-4.8-4, R-4.7-5 |
 
 **Audience.** TMC IT infrastructure staff and the Vendor's Infrastructure/Security Specialist. This
 manual covers operating the servers and containers, security administration, secrets, logs and the
@@ -28,11 +28,15 @@ changes are made in the repository and deployed through the pipeline.
 
 | Container | Role | Network | Must be running |
 |---|---|---|---|
-| `tmc-wp` | Apache + PHP 8.3 + WordPress Multisite | `tmc_internal`, `tmc_edge` (+ proxy network) | Yes |
+| `tmc-wp` | Apache + PHP 8.3 + WordPress Multisite | `tmc_internal`, `tmc_edge`, `tmc_apps` (+ proxy network) | Yes |
 | `tmc-db` | MariaDB 11.4 (all content, users, audit log) | `tmc_internal` | Yes |
 | `tmc-redis` | Object cache (no persistence) | `tmc_internal` | Yes (sites work without it, slower) |
 | `tmc-cron` | Runs due scheduled jobs on every site each minute | `tmc_internal` | Yes (scheduling and expiry records depend on it) |
-| `wpcli` | On-demand WP-CLI for provisioning and maintenance | `tmc_internal`, `tmc_edge` | No (started per command) |
+| `tmc-backup` | Scheduled backups every 15 minutes with retention (`tmc-backup status`) | `tmc_internal` | Yes (RPO depends on it) |
+| `tmc-apps-mock` | Demonstration stand-in for TMC's application back ends (Dev, CI, UAT only; not started on Production) | `tmc_apps` | Demonstration environments only |
+| `wpcli` | On-demand WP-CLI for provisioning and maintenance | `tmc_internal`, `tmc_edge`, `tmc_apps` | No (started per command) |
+
+On Production the same containers are named `tmc-prod-*` (`compose.prod.yml`).
 
 Architecture and zones: [System Architecture](../architecture/system-architecture.md),
 [Security Architecture](../architecture/security-architecture.md).
@@ -49,15 +53,20 @@ Architecture and zones: [System Architecture](../architecture/system-architectur
 ## 3. Daily health checks
 
 ```bash
-docker compose ps                                    # all four long-running containers "running"/"healthy"
+docker compose ps                                    # every long-running container "running"/"healthy"
+curl -s https://<tmc domain>/wp-json/tmc/v1/health   # "status":"ok" (HTTP 200); 503 names the failing check
+docker compose exec backup tmc-backup status         # newest backup and its age (RPO 15 minutes)
 ./scripts/smoke-test.sh                              # every site, both languages → "smoke test passed"
 docker compose logs --since 24h wordpress | grep -E "PHP (Fatal|Warning)" | tail -20
 df -h / /var/lib/docker                              # keep at least 20 % free
 tail -3 .release-history                             # which release is live
 ```
 
-Monitoring, alerting and the uptime measurement used for the 99.5 % SLA are delivered by W7 (verify at
-integration); the checks above remain the manual fallback.
+Continuous monitoring, alerting and the uptime measurement used for the 99.5 % SLA are described in
+[Monitoring](../operations/monitoring.md): Uptime Kuma on a separate host polls every home page and
+the health endpoint, and `scripts/sla/availability-report.sh` produces the monthly availability
+report. The checks above remain the manual fallback; *Network Admin → Health & Backups* shows the same
+health checks and the recent backups in the CMS.
 
 ## 4. Operating the containers
 
@@ -113,10 +122,10 @@ of them after every deployment.
 | CMS audit log | *Network Admin → Audit Log*: filter by `login_failed`, `user_role_changed`, `super_admin_granted`, `plugin_activated`, `network_setting_changed` | Monthly (weekly during the first three months after each Go-Live) |
 | Web server log | `docker compose logs --since 24h wordpress \| grep -c " 403 "` and review of unusual paths | Weekly |
 | Host authentication | `journalctl -u ssh --since yesterday` (or `/var/log/auth.log`) | Weekly |
-| Container image and dependency scans | CI security gate report of the latest release (W2) | Each release |
+| Container image and dependency scans | CI security gate reports of the latest release (`security-image-reports` from Trivy, `security-secrets-report`, `security-dast-reports`; `.github/workflows/security.yml`) and open Dependabot pull requests | Each release |
 
 Brute-force pattern: many `login_failed` entries for one username or from one IP in the audit log.
-Action: confirm the lockout is working (W2), block the source at the firewall if it persists, and
+Action: confirm the lockout is working (`login_lockout` entries in the audit log), block the source at the firewall if it persists, and
 inform the account holder.
 
 ### 5.4 Log locations and retention
@@ -124,7 +133,7 @@ inform the account holder.
 | Log | Location | Retention |
 |---|---|---|
 | CMS audit log | Table `tmc_tmc_audit_log` (all sites) | Whole contract, see [Audit Log Retention Policy](../architecture/audit-log-retention-policy.md) |
-| Web container | Docker log of `tmc-wp`; shipped to the central log store (W7) | 180 days minimum (CERT-In Directions, 28 April 2022) |
+| Web container | Docker log of `tmc-wp`; to be shipped to TMC's central log store from the production host (TMC infrastructure) | 180 days minimum (CERT-In Directions, 28 April 2022) |
 | Proxy / WAF | TMC infrastructure | 180 days minimum |
 | Host | journald / `/var/log` | 180 days minimum |
 | Deployments | `.release-history` on each server; GitHub Actions history | Life of the system |
@@ -265,7 +274,7 @@ with TMC IT and record the results in the Go-Live acceptance pack.
 
 | Frequency | Task | Reference |
 |---|---|---|
-| Daily | Health checks (§3); backup job status | §3, W7 |
+| Daily | Health checks (§3); backup job status | §3; [Monitoring](../operations/monitoring.md); [Backup and DR](../operations/backup-and-dr.md) |
 | Weekly | Security event review (§5.3); vulnerability sources | §5.3, Patch Management §3 |
 | Monthly | Maintenance release; vendor access review; disk usage trend | Patch Management §4 |
 | Quarterly | DR drill; audit-log anchor; restore test | Backup and Restoration §5–6 |

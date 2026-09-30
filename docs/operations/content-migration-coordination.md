@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-OPS-09 | 0.1 | Draft for TMC IT approval; importer column names verified at integration (W3) | R-4.11-5, R-4.11-1 to R-4.11-4, R-2-4, R-7.1-1 |
+| TMC-WEB-OPS-09 | 0.2 | Draft for TMC IT approval | R-4.11-5, R-4.11-1 to R-4.11-4, R-2-4, R-7.1-1 |
 
 SOW §4.11: "TMC shall provide the approved content for migration. The Vendor shall not be responsible for
 auditing, validating, or restructuring the content provided." The Vendor shall "coordinate with TMC and
@@ -59,6 +59,17 @@ in the [Content Migration Methodology](../proposal/04-content-migration-methodol
 | `owner`, `approved_on` | Content owner and approval date | |
 | `status` | `received`, `queried`, `imported`, `verified`, `confirmed` | |
 
+This inventory is the **receipt and tracking** list that TMC units fill in. The migration lead converts
+each approved row into the import file of the content migration toolkit
+([`docs/migration/content-inventory-template.csv`](../migration/content-inventory-template.csv); every column
+is described in the [importer guide](../migration/importer.md#inventory-columns)). The main correspondences
+are: `content_type` → `type`; `parent_id` → `parent_path` (path of the parent page); `body_file` →
+`content_html_file` (converted to HTML); `summary` → `excerpt`; `category` → `categories`;
+`translation_of` → a shared `translation_key`; `menu_order` → `order`; tender, event and doctor
+columns → the `field:tmc_…` columns (for example `closing_at` → `field:tmc_closing_at`); `old_url`
+is used as is. The tracking columns (`inventory_id`, `owner`, `approved_on`, `status`) stay in this
+inventory and are not imported.
+
 ## 4. Schedule and tracking
 
 | Step | Who | Timing (relative to the site's Go-Live date G) |
@@ -89,11 +100,11 @@ rather than inventing text (SOW §4.11).
 
 | # | Check | Evidence | Result |
 |---|---|---|---|
-| 1 | Every inventory item with status `approved` is present at its planned place in the IA, in both languages where supplied | Post-migration verification report (W6) | |
+| 1 | Every inventory item with status `approved` is present at its planned place in the IA, in both languages where supplied | Importer report (`report.csv` of `scripts/import/import-inventory.php`, see [Content migration toolkit](../migration/importer.md)) and link crawl (`orphans.csv`) | |
 | 2 | Content renders correctly in its template (sample reviewed by the unit: at least 10 % of pages and every template type) | Unit reviewer's list | |
 | 3 | Documents open and are the correct versions | Report | |
-| 4 | Every old URL redirects (301) to the correct new page or returns 410 where the content was withdrawn | Redirect report (W3) | |
-| 5 | Zero broken links and no orphaned pages (automated scan) | Link report (W6) | |
+| 4 | Every old URL redirects (301) to the correct new page or returns 410 where the content was withdrawn | Redirect list exported from *Tools → Redirects* (CSV, with hit counts) and `curl -I` checks of a sample of old URLs | |
+| 5 | Zero broken links and no orphaned pages (automated scan) | Link report of `tests/links/crawl.js` (`broken.csv`, `orphans.csv`; see [Quality gates](../testing/quality-gates.md#links-and-orphaned-pages)) | |
 | 6 | Sample content (`_tmc_sample`) removed | [Installation Guide §7](installation-deployment.md#7-pre-go-live-content-clean-up) | |
 
 We confirm that the content migration of the above website is complete and correct.

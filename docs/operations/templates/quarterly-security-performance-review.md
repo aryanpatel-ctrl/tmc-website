@@ -2,12 +2,13 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-TPL-02 | 0.1 | R-6-8, R-6-4, R-4.7-6, R-4.8-4, R-4.10-6 |
+| TMC-WEB-TPL-02 | 0.2 | R-6-8, R-6-4, R-4.7-6, R-4.8-4, R-4.10-6 |
 
 SOW §6.4: "Security and performance review — Quarterly, with a written report to TMC IT." Submitted within
 15 days of the end of each quarter during warranty and AMC. Inputs are the CI and scan reports of the
-quarter (W2, W6, W7 — report names verified at integration), the audit log, the DR drill record and the
-tracker.
+quarter (security gate: `security-secrets-report`, `security-image-reports`, `security-dast-reports`;
+quality gates: `quality-reports` with the Go-Live acceptance report; `dr-drill-report`; `capacity-report`), the monthly availability reports of
+`scripts/sla/availability-report.sh`, the audit log, the DR drill record and the tracker.
 
 ---
 
@@ -45,7 +46,7 @@ tracker.
 |---|---|
 | Super Admin list reviewed and confirmed by TMC IT (names) | [ ] |
 | Each site's user list confirmed by its Site Administrator (6 sites) | [ ] of 6 |
-| Accounts without MFA among privileged roles (must be 0; W2) | [ ] |
+| Accounts without MFA among privileged roles (must be 0; enforced by `TMC_ENFORCE_MFA=1`) | [ ] |
 | Accounts inactive for more than 90 days (disabled?) | [ ] |
 | Vendor access windows to Production/DR this quarter (tickets) | [ ] |
 | Demonstration or default accounts present in Production (must be none) | [ ] |

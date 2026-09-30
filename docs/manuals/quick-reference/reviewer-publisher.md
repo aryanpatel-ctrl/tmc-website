@@ -1,6 +1,6 @@
 # Quick Reference: Reviewer / Publisher
 
-**Sign in:** `https://<your website>/wp-login.php` + authenticator code (W2) · **Full manual:**
+**Sign in:** `https://<your website>/wp-login.php` + six-digit code from your authenticator app (mandatory for this role) · **Full manual:**
 [Content Editor Manual §11](../content-editor-manual.md#11-review-approval-and-scheduling)
 
 ## Your queue

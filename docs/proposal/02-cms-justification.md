@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-03 | 0.1 | R-4.5-1, R-4.5-2, R-12.1-\*, R-13-2, R-13-3 (evaluation parameter 2: 15 marks) |
+| TMC-WEB-PRP-03 | 0.2 | R-4.5-1, R-4.5-2, R-12.1-\*, R-13-2, R-13-3 (evaluation parameter 2: 15 marks) |
 
 ## 1. Proposal
 
@@ -18,8 +18,8 @@ else is the project's own GPL code, owned by TMC.
 |---|---|---|
 | **Functionality** | Multisite in core: one network, shared users and code, per-site content and settings. Block editor with template locking lets editors fill defined fields and sections without HTML or CSS (SOW §4.3). Built-in revisions, scheduling, roles and capabilities, media library, REST API | Six sites provisioned as one network; locked home sections; content types with structured fields; review workflow and audit log implemented as modules |
 | **Maintainability** | Large pool of skilled developers in India; stable, backward-compatible APIs; WP-CLI for full automation; configuration as code | Every environment built by scripts (`setup.sh`); data changes as versioned migrations; modules as separate files; inline documentation |
-| **Scalability** | Proven on high-traffic sites; object cache (Redis protocol), page cache, horizontal scaling of stateless web containers | Redis object cache in place; container architecture scales horizontally ([System Architecture §10](../architecture/system-architecture.md#10-scalability-and-extensibility)) |
-| **Security** | Dedicated core security team, coordinated disclosure, frequent security releases; hardening options (file editing disabled, least-privilege roles); mature ecosystem of security tooling | Hardened container and PHP/Apache configuration; roles tightened (no self-publishing role); HMAC-chained audit log; MFA and admin restrictions (W2); CI security gate; patch SLA within 30 days ([Patch Management](../operations/patch-management.md)) |
+| **Scalability** | Proven on high-traffic sites; object cache (Redis protocol), page cache, horizontal scaling of stateless web containers | Redis object cache and full-page cache in place (capacity tested in CI); container architecture scales horizontally ([System Architecture §10](../architecture/system-architecture.md#10-scalability-and-extensibility)) |
+| **Security** | Dedicated core security team, coordinated disclosure, frequent security releases; hardening options (file editing disabled, least-privilege roles); mature ecosystem of security tooling | Hardened container and PHP/Apache configuration; roles tightened (no self-publishing role); HMAC-chained audit log; MFA for privileged roles, admin network allow-list, login lockout and Content-Security-Policy; CI security gate; patch SLA within 30 days ([Patch Management](../operations/patch-management.md)) |
 | **Community / long-term support** | Open-source project with a published release cycle, an active global community and long history of maintained releases; translations maintained for Hindi and many Indian languages | Language packs `hi_IN` and `en_GB` installed by provisioning |
 | **Freedom from lock-in** | GPL-2.0-or-later; no licence fees; standard LAMP stack; content exportable via standard formats and REST | GPL-only inventory ([THIRD-PARTY-LICENSES](../THIRD-PARTY-LICENSES.md)); repository and all scripts handed over; any competent WordPress team can take over (SOW §13) |
 | **Accessibility** | Accessible admin interface and block editor; themes can meet WCAG 2.2 AA | Theme built to GIGW 3.0 / WCAG 2.2 AA: skip link, text resizing, contrast mode, keyboard mega-menu, focus styles |

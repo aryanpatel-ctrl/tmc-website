@@ -1,5 +1,9 @@
 # Backup, restore and disaster recovery
 
+> **Scope.** Technical reference for the backup service, retention, off-host copy, restore and DR
+> tooling as built in this repository. The formal operating procedure (roles, schedule, records) is
+> [backup-restore.md](backup-restore.md).
+
 Requirements: **R-4.7-6** (RPO 15 minutes, RTO 1 hour, demonstrated through periodic drills),
 **R-4.7-8** (scheduled backup of content, databases and configuration; documented, tested restore),
 **R-4.7-3** (separate DR environment). Everything below is built from this repository; nothing is

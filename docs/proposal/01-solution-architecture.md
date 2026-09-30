@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-02 | 0.1 | R-12.1-\*, R-2-\*, R-4.1-\*, R-4.3-\*, R-4.7-\*, R-4.12-\* (evaluation parameter 1: 15 marks) |
+| TMC-WEB-PRP-02 | 0.2 | R-12.1-\*, R-2-\*, R-4.1-\*, R-4.3-\*, R-4.7-\*, R-4.12-\* (evaluation parameter 1: 15 marks) |
 
 ## 1. Understanding of the requirement
 
@@ -23,9 +23,9 @@ everything free of lock-in (SOW §6, §8, §13).
 |---|---|
 | CMS | **WordPress Multisite** (subdomain network): one installation, one code base, one user directory and one security framework for all six websites ([CMS justification](02-cms-justification.md)) |
 | Presentation | A custom GPL theme implementing Annexure A as design tokens (`theme.json`), the Annexure B templates and the component library; editors fill defined fields and locked sections, and cannot alter typography, colours or spacing |
-| Business rules | A must-use plugin (`tmc-core`) containing the project's modules: editorial roles, review workflow, tamper-evident audit log, content types (tenders/EOIs, events, careers, departments, doctors, news/notices) with structured fields and automatic expiry; further modules for search, security, SEO/redirects, application gateway and network publishing |
+| Business rules | A must-use plugin (`tmc-core`) containing the project's modules: editorial roles, review workflow, tamper-evident audit log, content types (tenders/EOIs, events, careers, departments, doctors, news/notices) with structured fields and automatic expiry; further modules for search and the document library, security hardening (MFA, CSP, admin allow-list), SEO/redirects/analytics, the application gateway, editorial governance and network publishing, caching and health monitoring |
 | Multilingual | English and Hindi at Go-Live with Polylang (GPL); further languages added without template changes (SOW §4.13) |
-| Runtime | Containers: Apache + PHP 8.3 (official WordPress image), MariaDB 11.4, a Redis-compatible object cache, a scheduler container; configuration from environment files; no external CDN or third-party script at runtime |
+| Runtime | Containers: Apache + PHP 8.3 (official WordPress image), MariaDB 11.4, a Redis-compatible cache (object cache and full-page cache), a scheduler container, a backup container (15-minute snapshots); configuration from environment files; no external CDN or third-party script at runtime |
 | Delivery | Git repository owned by TMC; CI builds all six sites from scratch and runs the test suites on every change; automated deployment to UAT; controlled promotion to Production; rollback by redeploying an earlier release |
 
 This solution is already implemented as a working baseline in the project repository (six sites, roles,
@@ -98,9 +98,9 @@ Hosting prerequisites and indicative sizing are in the
 
 | Target | Approach |
 |---|---|
-| RPO 15 minutes | Database backup every 15 minutes, copied off the Production host to storage in India; uploads backed up daily and incrementally |
+| RPO 15 minutes | Complete snapshot every 15 minutes by the `backup` service (consistent database dump, incremental copy of uploads, configuration; checksummed), copied off the Production host to TMC's storage in India (`scripts/backup/offsite-copy.sh`); the health endpoint alerts when the newest backup is older than 30 minutes |
 | RTO 1 hour | DR host kept ready; scripted rebuild (provision → restore database → restore uploads → verify → switch traffic), rehearsed quarterly with measured times ([Backup and Restoration §4.3](../operations/backup-restore.md#43-rebuild-an-environment-from-nothing-new-host-or-dr-activation)) |
-| Evidence | Quarterly DR drill record with achieved RPO and RTO, reported to TMC |
+| Evidence | Timed DR drill in CI on every change and monthly (`scripts/dr/drill.sh`, `.github/workflows/dr-drill.yml`); quarterly DR drill record on the Production/DR hosts with achieved RPO and RTO, reported to TMC |
 
 ## 8. Assumptions
 

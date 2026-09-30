@@ -92,7 +92,7 @@ $cleanup = function () use ( &$cleaned, $saved_registry, $names, $donate_page ) 
 		update_site_option( TMC_APPS_OPTION, $saved_registry );
 	}
 	foreach ( array_merge( array_values( $names ), array( '_unknown' ) ) as $bucket ) {
-		delete_transient( tmc_apps_rate_key( $bucket ) );
+		tmc_rate_limit_reset( 'apps_' . $bucket );
 	}
 	delete_transient( 'tmc_apps_c_' . md5( $names['appt'] . '|departments|' . wp_json_encode( array() ) ) );
 	delete_transient( 'tmc_apps_c_' . md5( $names['form'] . '|schema|' . wp_json_encode( array( 'form' => 'feedback' ) ) ) );
@@ -261,7 +261,7 @@ $t( 'refusal carries Retry-After', '60' === (string) ( $headers['Retry-After'] ?
 $_SERVER['REMOTE_ADDR'] = '198.51.100.' . wp_rand( 1, 254 );
 list( $status )         = $rest( 'POST', $names['rate'], 'lookup', array( 'roll_number' => 'DEMO1002', 'date_of_birth' => '1999-07-30' ) );
 $t( "another IP is not affected ($status)", 200 === $status );
-delete_transient( tmc_apps_rate_key( $names['rate'] ) );
+tmc_rate_limit_reset( 'apps_' . $names['rate'] );
 
 /* ---------------------------------------------------------------- no-JavaScript form post */
 

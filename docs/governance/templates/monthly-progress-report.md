@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-TPL-04 | 0.1 | R-14-1, R-14-2, R-7-1 |
+| TMC-WEB-TPL-04 | 0.2 | R-14-1, R-14-2, R-7-1 |
 
 SOW §14: "a written monthly progress report shall be submitted to TMC IT". Due by the 5th business day of
 the following month.
@@ -37,17 +37,17 @@ the following month.
 
 ## 3. Work completed this month
 
-| Work stream | Completed (with RTM IDs moved to Done) | Evidence (release tag, report) |
+| Area | Completed (with RTM IDs moved to Done) | Evidence (release tag, report) |
 |---|---|---|
 | Platform / core | | |
-| W1 Search and documents | | |
-| W2 Security | | |
-| W3 SEO, redirects, migration | | |
-| W4 Application front ends | | |
-| W5 Templates and components | | |
-| W6 Quality gates | | |
-| W7 Environments, backup, DR | | |
-| W8 Documentation, training, governance | | |
+| Search and document library | | |
+| Security hardening | | |
+| SEO, redirects, analytics, migration toolkit | | |
+| Application gateway and front ends | | |
+| Editorial platform: templates and components | | |
+| Quality gates | | |
+| Operations: environments, caching, backup, DR, monitoring | | |
+| Documentation, training, governance | | |
 
 RTM summary: [ ] Done · [ ] Partial · [ ] Planned · [ ] Blocked (of [ ] requirements).
 

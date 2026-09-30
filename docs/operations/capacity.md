@@ -2,7 +2,8 @@
 
 Requirements: **R-4.7-9** (sustain peak load without degrading agreed thresholds; scale for more
 units, languages and modules), **R-4.14-4** (performance and load testing against thresholds —
-capacity part; browser-side performance budgets are covered by the quality-gate workstream).
+capacity part; browser-side performance budgets are covered by the Lighthouse quality gate, see
+[Quality gates](../testing/quality-gates.md)).
 
 ## How the platform carries load
 

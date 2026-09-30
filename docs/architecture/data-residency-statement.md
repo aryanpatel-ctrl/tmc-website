@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-ARC-05 | 0.1 | Template: completed and signed at Milestone M2 once hosting is confirmed | R-4.7-1, R-4.7-2, R-7-2 |
+| TMC-WEB-ARC-05 | 0.2 | Template: completed and signed at Milestone M2 once hosting is confirmed | R-4.7-1, R-4.7-2, R-7-2 |
 
 **Instructions.** SOW §4.7 requires the Vendor to submit a data residency compliance statement. Complete
 every field marked [BIDDER TO FILL] or [TMC TO FILL] from the provisioned environments, attach the
@@ -70,7 +70,7 @@ runner in India. [TMC TO CONFIRM]
 | C-3 | Log shipping configuration showing the log store location |
 | C-4 | Repository and CI hosting details |
 | C-5 | Confirmation from TMC of TMC-provided services (analytics, e-mail relay, DNS, TLS) |
-| C-6 | Output of the external-request check: a crawl of every template confirming no third-party hosts are requested by the browser (W6 report) |
+| C-6 | Evidence that browsers request no third-party hosts: the Content-Security-Policy of the public pages (`default-src`, `script-src` and `connect-src` limited to the site itself and the network's own sites; `src/mu-plugins/tmc-core/security-headers.php`, checked by `scripts/smoke.d/security.sh`) and a browser network log of each template captured on the deployed environment. Exceptions, loaded only when configured or requested: the analytics host chosen by TMC and the OpenStreetMap map shown after the visitor presses "Show map" |
 
 ## Part D: Signature
 

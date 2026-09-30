@@ -41,7 +41,8 @@ function tmc_suggest_register_route() {
 }
 
 function tmc_suggest_endpoint( WP_REST_Request $request ) {
-	$retry_after = tmc_rate_limit_hit( 'suggest', tmc_suggest_rate_limit(), TMC_SUGGEST_WINDOW );
+	$rate        = tmc_rate_limit( 'suggest', tmc_suggest_rate_limit(), TMC_SUGGEST_WINDOW ); // shared limiter: rate-limit.php
+	$retry_after = $rate['over'] ? $rate['retry_after'] : 0;
 	if ( $retry_after ) {
 		$response = rest_convert_error_to_response( new WP_Error( 'tmc_rate_limited', 'Too many requests. Please try again shortly.', array( 'status' => 429 ) ) );
 		$response->header( 'Retry-After', (string) $retry_after );
@@ -101,34 +102,3 @@ function tmc_suggest_rate_limit() {
 	return max( 1, (int) apply_filters( 'tmc_suggest_rate_limit', $env > 0 ? $env : 120 ) );
 }
 
-/**
- * Fixed-window rate limit per client IP (mod_remoteip provides the real address behind the proxy).
- * Uses the object cache when it is persistent (Redis), otherwise a transient.
- *
- * @return int 0 when allowed, else the seconds until the window resets.
- */
-function tmc_rate_limit_hit( $bucket, $limit, $window ) {
-	$ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-	$now = time();
-	$key = 'tmc_rl_' . sanitize_key( $bucket ) . '_' . md5( $ip );
-
-	if ( wp_using_ext_object_cache() ) {
-		$slot  = (int) floor( $now / $window );
-		$key  .= '_' . $slot;
-		$count = wp_cache_incr( $key, 1, 'tmc_rate' );
-		if ( false === $count ) {
-			$count = wp_cache_add( $key, 1, 'tmc_rate', $window ) ? 1 : (int) wp_cache_incr( $key, 1, 'tmc_rate' );
-		}
-		$reset = ( $slot + 1 ) * $window - $now;
-	} else {
-		$data = get_transient( $key );
-		if ( ! is_array( $data ) || $now - (int) $data['start'] >= $window ) {
-			$data = array( 'start' => $now, 'count' => 0 );
-		}
-		++$data['count'];
-		$reset = max( 1, (int) $data['start'] + $window - $now );
-		set_transient( $key, $data, $reset );
-		$count = $data['count'];
-	}
-	return $count > $limit ? max( 1, (int) $reset ) : 0;
-}

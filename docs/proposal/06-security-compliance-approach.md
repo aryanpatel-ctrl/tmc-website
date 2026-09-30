@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-PRP-07 | 0.1 | R-4.8-1 to R-4.8-9, R-2-6, R-4.7-1/2/5, R-4.9-1, R-6-4 (evaluation parameter 3: 15 marks) |
+| TMC-WEB-PRP-07 | 0.2 | R-4.8-1 to R-4.8-9, R-2-6, R-4.7-1/2/5, R-4.9-1, R-6-4 (evaluation parameter 3: 15 marks) |
 
 ## 1. Objective
 
@@ -20,7 +20,7 @@ and re-validated before each Go-Live.
 | Segregated network zone; no direct connectivity to clinical systems, databases, patient data stores, internal file shares | Website zones (DMZ, web application, web data, management) on infrastructure separate from the clinical zone; default-deny egress towards TMC internal ranges; the database and cache sit on an internal network with no internet and no host ports |
 | Interaction only through TMC-approved, controlled, allow-listed endpoints | Server-side application gateway: only registered endpoint IDs, credentials from the environment, rate control, metadata-only logging, internal URLs never sent to browsers; the same allow-list enforced on the firewall |
 | Separate infrastructure accounts, databases, credentials | Own database instance and users, own secrets per environment, TMC-owned accounts |
-| No clinical or patient data on the website (SOW §4.4) | Application front ends pass data through and store nothing; verified by a test that searches the database after end-to-end tests |
+| No clinical or patient data on the website (SOW §4.4) | Application front ends pass data through and store nothing; verified in every CI run by `scripts/tests/apps-test.php`, which submits a unique marker through the gateway and then searches the content, user, option and audit tables of all sites for it |
 | Evidence | Segregation tests S-1 to S-6 at M2 and before each Go-Live, witnessed by TMC IT ([Security Architecture §3.1](../architecture/security-architecture.md#31-segregation-validation-test-performed-at-m2-and-before-each-go-live)) |
 
 ## 3. Access control
@@ -28,10 +28,10 @@ and re-validated before each Go-Live.
 | Control | Approach |
 |---|---|
 | Role-based authorisation | Super Admin (TMC IT only), Site Administrator, Reviewer / Publisher, Content Editor; no role can publish without review except reviewers; unit isolation; verified per role in CI |
-| Multi-factor authentication | TOTP mandatory for Super Admin, Site Administrator and Reviewer / Publisher; for all infrastructure access |
+| Multi-factor authentication | TOTP mandatory for Super Admin, Site Administrator and Reviewer / Publisher (Two Factor plugin, enforced by `TMC_ENFORCE_MFA`; `security-test.php`); for all infrastructure access |
 | Restricted network access | CMS administration and SSH only from TMC networks or the TMC-approved VPN/bastion |
 | Vendor access | No standing access to Production/DR; named, ticket-based, time-bound, logged; data never copied out ([Access Control and Vendor Access Policy](../architecture/access-control-policy.md)) |
-| Hardening | File editing disabled; code read-only at runtime; no PHP execution in uploads; XML-RPC disabled; version disclosure removed; security headers incl. CSP and HSTS; login rate limiting |
+| Hardening | File editing disabled; code read-only at runtime; no PHP execution in uploads; XML-RPC disabled; version disclosure removed; security headers incl. nonce-based CSP, HSTS and cross-origin isolation headers; `security.txt`; login lockout; user-enumeration blocking; rate limiting of public endpoints — all tested in CI (`security-test.php`, 127 checks) |
 
 ## 4. Audit logging and log retention
 

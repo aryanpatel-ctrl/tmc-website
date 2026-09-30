@@ -2,7 +2,7 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-ARC-01 | 0.1 | Draft for TMC IT review | R-4.15-1, R-4.7-1 to R-4.7-9, R-2-10, R-4.1-\*, R-8.2-6 |
+| TMC-WEB-ARC-01 | 0.2 | Draft for TMC IT approval | R-4.15-1, R-4.7-1 to R-4.7-9, R-2-10, R-4.1-\*, R-8.2-6 |
 
 **Project:** Development, CMS Implementation, Deployment, Content Migration, Security Certification,
 Training, Warranty and Maintenance of the TMC Website Ecosystem (EOI No. TMH/TMH/2026-27/CAP/EO/0009).
@@ -14,7 +14,7 @@ the companion [Security Architecture Document](security-architecture.md) (TMC-WE
 Milestone M2 deliverable required by SOW §4.8.
 
 **Conventions:** every statement is taken from the code in this repository as integrated on branch
-`feat/integration` (all work streams W1–W8 merged) and verified by the CI pipeline.
+`feat/integration` (all components integrated) and verified by the CI pipeline.
 
 ---
 
@@ -55,7 +55,7 @@ flowchart LR
     citizen -- "HTTPS" --> web
     editors -- "HTTPS + MFA" --> cms
     tmcit -- "HTTPS + MFA / VPN" --> cms
-    web -- "allow-listed endpoints only<br/>(application gateway, W4)" --> apps
+    web -- "allow-listed endpoints only<br/>(application gateway)" --> apps
     gh -- "tested release" --> eco
     web -. "no connectivity" .- clinical
 ```
@@ -125,7 +125,13 @@ flowchart TB
 | Automatic expiry | `tmc-core/expiry.php` | Every 5 minutes: records closure/expiry of time-bound content once in the audit log |
 | Theme bootstrap | `src/themes/tmc/functions.php` | Loads every file in `inc/`; feature CSS/JS in `assets/*/features/` load automatically |
 | Views | `src/themes/tmc/inc/content-views.php` and templates | Listings with current/archive views, event calendar, `.ics` download, doctor filter |
-| Provisioning | `scripts/setup.sh` and helpers | Containers, network install, pinned plugin, languages, theme, per-site seed and migrations |
+| Search and document library | `tmc-core/search-index.php`, `search-suggest.php`, `document-text.php`, `documents.php`, `media-overview.php`; theme `inc/search.php`, `inc/documents.php` | Site search including PDF text, suggestions (`/wp-json/tmc/v1/suggest`), document library (`/documents/`), *Network Admin → Media & documents* |
+| Security hardening | `tmc-core/security*.php`, `rate-limit.php` | CSP and HSTS headers, `security.txt`, MFA enforcement, login lockout, admin network allow-list, session policy, user-enumeration blocking, shared rate limiting |
+| SEO, redirects, analytics | `tmc-core/seo.php`, `seo-schema.php`, `redirects.php`, `analytics.php` | SEO fields and JSON-LD, robots per environment, redirect manager (*Tools → Redirects*), analytics settings (*Network Admin → Settings → Analytics & Search*) |
+| Application gateway | `tmc-core/apps-gateway.php`, `apps-admin.php`; theme `inc/apps-blocks.php`, `inc/apps-pages.php` | Allow-listed calls to TMC application back ends (`/wp-json/tmc/v1/apps/<service>/<action>`), endpoint registry (*Network Admin → Settings → TMC applications*), front-end blocks |
+| Editorial platform | `tmc-core/editorial-governance.php`, `editorial-ia.php`, `network-publishing.php`; theme `inc/page-templates.php`, `inc/component-library.php` | Page-template picker, restricted block inserter, publishing to unit websites, component library page (`/component-library/`) |
+| Page cache, health, backups | `src/mu-plugins/tmc-page-cache/`, `tmc-core/page-cache.php`, `object-cache-config.php`, `health.php` | Full-page cache in Redis, health endpoint (`/wp-json/tmc/v1/health`), *Network Admin → Health & Backups* |
+| Provisioning | `scripts/setup.sh` and helpers | Containers, network install, pinned plugins, languages, theme, per-site seed and migrations |
 | Tests | `scripts/tests/*-test.php`, `scripts/smoke-test.sh`, `scripts/smoke.d/*.sh`, `scripts/lint.sh` | Run locally (`make check`) and in CI |
 
 ## 5. Physical (container) architecture
@@ -139,7 +145,7 @@ flowchart LR
         end
         subgraph internal["tmc_internal: no internet"]
             db[("tmc-db<br/>MariaDB 11.4")]
-            redis[("tmc-redis<br/>Redis 7")]
+            redis[("tmc-redis<br/>Valkey 8.1 (Redis-compatible)")]
             cron["tmc-cron<br/>WP-CLI loop, every 60 s"]
         end
         proxy["Reverse proxy<br/>UAT: nginx-proxy-manager<br/>Dev/CI: port 127.0.0.1:80"]
@@ -155,7 +161,7 @@ flowchart LR
 |---|---|---|---|---|---|
 | `db` (`tmc-db`) | `mariadb:11.4.13` | `tmc_internal` | none | volume `db_data` | Health-checked; `max-allowed-packet=64M` |
 | `redis` (`tmc-redis`) | `valkey/valkey:8.1.10-alpine` (Redis-compatible, BSD-3-Clause) | `tmc_internal` | none | none (`--save ""`) | Cache only; losing it loses no data |
-| `wordpress` (`tmc-wp`) | `tmc-wordpress:latest` built from `wordpress/Dockerfile` (base `wordpress:7.1.2-php8.3-apache`) | `tmc_internal`, `tmc_edge` (+ `homelab` on UAT) | Dev/CI: `127.0.0.1:80`; UAT: none | volume `wp_html` (core + uploads); theme and mu-plugins bind-mounted **read-only** | Hardened Apache/PHP config (`wordpress/apache-tmc.conf`, `php.ini`) |
+| `wordpress` (`tmc-wp`) | `tmc-wordpress:latest` built from `wordpress/Dockerfile` (base `wordpress:7.1.2-php8.3-apache`) | `tmc_internal`, `tmc_edge`, `tmc_apps` (+ `homelab` on UAT) | Dev/CI: `127.0.0.1:80`; UAT: none | volume `wp_html` (core + uploads); theme and mu-plugins bind-mounted **read-only** | Hardened Apache/PHP config (`wordpress/apache-tmc.conf`, `php.ini`) |
 | `cron` (`tmc-cron`) | `wordpress:cli-2.12.0-php8.3` | `tmc_internal` only | none | shares `wp_html` | Runs `wp cron event run --due-now` for each site every 60 seconds |
 | `wpcli` | `wordpress:cli-2.12.0-php8.3` | `tmc_internal`, `tmc_edge`, `tmc_apps` | none | shares `wp_html`; `scripts/` mounted read-only at `/tmc-scripts` | Not running; started only for provisioning, migrations and tests |
 
@@ -165,7 +171,6 @@ The environment-specific override file is selected by `COMPOSE_FILE` in `.env`:
 |---|---|---|
 | `compose.local.yml` | Developer machine, CI | Publishes WordPress on `127.0.0.1:80` only (loopback) |
 | `compose.server.yml` | UAT server | No published port; joins the external `homelab` network so the reverse proxy can reach `tmc-wp` |
-
 | `compose.prod.yml` | Production and a real DR failover | Own project (`tmc-prod`) and container names; WordPress on `127.0.0.1:8080` behind TMC's reverse proxy; the DEMO application mock is not started |
 | `compose.dr.yml` | DR drill (CI, monthly) | Isolated project `tmc-dr`, no published ports |
 
@@ -237,7 +242,7 @@ flowchart LR
     ci -- "merge to main" --> ci2["CI again on main"]
     ci2 -- "self-hosted runner" --> uat["UAT deploy:<br/>1 DB backup, 2 sync, 3 provision,<br/>4 proxy route, 5 smoke, 6 record"]
     uat -- "TMC UAT sign-off, tag vX.Y.Z,<br/>re-test + approval (release.yml)" --> prod["Production promotion"]
-    prod -. "replication / restore" .-> dr["DR"]
+    prod -. "15-minute backups, off-host copy, restore" .-> dr["DR"]
 ```
 
 Every deployment is tested first, preceded by a database backup, smoke-tested after, and recorded in
@@ -252,7 +257,7 @@ earlier commit or tag through *Actions → Pipeline → Run workflow* (R-4.7-4).
 | **CI** | Automated verification of every change | GitHub-hosted `ubuntu-latest`, discarded after each run | `make-env.sh ci` + `setup.sh` + tests + smoke | GitHub Actions logs | Seeded sample data only |
 | **UAT** | TMC acceptance testing, demonstrations | UAT server (currently the vendor-managed host "hetser", reachable only over the Tailscale private network) | `deploy.sh` via self-hosted runner on push to `main` | TMC testers and project team | Seeded sample data + TMC test content |
 | **Production** | Live websites | TMC-owned or TMC-subscribed infrastructure, MeitY-empanelled cloud in TMC's name where cloud is used (SOW §4.7) | Same scripts; promotion after UAT sign-off | Public (websites); MFA + restricted network (administration) | Live content |
-| **Disaster Recovery** | Continuity: RPO 15 min, RTO 1 h | Separate TMC-owned site/region in India | Same scripts + restore of the latest backup set | As Production | Replica / backups of Production |
+| **Disaster Recovery** | Continuity: RPO 15 min, RTO 1 h | Separate TMC-owned site/region in India | Same scripts + restore of the latest backup set | As Production | Restored from the backups of Production |
 
 Production and DR use `compose.prod.yml`; promotion is `.github/workflows/release.yml`; the 15-minute
 backups, the off-host copy and the timed restore drill are described in
@@ -281,7 +286,7 @@ The same repository commit produces every environment. What differs is only `.en
 | Separate Dev, UAT, Production, DR | Section 7. |
 | Controlled, auditable promotion, version control, rollback | Git history + pipeline + pre-deploy backup + `.release-history` + redeploy of any earlier commit. |
 | Production/DR owned by TMC; vendor access limited and logged | [Access Control and Vendor Access Policy](access-control-policy.md). |
-| RPO 15 minutes, RTO 1 hour, periodic drills | W7 backup schedule and timed restore drill; procedure in [Backup and Restoration](../operations/backup-restore.md). |
+| RPO 15 minutes, RTO 1 hour, periodic drills | `backup` service (snapshot every 15 minutes, off-host copy) and timed restore drill (`scripts/dr/drill.sh`, `.github/workflows/dr-drill.yml`); procedure in [Backup and Restoration](../operations/backup-restore.md). |
 | Single CMS and security framework for all subdomains | One WordPress Multisite network; one `tmc-core` plugin; one theme. |
 | Scheduled backup of content, databases, configurations; tested restore | Section 9 and the backup procedure. |
 | Peak load; scale for more units, languages, modules | Section 10. |
@@ -307,6 +312,7 @@ following is the starting point for the Production and DR hosts, each:
 | Configuration and secrets | `.env` on each host (mode 600, never in Git) | Database credentials, admin bootstrap, `TMC_AUDIT_KEY` |
 | Code and provisioning | Git repository | Everything else; any environment is rebuilt from it |
 | Release record | `.release-history`, `.deployed` on the server | Which commit was deployed when and by whom |
+| Backups | volume `backup_data` and the off-host copy | 15-minute snapshots (database, uploads, configuration) with retention; see [Backup and DR](../operations/backup-and-dr.md) |
 
 `TMC_AUDIT_KEY` must be backed up separately from the database backups (see
 [Security Architecture](security-architecture.md#8-key-and-secret-management)): without it the
@@ -319,8 +325,8 @@ integrity of the restored audit log cannot be verified.
 | Additional unit website | `wp site create` + the per-site steps of `setup.sh` (seed, languages, migrations) | Only the site list in `install-network.sh` / `setup.sh` / `seed-site-structure.php` so fresh installs include it |
 | Additional language (3rd, 4th) | Polylang: add the language on each site; theme strings are wrapped in `__( '…', 'tmc' )` | None in templates (R-4.13-2); translation files only |
 | New content type or feature | New file in `tmc-core/` or `inc/`; migration for existing sites | Additive; no edits to existing modules |
-| Traffic | 1) Redis object cache (in place); 2) page cache (W7); 3) vertical scaling; 4) horizontal: several `wordpress` containers behind a load balancer with shared uploads storage and the existing external Redis/MariaDB | Configuration only |
-| Database | MariaDB tuning; primary/replica for DR (W7) | None |
+| Traffic | 1) Redis object cache (in place); 2) full-page cache (in place, `tmc-page-cache`); 3) vertical scaling; 4) horizontal: several `wordpress` containers behind a load balancer with shared uploads storage and the existing external Redis/MariaDB | Configuration only |
+| Database | MariaDB tuning; DR by restoring the 15-minute backups on the DR host (`scripts/dr/restore.sh`); a primary/replica pair can be added if TMC requires a shorter RPO | Configuration only |
 
 ## 11. Design constraints carried into the architecture
 

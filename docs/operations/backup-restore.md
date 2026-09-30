@@ -2,7 +2,11 @@
 
 | Document ID | Version | Status | RTM references |
 |---|---|---|---|
-| TMC-WEB-OPS-03 | 0.1 | Draft; scheduled-backup details from W7 to be confirmed at integration | R-4.15-5, R-4.7-6, R-4.7-8, R-8.2-6 |
+| TMC-WEB-OPS-03 | 0.2 | Draft for TMC IT approval; aligned with the implemented backup service | R-4.15-5, R-4.7-6, R-4.7-8, R-8.2-6 |
+
+> **Scope.** This is the formal *procedure* (who does what, when, and how it is recorded) — the SOW §4.15
+> deliverable. The technical design of the backup service, retention, off-host copy and DR tooling is
+> in [backup-and-dr.md](backup-and-dr.md); where they overlap, commands are identical.
 
 SOW §4.7 requires "scheduled backup of content, databases, and configurations, with a documented and
 tested restoration procedure" and business continuity meeting **RPO 15 minutes** and **RTO 1 hour**,
@@ -26,8 +30,8 @@ umask 077; mkdir -p backups
 
 | # | Item | Location | Method | Frequency |
 |---|---|---|---|---|
-| B1 | Database (all sites, users, settings, revisions, audit log) | volume `db_data` | `mariadb-dump --single-transaction` (consistent, no locking of the sites) | Before every deployment (in place); scheduled per §2 (W7) |
-| B2 | Uploads (media and documents of all sites) | volume `wp_html`, `wp-content/uploads/` | Archive / incremental copy | Scheduled per §2 (W7) |
+| B1 | Database (all sites, users, settings, revisions, audit log) | volume `db_data` | `mariadb-dump --single-transaction` (consistent, no locking of the sites) | Before every deployment and every 15 minutes by the `backup` service (§2) |
+| B2 | Uploads (media and documents of all sites) | volume `wp_html`, `wp-content/uploads/` | Incremental copy (hard-linked snapshots) by the `backup` service | Every 15 minutes (§2) |
 | B3 | Environment configuration and secrets | `.env` | Encrypted copy in TMC's secret store / offline escrow | At creation and after every change |
 | B4 | Audit HMAC key | `TMC_AUDIT_KEY` in `.env` | Offline escrow held by TMC IT | At creation and after rotation |
 | B5 | Release record | `.release-history`, `.deployed` | Included in the configuration backup | After each deployment |
@@ -53,8 +57,12 @@ with `scripts/backup/offsite-copy.sh`. Retention (policy to be confirmed with TM
 | Same, first snapshot of each month | Monthly | 12 months | As above |
 | Pre-deploy database dump + full snapshot | Each deployment | Last 10 dumps | Production host `backups/` and `backup_data` |
 
-Backups are encrypted in transit and at rest, accessible only to TMC IT and the named infrastructure
-administrator, and located in India (see [Data Residency Statement](../architecture/data-residency-statement.md)).
+Backup files are written with owner-only permissions (directories `0700`, files `0600`) on a volume
+reachable only from the internal network, and the off-host copy travels over SSH with a key restricted to
+the backup directory. Encryption at rest is provided by the storage: the production host and TMC's
+off-host backup target use encrypted disks or volumes (hosting responsibility, checked in the
+[Pre-VAPT checklist](../security/pre-vapt-checklist.md) item 5.5). Backups are accessible only to TMC IT and the named infrastructure administrator,
+and are located in India (see [Data Residency Statement](../architecture/data-residency-statement.md)).
 
 ## 3. Taking a backup on demand
 
@@ -154,8 +162,8 @@ every change and monthly). See [Backup and DR](backup-and-dr.md).
 
 | Check | Frequency | How |
 |---|---|---|
-| Backup job succeeded | Daily | Monitoring alert on missing/failed backup (W7) |
-| Archive integrity | Each backup | `gzip -t` (compressed dumps) |
+| Backup job succeeded | Continuous; reviewed daily | `/wp-json/tmc/v1/health` returns HTTP 503 (`backup` check) when the newest good backup is older than 30 minutes, so the uptime monitor alerts ([Monitoring](monitoring.md)); *Network Admin → Health & Backups* lists the last 20 runs |
+| Archive integrity | Each backup | SHA-256 seal of every file verified before the run is recorded; `tmc-backup verify latest` on demand; `gzip -t` for pre-deploy dumps |
 | Restorability | Monthly on UAT; quarterly DR drill | Restore the latest Production backup to UAT or DR and run the smoke test |
 | Audit chain after restore | Each restore | *Network Admin → Audit Log → Verify integrity* |
 

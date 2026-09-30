@@ -2,7 +2,7 @@
 
 | Document ID | Version | RTM references |
 |---|---|---|
-| TMC-WEB-TPL-03 | 0.1 | R-6-4, R-6-2, R-4.8-7, R-13-2 |
+| TMC-WEB-TPL-03 | 0.2 | R-6-4, R-6-2, R-4.8-7, R-13-2 |
 
 SOW §6.2 (AMC): "An annual security review report covering the CMS, modules, and plugins, submitted to TMC
 IT", together with annual VAPT by a CERT-In empanelled agency, renewal of the Safe-to-Host certificate
@@ -32,7 +32,13 @@ One row per component in [THIRD-PARTY-LICENSES.md](../../THIRD-PARTY-LICENSES.md
 | Redis-compatible cache | | | | | | Yes | | |
 | `tmc-core` modules (one row per module) | | | Project | | | | GPL-2.0-or-later | |
 | `tmc` theme | | | Project | | | | GPL-2.0-or-later | |
-| Components added by work streams (search, security, SEO, gateway, editorial, quality, backup) | | | | | | | | |
+| Two Factor (MFA) | | | | | | Yes | | |
+| Redis Object Cache | | | | | | Yes | | |
+| `tmc-page-cache` drop-in (page cache) | | | Project | | | | GPL-2.0-or-later | |
+| poppler-utils `pdftotext` (PDF text for search, in the WordPress image) | | | | | | Yes | | |
+| Backup image (`backup/Dockerfile`, MariaDB client, rsync, OpenSSH client) | | | | | | Yes | | |
+| Uptime Kuma (monitoring host) | | | | | | Yes | | |
+| CI and test tooling (GitHub Actions, Playwright, axe, Lighthouse, Nu HTML Checker, Trivy, ZAP, gitleaks; not deployed to Production) | | | | | | | | |
 
 ## 3. Certification status
 

@@ -93,6 +93,36 @@ function tmc_csp_directives( $context, $https ) {
 	return (array) apply_filters( 'tmc_csp_directives', $directives, $context );
 }
 
+/**
+ * Web analytics (analytics.php), when a provider is configured: allow exactly its origin, so the
+ * tracker works without loosening the policy for anything else.
+ */
+add_filter( 'tmc_csp_directives', 'tmc_csp_allow_analytics', 10, 2 );
+function tmc_csp_allow_analytics( $directives, $context ) {
+	if ( 'front' !== $context || ! function_exists( 'tmc_analytics_active' ) ) {
+		return $directives;
+	}
+	$active = tmc_analytics_active();
+	$add    = array();
+	if ( is_array( $active ) && 'matomo' === ( $active['provider'] ?? '' ) && ! empty( $active['url'] ) ) {
+		$parts = wp_parse_url( (string) $active['url'] );
+		if ( ! empty( $parts['scheme'] ) && ! empty( $parts['host'] ) ) {
+			$origin = strtolower( $parts['scheme'] . '://' . $parts['host'] ) . ( isset( $parts['port'] ) ? ':' . (int) $parts['port'] : '' );
+			$add    = array( 'script-src' => array( $origin ), 'img-src' => array( $origin ), 'connect-src' => array( $origin ) );
+		}
+	} elseif ( is_array( $active ) && 'ga4' === ( $active['provider'] ?? '' ) ) {
+		$add = array(
+			'script-src'  => array( 'https://www.googletagmanager.com' ),
+			'img-src'     => array( 'https://*.google-analytics.com', 'https://*.googletagmanager.com' ),
+			'connect-src' => array( 'https://*.google-analytics.com', 'https://*.analytics.google.com', 'https://*.googletagmanager.com' ),
+		);
+	}
+	foreach ( $add as $name => $sources ) {
+		$directives[ $name ] = array_merge( (array) ( $directives[ $name ] ?? array() ), $sources );
+	}
+	return $directives;
+}
+
 function tmc_csp_header_value( array $directives ) {
 	$parts = array();
 	foreach ( $directives as $name => $sources ) {
@@ -114,8 +144,8 @@ function tmc_csp_header_value( array $directives ) {
 function tmc_security_headers( $context, $https ) {
 	$headers = array( 'Content-Security-Policy' => tmc_csp_header_value( tmc_csp_directives( $context, $https ) ) );
 	if ( $https ) {
-		$hsts = 'max-age=' . tmc_env_int( 'TMC_HSTS_MAX_AGE', YEAR_IN_SECONDS, 0, 2 * YEAR_IN_SECONDS );
-		if ( tmc_env_flag( 'TMC_HSTS_INCLUDE_SUBDOMAINS', false ) ) {
+		$hsts = 'max-age=' . tmc_security_int( 'TMC_HSTS_MAX_AGE', YEAR_IN_SECONDS, 0, 2 * YEAR_IN_SECONDS );
+		if ( tmc_security_flag( 'TMC_HSTS_INCLUDE_SUBDOMAINS', false ) ) {
 			$hsts .= '; includeSubDomains';
 		}
 		$headers['Strict-Transport-Security'] = $hsts;
@@ -124,7 +154,7 @@ function tmc_security_headers( $context, $https ) {
 }
 
 function tmc_send_security_headers( $context ) {
-	if ( headers_sent() || tmc_is_cli() ) {
+	if ( headers_sent() || tmc_security_is_cli() ) {
 		return;
 	}
 	foreach ( tmc_security_headers( $context, is_ssl() ) as $name => $value ) {
@@ -138,7 +168,7 @@ add_action( 'admin_init', fn() => tmc_send_security_headers( 'admin' ) );
 add_action(
 	'rest_api_init',
 	function () {
-		if ( is_ssl() && ! headers_sent() && ! tmc_is_cli() ) {
+		if ( is_ssl() && ! headers_sent() && ! tmc_security_is_cli() ) {
 			$headers = tmc_security_headers( 'admin', true );
 			header( 'Strict-Transport-Security: ' . $headers['Strict-Transport-Security'] );
 		}
@@ -160,7 +190,7 @@ add_filter( 'xmlrpc_enabled', '__return_false' );
 /** Contact URIs; placeholder until TMC confirms one (TMC_SECURITY_CONTACT). */
 function tmc_security_contacts() {
 	$contacts = array();
-	foreach ( explode( ',', tmc_env( 'TMC_SECURITY_CONTACT', '' ) ) as $contact ) {
+	foreach ( explode( ',', tmc_security_env( 'TMC_SECURITY_CONTACT', '' ) ) as $contact ) {
 		$contact = trim( $contact );
 		if ( preg_match( '#^(mailto:[^\s@]+@[^\s@]+|https://\S+)$#i', $contact ) ) {
 			$contacts[] = $contact;
@@ -172,7 +202,7 @@ function tmc_security_contacts() {
 function tmc_security_txt_body( $canonical, $now = null ) {
 	$now      = null === $now ? time() : (int) $now;
 	$contacts = tmc_security_contacts();
-	$expires  = tmc_env( 'TMC_SECURITY_TXT_EXPIRES', '' );
+	$expires  = tmc_security_env( 'TMC_SECURITY_TXT_EXPIRES', '' );
 	$expires  = preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $expires ) ? $expires : gmdate( 'Y-m-d\T00:00:00\Z', $now + 180 * DAY_IN_SECONDS );
 
 	$lines = array( '# Security contact for the Tata Memorial Centre website network (RFC 9116).' );
@@ -191,7 +221,7 @@ function tmc_security_txt_body( $canonical, $now = null ) {
 
 add_action( 'parse_request', 'tmc_serve_security_txt', 0 );
 function tmc_serve_security_txt() {
-	$path = tmc_request_path();
+	$path = tmc_security_request_path();
 	if ( '/security.txt' === $path ) {
 		wp_safe_redirect( home_url( '/.well-known/security.txt' ), 301 );
 		exit;

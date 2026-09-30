@@ -33,11 +33,11 @@ const TMC_MFA_SINCE_META = 'tmc_mfa_required_since';
 const TMC_PASSWORD_CHANGE_META = 'tmc_password_change_required';
 
 function tmc_mfa_enforced() {
-	return tmc_env_flag( 'TMC_ENFORCE_MFA', true );
+	return tmc_security_flag( 'TMC_ENFORCE_MFA', true );
 }
 
 function tmc_mfa_grace_seconds() {
-	return tmc_env_int( 'TMC_MFA_GRACE_HOURS', 0, 0, 30 * 24 ) * HOUR_IN_SECONDS;
+	return tmc_security_int( 'TMC_MFA_GRACE_HOURS', 0, 0, 30 * 24 ) * HOUR_IN_SECONDS;
 }
 
 function tmc_mfa_plugin_active() {
@@ -144,36 +144,52 @@ add_filter( 'two_factor_totp_issuer', fn( $issuer ) => get_network() ? get_netwo
 
 /* ------------------------------------------------------------------ enforcement */
 
+/** Where to send an account that opens admin screen $pagenow ('' = let it through). */
+function tmc_account_gate_redirect( $user, $pagenow ) {
+	if ( tmc_account_gate_allows_screen( $pagenow ) ) {
+		return '';
+	}
+	$reason = tmc_account_gate( $user );
+	return '' === $reason ? '' : tmc_account_gate_url( $reason );
+}
+
+/** The error for a REST call by an account that must act first (null = allowed). */
+function tmc_account_gate_rest_error( $user, $route ) {
+	if ( tmc_account_gate_allows_route( $route ) || '' === tmc_account_gate( $user ) ) {
+		return null;
+	}
+	return new WP_Error( 'tmc_account_action_required', 'This account must set up two-factor authentication (or change its password) on its profile page before it can do anything else.', array( 'status' => 403 ) );
+}
+
 add_action( 'admin_init', 'tmc_account_gate_admin', 1 );
 function tmc_account_gate_admin() {
 	global $pagenow;
-	if ( tmc_is_cli() || wp_doing_ajax() || wp_doing_cron() || tmc_account_gate_allows_screen( $pagenow ) ) {
+	if ( tmc_security_is_cli() || wp_doing_ajax() || wp_doing_cron() || ! is_user_logged_in() ) {
 		return;
 	}
-	$user   = wp_get_current_user();
+	$user     = wp_get_current_user();
+	$redirect = tmc_account_gate_redirect( $user, (string) $pagenow );
+	if ( '' === $redirect ) {
+		return;
+	}
 	$reason = tmc_account_gate( $user );
-	if ( '' === $reason ) {
-		return;
-	}
 	tmc_security_audit_throttled(
 		'gate-' . $user->ID . '-' . $reason,
 		HOUR_IN_SECONDS,
 		'mfa' === $reason ? 'mfa_enrolment_required' : 'password_change_required',
 		array( 'object_type' => 'user', 'object_id' => $user->ID, 'object_title' => $user->user_login, 'details' => array( 'screen' => (string) $pagenow ) )
 	);
-	wp_safe_redirect( tmc_account_gate_url( $reason ) );
+	wp_safe_redirect( $redirect );
 	exit;
 }
 
 add_filter( 'rest_pre_dispatch', 'tmc_account_gate_rest', 6, 3 );
 function tmc_account_gate_rest( $result, $server, $request ) {
-	if ( null !== $result || tmc_is_cli() || ! $request instanceof WP_REST_Request || ! is_user_logged_in() ) {
+	if ( null !== $result || tmc_security_is_cli() || ! $request instanceof WP_REST_Request || ! is_user_logged_in() ) {
 		return $result;
 	}
-	if ( tmc_account_gate_allows_route( $request->get_route() ) || '' === tmc_account_gate( wp_get_current_user() ) ) {
-		return $result;
-	}
-	return new WP_Error( 'tmc_account_action_required', 'This account must set up two-factor authentication (or change its password) on its profile page before it can do anything else.', array( 'status' => 403 ) );
+	$error = tmc_account_gate_rest_error( wp_get_current_user(), $request->get_route() );
+	return $error ? $error : $result;
 }
 
 /* ------------------------------------------------------------------ notices */

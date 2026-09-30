@@ -25,11 +25,11 @@ defined( 'ABSPATH' ) || exit;
 
 function tmc_login_policy() {
 	return array(
-		'user_max' => tmc_env_int( 'TMC_LOGIN_MAX_ATTEMPTS', 5, 1, 100 ),
-		'ip_max'   => tmc_env_int( 'TMC_LOGIN_MAX_ATTEMPTS_IP', 20, 1, 1000 ),
-		'window'   => tmc_env_int( 'TMC_LOGIN_WINDOW', 15 * MINUTE_IN_SECONDS, MINUTE_IN_SECONDS, DAY_IN_SECONDS ),
-		'base'     => tmc_env_int( 'TMC_LOGIN_LOCKOUT_BASE', MINUTE_IN_SECONDS, 1, HOUR_IN_SECONDS ),
-		'cap'      => tmc_env_int( 'TMC_LOGIN_LOCKOUT_MAX', HOUR_IN_SECONDS, MINUTE_IN_SECONDS, WEEK_IN_SECONDS ),
+		'user_max' => tmc_security_int( 'TMC_LOGIN_MAX_ATTEMPTS', 5, 1, 100 ),
+		'ip_max'   => tmc_security_int( 'TMC_LOGIN_MAX_ATTEMPTS_IP', 20, 1, 1000 ),
+		'window'   => tmc_security_int( 'TMC_LOGIN_WINDOW', 15 * MINUTE_IN_SECONDS, MINUTE_IN_SECONDS, DAY_IN_SECONDS ),
+		'base'     => tmc_security_int( 'TMC_LOGIN_LOCKOUT_BASE', MINUTE_IN_SECONDS, 1, HOUR_IN_SECONDS ),
+		'cap'      => tmc_security_int( 'TMC_LOGIN_LOCKOUT_MAX', HOUR_IN_SECONDS, MINUTE_IN_SECONDS, WEEK_IN_SECONDS ),
 	);
 }
 
@@ -150,7 +150,7 @@ function tmc_login_precheck( $user, $username, $password ) {
 	if ( '' === trim( (string) $username ) ) {
 		return $user;
 	}
-	if ( tmc_login_lock_remaining( tmc_client_ip(), (string) $username ) > 0 ) {
+	if ( tmc_login_lock_remaining( tmc_security_client_ip(), (string) $username ) > 0 ) {
 		$removed = array();
 		foreach ( array( 'wp_authenticate_username_password', 'wp_authenticate_email_password' ) as $handler ) {
 			if ( remove_filter( 'authenticate', $handler, 20 ) ) {
@@ -180,7 +180,7 @@ function tmc_login_on_failure( $username, $error = null ) {
 	if ( $error instanceof WP_Error && 'tmc_login_locked' === $error->get_error_code() ) {
 		return; // attempts during a lockout do not extend it (the audit log still records them)
 	}
-	tmc_login_register_failure( tmc_client_ip(), (string) $username );
+	tmc_login_register_failure( tmc_security_client_ip(), (string) $username );
 }
 
 add_action( 'wp_login', 'tmc_login_on_success', 5, 2 );
@@ -219,23 +219,32 @@ add_filter( 'shake_error_codes', fn( $codes ) => array_merge( (array) $codes, ar
 /**
  * Lost password: for an unknown username or email, behave exactly as for a known one (redirect to
  * "check your email") instead of showing "There is no account with that username or email".
+ *
+ * @return string Where to send the visitor, or '' to let WordPress continue.
  */
-add_action( 'lostpassword_post', 'tmc_lostpassword_no_enumeration', 10, 2 );
-function tmc_lostpassword_no_enumeration( $errors, $user_data ) {
-	if ( $user_data instanceof WP_User || 'wp-login.php' !== ( $GLOBALS['pagenow'] ?? '' ) || ! $errors instanceof WP_Error ) {
-		return;
+function tmc_lostpassword_fake_success_url( $errors, $user_data, $pagenow, $login, $redirect_to = '' ) {
+	if ( $user_data instanceof WP_User || 'wp-login.php' !== $pagenow || ! $errors instanceof WP_Error || '' === trim( (string) $login ) ) {
+		return '';
 	}
 	if ( array_diff( $errors->get_error_codes(), array( 'invalid_email' ) ) ) {
-		return; // e.g. the field was empty: let WordPress say so
+		return ''; // e.g. the field was empty: let WordPress say so
 	}
-	$login = isset( $_POST['user_login'] ) && is_string( $_POST['user_login'] ) ? trim( wp_unslash( $_POST['user_login'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- core form; value only compared
-	if ( '' === $login ) {
+	// Same destination as core after a successful request (wp-login.php, case 'lostpassword').
+	return '' !== (string) $redirect_to ? (string) $redirect_to : 'wp-login.php?checkemail=confirm';
+}
+
+add_action( 'lostpassword_post', 'tmc_lostpassword_no_enumeration', 10, 2 );
+function tmc_lostpassword_no_enumeration( $errors, $user_data ) {
+	// phpcs:disable WordPress.Security.NonceVerification -- core form; values are only compared / validated by wp_safe_redirect()
+	$login    = isset( $_POST['user_login'] ) && is_string( $_POST['user_login'] ) ? trim( wp_unslash( $_POST['user_login'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	$redirect = isset( $_REQUEST['redirect_to'] ) && is_string( $_REQUEST['redirect_to'] ) ? wp_unslash( $_REQUEST['redirect_to'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	// phpcs:enable
+	$url = tmc_lostpassword_fake_success_url( $errors, $user_data, (string) ( $GLOBALS['pagenow'] ?? '' ), $login, $redirect );
+	if ( '' === $url ) {
 		return;
 	}
-	tmc_security_audit_throttled( tmc_client_ip(), 10 * MINUTE_IN_SECONDS, 'password_reset_unknown_account', array( 'object_type' => 'user', 'details' => array( 'note' => 'reset requested for an account that does not exist' ) ) );
-	// Same destination as core after a successful request (wp-login.php, case 'lostpassword').
-	$redirect = ! empty( $_REQUEST['redirect_to'] ) && is_string( $_REQUEST['redirect_to'] ) ? wp_unslash( $_REQUEST['redirect_to'] ) : 'wp-login.php?checkemail=confirm'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- wp_safe_redirect validates
-	wp_safe_redirect( $redirect );
+	tmc_security_audit_throttled( tmc_security_client_ip(), 10 * MINUTE_IN_SECONDS, 'password_reset_unknown_account', array( 'object_type' => 'user', 'details' => array( 'note' => 'reset requested for an account that does not exist' ) ) );
+	wp_safe_redirect( $url );
 	exit;
 }
 

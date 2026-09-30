@@ -20,13 +20,13 @@ defined( 'ABSPATH' ) || exit;
 const TMC_PRIVILEGED_ROLES = array( 'administrator', 'editor' );
 
 /** String setting from the environment; $fallback when unset or empty. */
-function tmc_env( $name, $fallback = '' ) {
+function tmc_security_env( $name, $fallback = '' ) {
 	$value = getenv( $name );
 	return ( false === $value || '' === trim( $value ) ) ? $fallback : trim( $value );
 }
 
 /** On/off setting from the environment: "0", "off", "false", "no" mean off; anything else means on. */
-function tmc_env_flag( $name, $fallback ) {
+function tmc_security_flag( $name, $fallback ) {
 	$value = getenv( $name );
 	if ( false === $value || '' === trim( $value ) ) {
 		return (bool) $fallback;
@@ -35,7 +35,7 @@ function tmc_env_flag( $name, $fallback ) {
 }
 
 /** Whole-number setting from the environment, clamped to [$min, $max]. */
-function tmc_env_int( $name, $fallback, $min = 0, $max = PHP_INT_MAX ) {
+function tmc_security_int( $name, $fallback, $min = 0, $max = PHP_INT_MAX ) {
 	$value = getenv( $name );
 	if ( false === $value || ! preg_match( '/^\s*-?\d+\s*$/', $value ) ) {
 		return (int) $fallback;
@@ -43,7 +43,7 @@ function tmc_env_int( $name, $fallback, $min = 0, $max = PHP_INT_MAX ) {
 	return max( (int) $min, min( (int) $max, (int) $value ) );
 }
 
-function tmc_is_cli() {
+function tmc_security_is_cli() {
 	return defined( 'WP_CLI' ) && WP_CLI;
 }
 
@@ -63,7 +63,7 @@ function tmc_ip_normalise( $ip ) {
  * client address from X-Forwarded-For when the request came through a trusted reverse proxy
  * (wordpress/apache-tmc.conf), so no forwarding header is read here.
  */
-function tmc_client_ip() {
+function tmc_security_client_ip() {
 	return tmc_ip_normalise( isset( $_SERVER['REMOTE_ADDR'] ) ? wp_unslash( $_SERVER['REMOTE_ADDR'] ) : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- validated as an IP address
 }
 
@@ -179,7 +179,7 @@ function tmc_security_audit_throttled( $key, $ttl, $action, array $args = array(
 }
 
 /** Path of the current request (for audit details), without the query string. */
-function tmc_request_path() {
+function tmc_security_request_path() {
 	$uri  = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitised below
 	$path = (string) wp_parse_url( (string) $uri, PHP_URL_PATH );
 	return mb_substr( sanitize_text_field( $path ), 0, 200 );

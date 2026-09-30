@@ -24,7 +24,7 @@ defined( 'ABSPATH' ) || exit;
 /* ================================================================ idle timeout */
 
 function tmc_session_idle_limit() {
-	return tmc_env_int( 'TMC_ADMIN_IDLE_MINUTES', 30, 0, 24 * 60 ) * MINUTE_IN_SECONDS; // 0 = off
+	return tmc_security_int( 'TMC_ADMIN_IDLE_MINUTES', 30, 0, 24 * 60 ) * MINUTE_IN_SECONDS; // 0 = off
 }
 
 add_filter(
@@ -68,7 +68,7 @@ function tmc_session_touch( $user_id, $token, $now, $activity = true ) {
 
 add_action( 'init', 'tmc_session_idle_check', 1 );
 function tmc_session_idle_check() {
-	if ( tmc_is_cli() || wp_doing_cron() || ! is_user_logged_in() ) {
+	if ( tmc_security_is_cli() || wp_doing_cron() || ! is_user_logged_in() ) {
 		return;
 	}
 	$token = wp_get_session_token();
@@ -108,13 +108,13 @@ function tmc_session_max_length( $length, $user_id, $remember ) {
 	if ( ! tmc_user_is_privileged( (int) $user_id ) ) {
 		return $length;
 	}
-	return min( (int) $length, tmc_env_int( 'TMC_ADMIN_SESSION_HOURS', 12, 1, 14 * 24 ) * HOUR_IN_SECONDS );
+	return min( (int) $length, tmc_security_int( 'TMC_ADMIN_SESSION_HOURS', 12, 1, 14 * 24 ) * HOUR_IN_SECONDS );
 }
 
 /* ================================================================ password policy */
 
 function tmc_password_min_length() {
-	return tmc_env_int( 'TMC_PASSWORD_MIN_LENGTH', 12, 8, 128 );
+	return tmc_security_int( 'TMC_PASSWORD_MIN_LENGTH', 12, 8, 128 );
 }
 
 /** Common base words that must not form the password (checked after removing digits and symbols). */
@@ -219,7 +219,7 @@ add_action( 'after_password_reset', fn( $user ) => delete_user_meta( $user->ID, 
 /* ================================================================ application passwords */
 
 function tmc_app_password_roles() {
-	return array_values( array_filter( array_map( 'sanitize_key', explode( ',', tmc_env( 'TMC_APP_PASSWORD_ROLES', '' ) ) ) ) );
+	return array_values( array_filter( array_map( 'sanitize_key', explode( ',', tmc_security_env( 'TMC_APP_PASSWORD_ROLES', '' ) ) ) ) );
 }
 
 add_filter( 'wp_is_application_passwords_available', fn( $available ) => $available && (bool) tmc_app_password_roles() );
@@ -252,7 +252,7 @@ add_action(
 	'application_password_failed_authentication',
 	function ( $error ) {
 		$code = $error instanceof WP_Error ? $error->get_error_code() : '';
-		tmc_security_audit_throttled( tmc_client_ip() . '|' . $code, 10 * MINUTE_IN_SECONDS, 'app_password_auth_failed', array( 'object_type' => 'request', 'details' => array( 'reason' => $code ) ) );
+		tmc_security_audit_throttled( tmc_security_client_ip() . '|' . $code, 10 * MINUTE_IN_SECONDS, 'app_password_auth_failed', array( 'object_type' => 'request', 'details' => array( 'reason' => $code ) ) );
 	}
 );
 
@@ -270,12 +270,12 @@ function tmc_file_mods_blocked( $env, $is_cli ) {
 	}
 	$flag = getenv( 'TMC_DISALLOW_FILE_MODS' );
 	if ( false !== $flag && '' !== trim( $flag ) ) {
-		return tmc_env_flag( 'TMC_DISALLOW_FILE_MODS', false );
+		return tmc_security_flag( 'TMC_DISALLOW_FILE_MODS', false );
 	}
 	return 'server' === $env;
 }
 
-add_filter( 'file_mod_allowed', fn( $allowed ) => tmc_file_mods_blocked( tmc_env( 'TMC_ENV', '' ), tmc_is_cli() ) ? false : $allowed, 20 );
+add_filter( 'file_mod_allowed', fn( $allowed ) => tmc_file_mods_blocked( tmc_security_env( 'TMC_ENV', '' ), tmc_security_is_cli() ) ? false : $allowed, 20 );
 
 /* ================================================================ avatars */
 

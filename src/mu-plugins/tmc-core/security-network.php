@@ -28,7 +28,7 @@ const TMC_ADMIN_PUBLIC_LOGIN_ACTIONS = array( 'postpass', 'confirmaction' );
 
 /** The effective allow-list. */
 function tmc_admin_allowed_cidrs() {
-	$raw = tmc_env( 'TMC_ADMIN_ALLOW_CIDRS', '' );
+	$raw = tmc_security_env( 'TMC_ADMIN_ALLOW_CIDRS', '' );
 	if ( '' === $raw ) {
 		return TMC_ADMIN_DEFAULT_CIDRS;
 	}
@@ -91,14 +91,14 @@ function tmc_admin_access_allowed( $area, $ip, $logged_in, $login_action = '' ) 
 // Early on every request, before any admin code runs (and before auth_redirect()).
 add_action( 'init', 'tmc_admin_network_guard', -1000 );
 function tmc_admin_network_guard() {
-	if ( tmc_is_cli() || wp_doing_cron() ) {
+	if ( tmc_security_is_cli() || wp_doing_cron() ) {
 		return;
 	}
 	$area = tmc_admin_request_area();
 	if ( '' === $area ) {
 		return;
 	}
-	$ip     = tmc_client_ip();
+	$ip     = tmc_security_client_ip();
 	$action = isset( $_REQUEST['action'] ) && is_string( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- routing only
 	if ( tmc_admin_access_allowed( $area, $ip, is_user_logged_in(), 'login' === $area ? $action : '' ) ) {
 		return;
@@ -112,7 +112,7 @@ function tmc_admin_network_guard() {
 			'object_type'  => 'request',
 			'object_title' => $area,
 			'details'      => array(
-				'path'   => tmc_request_path(),
+				'path'   => tmc_security_request_path(),
 				'reason' => 'client address not in TMC_ADMIN_ALLOW_CIDRS',
 			),
 		)

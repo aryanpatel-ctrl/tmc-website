@@ -26,7 +26,7 @@ $tmc_title = sprintf( __( 'Search results for “%s”', 'tmc' ), $tmc_query );
 get_template_part( 'template-parts/page-header', null, array( 'title' => esc_html( $tmc_title ) ) );
 ?>
 <div class="container page-body search-page">
-	<form role="search" method="get" class="filter-form search-filter" action="<?php echo esc_url( tmc_home_url() ); ?>" data-tmc-suggest>
+	<form role="search" method="get" class="filter-form search-filter" action="<?php echo esc_url( tmc_home_url() ); ?>" aria-label="<?php esc_attr_e( 'Refine search', 'tmc' ); ?>" data-tmc-suggest>
 		<p class="search-filter-query">
 			<label for="search-page-q"><?php esc_html_e( 'Search for', 'tmc' ); ?></label>
 			<input type="search" id="search-page-q" name="s" value="<?php echo esc_attr( $tmc_query ); ?>" maxlength="100" autocomplete="off">

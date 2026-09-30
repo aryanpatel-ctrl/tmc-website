@@ -214,7 +214,7 @@ add_action( 'attachment_updated', 'tmc_search_index_post', 20 );
 add_action(
 	'transition_post_status',
 	function ( $new_status, $old_status, $post ) {
-		if ( $new_status !== $old_status && 'attachment' !== $post->post_type && 'revision' !== $post->post_type ) {
+		if ( $new_status !== $old_status && 'attachment' !== $post->post_type && in_array( $post->post_type, tmc_search_post_types(), true ) ) {
 			tmc_search_index_children( $post->ID );
 		}
 	},
@@ -278,6 +278,9 @@ add_action(
 function tmc_search_rebuild() {
 	global $wpdb;
 	tmc_search_install();
+	if ( (int) get_option( 'tmc_search_db_version' ) !== TMC_SEARCH_DB_VERSION ) {
+		return 0;
+	}
 	$types = tmc_search_post_types();
 	$in    = implode( ',', array_fill( 0, count( $types ), '%s' ) );
 	$ids   = array_map( 'intval', $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type IN ($in) AND post_status IN ('publish','inherit') ORDER BY ID", $types ) ) ); // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQL.InterpolatedNotPrepared

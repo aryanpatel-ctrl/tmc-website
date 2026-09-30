@@ -1,0 +1,58 @@
+# W4 — application gateway checks that need no WordPress (reusable; wired into pipeline.yml by the
+# integrator). The gateway itself is tested in the Integration job by scripts/tests/apps-test.php and
+# scripts/smoke.d/apps.sh, which run automatically with the other suites.
+#
+#   - PHP syntax of the DEMO mock backend (mock/ is outside lint.sh's src/ + scripts/)
+#   - contract test of the mock (docs/integration/gateway.md, section 3/4)
+#   - network segregation in the compose file: the mock only on the internal tmc_apps network, no host
+#     port, and the database/cache not on the integration network (R-4.8-1)
+name: Application gateway
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit, tag or branch to check (default: the triggering commit)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  mock-and-segregation:
+    name: Mock backend contract + network segregation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: PHP syntax (mock backend)
+        run: docker run --rm -v "$PWD/mock/tmc-apps":/app:ro -w /app php:8.3.35-cli-alpine sh -c 'for f in *.php; do php -l "$f" || exit 1; done'
+
+      - name: Mock backend contract test
+        run: docker run --rm -v "$PWD/mock/tmc-apps":/app:ro -w /app php:8.3.35-cli-alpine php contract-test.php
+
+      - name: Integration network is segregated
+        run: |
+          ./scripts/make-env.sh ci
+          for files in "docker-compose.yml:compose.local.yml" "docker-compose.yml:compose.server.yml"; do
+            COMPOSE_FILE="$files" docker compose --profile tools config --format json > "$RUNNER_TEMP/compose.json"
+            python3 - "$RUNNER_TEMP/compose.json" "$files" <<'EOF'
+          import json, sys
+          c = json.load(open(sys.argv[1]))
+          s, n = c["services"], c["networks"]
+          mock = s["tmc-apps-mock"]
+          assert set(mock["networks"]) == {"tmc_apps"}, "mock must be on tmc_apps only: %s" % mock["networks"]
+          assert not mock.get("ports"), "mock must not publish ports"
+          assert n["tmc_apps"].get("internal") is True, "tmc_apps must be an internal network"
+          for name in ("db", "redis", "cron"):
+              assert "tmc_apps" not in s[name]["networks"], name + " must not join tmc_apps"
+          for name in ("wordpress", "wpcli"):
+              assert "tmc_apps" in s[name]["networks"], name + " must join tmc_apps"
+          print("segregation ok:", sys.argv[2])
+          EOF
+          done

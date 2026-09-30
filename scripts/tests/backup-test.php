@@ -57,7 +57,8 @@ tmc_backup_audit_import();
 $again = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . tmc_audit_table() . ' WHERE id > %d AND object_title = %s', $before, $name ) );
 $t( 'importing again does not duplicate it', 1 === $again );
 $t( 'real backup runs reach the audit log (backup_completed present)', (bool) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . tmc_audit_table() . ' WHERE action = %s LIMIT 1', 'backup_completed' ) ) );
-$t( 'a failed run does not count as the newest good backup', ! $last || tmc_backup_last( 'success' )->name === $last->name );
+$newest = tmc_backup_last( 'success' ); // a scheduled backup may finish meanwhile: only the test row must never be it
+$t( 'a failed run does not count as the newest good backup', ! $last || ( $newest && (int) $newest->id !== $row_id && 'success' === $newest->status ) );
 $t( 'audit chain intact', tmc_audit_verify()['ok'] );
 $wpdb->delete( $table, array( 'id' => $row_id ) ); // test row only; the audit entry stays, by design
 
@@ -88,7 +89,8 @@ $t( 'fresh verified copy → ok, age measured from the snapshot time (' . ( $che
 $rows[] = $offsite_row( 'offsite-failed', '' );
 $check  = tmc_health_report( true )['checks']['offsite'];
 $t( 'a failed copy after it does not hide the last good one (still ok)', true === $check['ok'] );
-$t( 'a failed copy does not count as a backup', tmc_backup_last( 'success' ) == $last ); // phpcs:ignore Universal.Operators.StrictComparisons -- same row, separate objects
+$newest = tmc_backup_last( 'success' );
+$t( 'off-host copies do not count as backups', ! $last || ( $newest && ! in_array( (int) $newest->id, $rows, true ) && 'success' === $newest->status ) );
 $rows[] = $offsite_row( 'offsite-ok', $stale_name );
 $check  = tmc_health_report( true )['checks']['offsite'];
 $t( 'newest copy holds 2-hour-old data → not ok (limit ' . tmc_health_limits()['offsite_max_age'] . 's)', false === $check['ok'] && $check['age_seconds'] >= 2 * HOUR_IN_SECONDS );

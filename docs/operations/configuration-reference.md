@@ -93,7 +93,7 @@ Networks: `tmc_internal` (`internal: true`), `tmc_edge` (default bridge with int
 | `DISALLOW_FILE_EDIT` | `true` | No theme/plugin editor in the admin |
 | `WP_MEMORY_LIMIT` | `256M` | PHP memory for WordPress |
 | `WP_AUTO_UPDATE_CORE` | `minor` | Minor core updates allowed; see [Patch Management §4](patch-management.md#4-how-updates-are-applied) for how updates are actually applied |
-| `WP_REDIS_HOST`, `WP_REDIS_PORT`, `WP_CACHE_KEY_SALT` | `redis`, `6379`, `tmc_` | Object cache connection settings |
+| `WP_REDIS_HOST`, `WP_REDIS_PORT`, `WP_CACHE_KEY_SALT` | `tmc-valkey`, `6379`, `tmc_` | Object cache connection settings. `tmc-valkey` (cache) and `tmc-mariadb` (database, `WORDPRESS_DB_HOST`) are network aliases that exist only on `tmc_internal`; plain names such as `redis` or `db` could resolve to another project's container on a shared network |
 | `DISABLE_WP_CRON` | `true` | Scheduled jobs run from the `cron` container, not on page views |
 | HTTPS detection | `$_SERVER['HTTPS']='on'` when `X-Forwarded-Proto` contains `https` | Correct URLs behind the TLS-terminating proxy |
 | `WP_ALLOW_MULTISITE`, `MULTISITE`, `SUBDOMAIN_INSTALL` | `true` | Multisite on subdomains |

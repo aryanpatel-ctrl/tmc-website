@@ -159,7 +159,7 @@ function tmc_pc_redis( $reset = false ) {
 	if ( $conn || $failed ) {
 		return $conn;
 	}
-	$host  = defined( 'WP_REDIS_HOST' ) ? WP_REDIS_HOST : 'redis';
+	$host  = defined( 'WP_REDIS_HOST' ) ? WP_REDIS_HOST : 'tmc-valkey';
 	$port  = defined( 'WP_REDIS_PORT' ) ? (int) WP_REDIS_PORT : 6379;
 	$errno = 0;
 	$error = '';

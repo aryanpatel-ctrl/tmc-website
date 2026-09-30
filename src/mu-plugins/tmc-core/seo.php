@@ -526,7 +526,10 @@ function tmc_seo_robots_txt( $output = '', $public = true ) {
 	return implode( "\n", $lines ) . "\n";
 }
 
-/** X-Robots-Tag on every front-end response outside production (also covers PDFs served via WP). */
+/**
+ * X-Robots-Tag on every page WordPress serves outside production. Static files (uploaded PDFs) are
+ * served by Apache directly; robots.txt "Disallow: /" keeps crawlers away from those.
+ */
 add_filter( 'wp_headers', 'tmc_seo_http_headers' );
 function tmc_seo_http_headers( $headers ) {
 	if ( ! tmc_seo_site_indexable() ) {

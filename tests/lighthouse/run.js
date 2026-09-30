@@ -18,7 +18,7 @@
  * Outside production (TMC_ENV != production) the "is-crawlable" audit is skipped: non-production
  * environments are deliberately "noindex". It is verified on production (docs/testing/thresholds.md).
  *
- * Environment: LIGHTHOUSE_SITES, LIGHTHOUSE_FORM_FACTORS (desktop,mobile), LIGHTHOUSE_RUNS,
+ * Environment: LIGHTHOUSE_SITES, LIGHTHOUSE_TEMPLATES (template ids; default all flagged), LIGHTHOUSE_FORM_FACTORS (desktop,mobile), LIGHTHOUSE_RUNS,
  * LIGHTHOUSE_RECHECK_RUNS, CHROME_PATH (default: Playwright's pinned Chromium), TMC_ENV.
  * Output: $QUALITY_OUT/lighthouse/{summary.json, report.html, <form factor>/<page>/reports/*.html}
  * Exit code 1 when any page misses a category budget.
@@ -40,6 +40,7 @@ const FULL_SITES = list(process.env.LIGHTHOUSE_SITES, 'tmc,tmh');
 const FORM_FACTORS = list(process.env.LIGHTHOUSE_FORM_FACTORS, 'desktop,mobile');
 const RUNS = Math.max(1, Number(process.env.LIGHTHOUSE_RUNS || 1));
 const RECHECK_RUNS = Math.max(0, Number(process.env.LIGHTHOUSE_RECHECK_RUNS || 3));
+const ONLY_TEMPLATES = list(process.env.LIGHTHOUSE_TEMPLATES, '');
 const PRODUCTION = process.env.TMC_ENV === 'production';
 
 function chromePath() {
@@ -59,6 +60,9 @@ function pages() {
   for (const site of SITES) {
     const full = FULL_SITES.includes(site.id);
     for (const template of TEMPLATES) {
+      if (ONLY_TEMPLATES.length && !ONLY_TEMPLATES.includes(template.id)) {
+        continue;
+      }
       if (template.lighthouse && (full || template.id === 'home' || template.id === 'home-hi')) {
         out.push({ site: site.id, template: template.id, label: template.label, url: url(site, template.path) });
       }

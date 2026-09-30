@@ -131,6 +131,25 @@ function inventoryFor(siteId) {
   return { total: data.urls.length, counts };
 }
 
+/**
+ * Load test (tests/load/report.js). It runs by hand against UAT, not in the CI run that produces
+ * the other results: copy its load/summary.json into $QUALITY_OUT/load/ before generating the
+ * report. Only the "peak" profile is evidence for Go-Live (SOW §4.7: sustain peak load).
+ */
+function loadItem(load) {
+  if (!load || !load.status) {
+    return { status: 'MANUAL', evidence: 'No load test result in this bundle. Run the "Load test (UAT)" workflow with the peak profile (docs/testing/quality-gates.md#load-test).' };
+  }
+  const when = load.generatedAt ? ` Measured ${load.generatedAt}.` : '';
+  if (load.status === 'FAIL') {
+    return { status: 'FAIL', evidence: `${load.evidence || 'Load test failed.'}${when}` };
+  }
+  if (load.profile !== 'peak') {
+    return { status: 'MANUAL', evidence: `${load.evidence || ''}${when} Only the "peak" profile counts for Go-Live.` };
+  }
+  return { status: 'PASS', evidence: `${load.evidence || ''}${when}` };
+}
+
 function checklist(site, sources) {
   const { e2e, visual, a11y, lighthouse, html, links, load } = sources;
   const inv = inventoryFor(site.id);
@@ -144,7 +163,7 @@ function checklist(site, sources) {
   add('wcag-manual', '§7.1 (c), R-4.9-1', 'WCAG 2.2 AA / GIGW 3.0 — manual audit (screen readers, keyboard, content)', { status: 'MANUAL', evidence: 'Checklist in docs/testing/quality-gates.md (manual accessibility audit).' }, 'Signed manual audit record (NVDA + Firefox, TalkBack, VoiceOver; keyboard only; zoom 200 %/400 %).');
   add('responsive', '§7.1 (d), R-4.9-2, R-4.9-3, R-4.14-2/3', 'Responsive layouts and major browsers (Chromium, Firefox, WebKit at 360/768/1280 px); functional tests', e2e);
   add('performance', '§7.1 (e), R-4.10-6', 'Performance thresholds per template, desktop and mobile (Lighthouse)', suiteItem(lighthouse, site.id, (s, all) => `${s.checks} measurements (${s.fullTemplateSet ? 'every template type' : 'home pages; other templates are shared and measured on ' + all.referenceSites.join(', ')}); ${s.failures} below budget. Budgets: ${Object.entries(all.budgets).map(([ff, b]) => `${ff} perf ≥ ${Math.round(b.performance * 100)}, a11y ≥ ${Math.round(b.accessibility * 100)}, BP ≥ ${Math.round(b['best-practices'] * 100)}, SEO ≥ ${Math.round(b.seo * 100)}`).join('; ')}.`));
-  add('load', '§7.1 (e), R-4.14-4, R-4.7-9', 'Load test against thresholds (k6, UAT)', load && load.status ? { status: load.status, evidence: load.evidence || '' } : { status: 'MANUAL', evidence: 'Run the Load test workflow against UAT (docs/testing/quality-gates.md) and attach its report.' }, load && load.status ? '' : 'k6 report from the manual "Load test (UAT)" workflow.');
+  add('load', '§7.1 (e), R-4.14-4, R-4.7-9', 'Load test against thresholds (k6, UAT, peak profile)', loadItem(load), load && load.status === 'PASS' && load.profile === 'peak' ? '' : 'k6 report of the "peak" profile from the manual "Load test (UAT)" workflow.');
   add('html', 'R-4.8-6', 'W3C HTML validity of every template (Nu HTML Checker)', suiteItem(html, site.id, (s, all) => `${s.checks} pages; ${s.failures} with errors; ${s.warnings} warnings (not failing). ${all.tool}.`));
   add('security', '§7.1 (f), R-4.8-7', 'VAPT by a CERT-In empanelled agency: all observations closed; segregation evidence', { status: 'MANUAL', evidence: 'External certification.' }, 'VAPT report and closure report; security architecture document with segregation evidence (R-4.8-1, R-4.8-8).');
   add('certificates', '§7.1 (g), R-4.8-7', 'Safe-to-Host / STQC certificate', { status: 'MANUAL', evidence: 'External certification.' }, 'Certificate copy with validity dates.');
@@ -198,6 +217,7 @@ function main() {
       ['Lighthouse', '../lighthouse/report.html'],
       ['HTML validity', '../html/report.html'],
       ['Links and orphans', '../links/report.html'],
+      ['Load test (k6)', '../load/report.html'],
     ].filter(([, href]) => fs.existsSync(path.join(OUT, href)));
     const body = `<h1>Go-Live acceptance report</h1>
 <p class="meta"><strong>${esc(site.name)}</strong> · ${esc(host(site))}</p>
@@ -275,6 +295,7 @@ ${table(
     gate(`Lighthouse — desktop + mobile${summaries.lighthouse ? ` (${summaries.lighthouse.totals.measurements} measurements)` : ''}`, summaries.lighthouse ? summaries.lighthouse.status : 'NOT-RUN'),
     gate(`HTML validity — Nu HTML Checker${summaries.html ? ` (${summaries.html.totals.pages} pages)` : ''}`, summaries.html ? summaries.html.status : 'NOT-RUN'),
     gate(`Links and orphans${summaries.links ? ` (${summaries.links.totals.urlsChecked} URLs)` : ''}`, summaries.links ? summaries.links.status : 'NOT-RUN'),
+    gate(`Load test — k6${summaries.load ? ` (profile ${summaries.load.profile || '?'})` : ' (manual, against UAT)'}`, summaries.load ? summaries.load.status : 'MANUAL'),
     '',
     '| Website | Automated verdict | Pass | Fail | Pending / not run | Manual |',
     '|---|---|---|---|---|---|',

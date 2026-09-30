@@ -8,14 +8,18 @@
     "node": ">=20"
   },
   "scripts": {
-    "e2e": "playwright test --grep-invert @visual --project=e2e-chromium-360 --project=e2e-chromium-768 --project=e2e-chromium-1280 --project=e2e-firefox-360 --project=e2e-firefox-768 --project=e2e-firefox-1280 --project=e2e-webkit-360 --project=e2e-webkit-768 --project=e2e-webkit-1280",
-    "visual": "playwright test --project=visual",
-    "visual:update": "playwright test --project=visual --update-snapshots=all",
-    "a11y": "playwright test --project=a11y",
+    "e2e": "QUALITY_SUITE=e2e playwright test",
+    "visual": "QUALITY_SUITE=visual playwright test",
+    "visual:update": "QUALITY_SUITE=visual QUALITY_UPDATE_BASELINES=1 playwright test",
+    "a11y": "QUALITY_SUITE=a11y playwright test",
+    "a11y:report": "node a11y/report.js",
     "lighthouse": "node lighthouse/run.js",
     "html": "node html/validate.js",
     "links": "node links/crawl.js",
-    "report": "node report/acceptance.js"
+    "load:report": "node load/report.js",
+    "report": "node report/acceptance.js",
+    "failures": "node bin/failures.js",
+    "check": "node bin/check-syntax.js"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

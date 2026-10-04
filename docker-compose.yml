@@ -181,7 +181,7 @@ services:
   # no internet, no database, no host port; answers only requests carrying TMC_APPS_MOCK_KEY.
   # In production this service is absent and the gateway points at TMC-approved endpoints.
   tmc-apps-mock:
-    image: php:8.3.35-cli-alpine
+    image: php:8.5.11-cli-alpine
     container_name: tmc-apps-mock
     restart: unless-stopped
     user: "65534:65534"

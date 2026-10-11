@@ -1,5 +1,5 @@
 # Exact pin (WordPress 7.1.2, PHP 8.3); updates arrive as Dependabot PRs (docs/operations/patching.md).
-FROM wordpress:7.1.2-php8.3-apache
+FROM wordpress:7.1.3-php8.3-apache
 
 # phpredis for the object cache
 RUN set -eux; \

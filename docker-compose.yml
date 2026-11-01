@@ -111,7 +111,7 @@ services:
 
   redis:
     # Valkey (Linux Foundation, BSD-3-Clause): Redis-compatible; Redis 7.4+ is not OSI-licensed.
-    image: valkey/valkey:8.1.10-alpine
+    image: valkey/valkey:8.1.11-alpine
     container_name: tmc-redis
     restart: unless-stopped
     command: valkey-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
